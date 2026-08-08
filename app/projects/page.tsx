@@ -13,13 +13,13 @@ export default async function ProjectsPage() {
         <FolderGit2 size={22} className="text-[var(--color-accent)]" />
         Projets & Sessions
       </h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-[var(--color-muted)]">
         {projects.length} projet{projects.length > 1 ? "s" : ""} avec historique de session
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
         {projects.length === 0 && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-neutral-500">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
             Aucun projet trouvé dans ~/.claude/projects.
           </div>
         )}
@@ -31,10 +31,10 @@ export default async function ProjectsPage() {
           >
             <div className="min-w-0 flex-1">
               <div className="font-medium">{projectLabel(p.realPath)}</div>
-              <div className="mt-0.5 text-xs text-neutral-500 font-mono truncate">
+              <div className="mt-0.5 text-xs text-[var(--color-muted)] font-mono truncate">
                 {p.realPath}
               </div>
-              <div className="mt-2 flex items-center gap-4 text-[11px] text-neutral-600">
+              <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
                 <span className="flex items-center gap-1">
                   <MessagesSquare size={12} />
                   {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
@@ -44,7 +44,7 @@ export default async function ProjectsPage() {
             </div>
             <ChevronRight
               size={18}
-              className="text-neutral-600 group-hover:text-neutral-300 shrink-0"
+              className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] shrink-0"
             />
           </Link>
         ))}

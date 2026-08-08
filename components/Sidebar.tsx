@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Sparkles, FolderGit2 } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -21,7 +22,7 @@ export default function Sidebar() {
           </div>
           <div>
             <div className="font-semibold text-sm leading-tight">Claudeboard</div>
-            <div className="text-[11px] text-neutral-500 leading-tight">~/.claude</div>
+            <div className="text-[11px] text-[var(--color-muted)] leading-tight">~/.claude</div>
           </div>
         </div>
       </div>
@@ -35,7 +36,7 @@ export default function Sidebar() {
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 active
                   ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
+                  : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
               }`}
             >
               <Icon size={16} />
@@ -44,8 +45,11 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="mt-auto p-4 text-[11px] text-neutral-600">
-        Lecture + édition locale
+      <div className="mt-auto p-3">
+        <ThemeToggle />
+        <div className="px-3 pt-2 text-[11px] text-[var(--color-faint)]">
+          Lecture + édition locale
+        </div>
       </div>
     </aside>
   );

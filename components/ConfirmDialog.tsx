@@ -41,7 +41,7 @@ export default function ConfirmDialog({
             <div className="min-w-0">
               <h3 className="font-semibold">{title}</h3>
               {description && (
-                <p className="mt-1 text-sm text-neutral-400">{description}</p>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">{description}</p>
               )}
             </div>
           </div>
@@ -51,7 +51,7 @@ export default function ConfirmDialog({
           <button
             onClick={onCancel}
             disabled={busy}
-            className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-white/5 disabled:opacity-50"
+            className="rounded-lg px-4 py-2 text-sm text-[var(--color-fg)] hover:bg-[var(--color-hover)] disabled:opacity-50"
           >
             Annuler
           </button>

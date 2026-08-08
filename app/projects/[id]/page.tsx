@@ -19,7 +19,7 @@ export default async function ProjectSessionsPage({
     <div className="max-w-4xl mx-auto px-8 py-10">
       <Link
         href="/projects"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
       >
         <ArrowLeft size={15} /> Projets
       </Link>
@@ -29,13 +29,13 @@ export default async function ProjectSessionsPage({
           {project ? projectLabel(project.realPath) : id}
         </h1>
         {project && (
-          <p className="mt-1 text-xs text-neutral-500 font-mono">{project.realPath}</p>
+          <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
         )}
       </div>
 
       <div className="flex flex-col gap-3">
         {sessions.length === 0 && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-neutral-500">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
             Aucune session.
           </div>
         )}
@@ -47,19 +47,19 @@ export default async function ProjectSessionsPage({
           >
             <div className="min-w-0 flex-1">
               <div className="font-medium truncate">{s.title}</div>
-              <div className="mt-2 flex items-center gap-4 text-[11px] text-neutral-600">
+              <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
                 <span className="flex items-center gap-1">
                   <MessagesSquare size={12} />
                   {s.messageCount} messages
                 </span>
                 <span>{formatDate(s.lastModified)}</span>
                 <span>{formatSize(s.size)}</span>
-                <code className="text-neutral-700">{s.id.slice(0, 8)}</code>
+                <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
               </div>
             </div>
             <ChevronRight
               size={18}
-              className="text-neutral-600 group-hover:text-neutral-300 shrink-0"
+              className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] shrink-0"
             />
           </Link>
         ))}

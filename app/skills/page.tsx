@@ -13,13 +13,13 @@ export default async function SkillsPage() {
         <Sparkles size={22} className="text-[var(--color-accent)]" />
         Skills
       </h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-[var(--color-muted)]">
         {skills.length} skill{skills.length > 1 ? "s" : ""} dans ~/.claude/skills
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
         {skills.length === 0 && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-neutral-500">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
             Aucun skill trouvé dans ~/.claude/skills.
           </div>
         )}
@@ -32,18 +32,18 @@ export default async function SkillsPage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{s.name}</span>
-                <code className="text-[11px] text-neutral-500 bg-black/30 rounded px-1.5 py-0.5">
+                <code className="text-[11px] text-[var(--color-muted)] bg-[var(--color-code)] rounded px-1.5 py-0.5">
                   {s.slug}
                 </code>
               </div>
-              <p className="mt-1.5 text-sm text-neutral-400 line-clamp-2">{s.description}</p>
-              <p className="mt-2 text-[11px] text-neutral-600">
+              <p className="mt-1.5 text-sm text-[var(--color-muted)] line-clamp-2">{s.description}</p>
+              <p className="mt-2 text-[11px] text-[var(--color-faint)]">
                 Modifié le {formatDate(s.updatedAt)}
               </p>
             </div>
             <ChevronRight
               size={18}
-              className="text-neutral-600 group-hover:text-neutral-300 shrink-0 mt-1"
+              className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] shrink-0 mt-1"
             />
           </Link>
         ))}

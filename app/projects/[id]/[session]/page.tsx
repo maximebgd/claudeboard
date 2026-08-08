@@ -15,13 +15,13 @@ function BlockView({ block }: { block: Block }) {
     case "thinking":
       return (
         <Collapsible label="Réflexion" accent="#a78bfa">
-          <div className="text-sm text-neutral-400 whitespace-pre-wrap">{block.text}</div>
+          <div className="text-sm text-[var(--color-muted)] whitespace-pre-wrap">{block.text}</div>
         </Collapsible>
       );
     case "tool_use":
       return (
         <Collapsible label={`Outil : ${block.name}`} accent="#60a5fa">
-          <pre className="text-xs text-neutral-400 overflow-x-auto">
+          <pre className="text-xs text-[var(--color-muted)] overflow-x-auto">
             {JSON.stringify(block.input, null, 2)}
           </pre>
         </Collapsible>
@@ -32,7 +32,7 @@ function BlockView({ block }: { block: Block }) {
           label={block.isError ? "Résultat outil (erreur)" : "Résultat outil"}
           accent={block.isError ? "#f87171" : "#34d399"}
         >
-          <pre className="text-xs text-neutral-400 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+          <pre className="text-xs text-[var(--color-muted)] whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
             {block.text}
           </pre>
         </Collapsible>
@@ -55,14 +55,14 @@ export default async function SessionPage({
     <div className="max-w-3xl mx-auto px-8 py-10">
       <Link
         href={`/projects/${encodeURIComponent(id)}`}
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
       >
         <ArrowLeft size={15} /> Sessions
       </Link>
 
       <div className="mt-4 mb-8">
         <h1 className="text-xl font-semibold">{session.title}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-600 font-mono">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)] font-mono">
           <span>{session.events.length} messages</span>
           {session.gitBranch && <span>branche : {session.gitBranch}</span>}
           {session.version && <span>v{session.version}</span>}
@@ -77,18 +77,18 @@ export default async function SessionPage({
             <div key={ev.uuid} className="flex gap-3">
               <div
                 className={`mt-0.5 h-7 w-7 shrink-0 rounded-full flex items-center justify-center ${
-                  isUser ? "bg-neutral-700" : "bg-[var(--color-accent)]/20"
+                  isUser ? "bg-[var(--color-border)]" : "bg-[var(--color-accent)]/20"
                 }`}
               >
                 {isUser ? (
-                  <User size={14} className="text-neutral-300" />
+                  <User size={14} className="text-[var(--color-fg)]" />
                 ) : (
                   <Sparkles size={14} className="text-[var(--color-accent)]" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-[11px] text-neutral-500 mb-1">
-                  <span className="font-medium text-neutral-400">
+                <div className="flex items-center gap-2 text-[11px] text-[var(--color-muted)] mb-1">
+                  <span className="font-medium text-[var(--color-muted)]">
                     {isUser ? "Vous" : "Claude"}
                   </span>
                   {ev.timestamp && <span>{formatDate(ev.timestamp)}</span>}

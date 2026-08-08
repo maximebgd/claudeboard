@@ -5,16 +5,44 @@
   --color-panel: #131316;
   --color-border: #26262b;
   --color-accent: #d97757;
+  --color-fg: #e5e5e7;
+  --color-muted: #a1a1aa;
+  --color-faint: #71717a;
+  --color-code: #1d1d21;
+  --color-inset: #0d0d0f;
+  --color-hover: rgba(255, 255, 255, 0.05);
 }
 
 :root {
   color-scheme: dark;
 }
 
+/* Mode jour */
+:root.light {
+  color-scheme: light;
+  --color-bg: #f6f6f7;
+  --color-panel: #ffffff;
+  --color-border: #e3e3e6;
+  --color-accent: #c15532;
+  --color-fg: #1b1b1e;
+  --color-muted: #55555d;
+  --color-faint: #8b8b93;
+  --color-code: #f0f0f2;
+  --color-inset: #f4f4f6;
+  --color-hover: rgba(0, 0, 0, 0.05);
+}
+
 html,
 body {
   background: var(--color-bg);
-  color: #e5e5e7;
+  color: var(--color-fg);
+}
+
+/* Coupe toutes les transitions le temps d'une bascule de thème,
+   sinon les éléments en transition-colors (cartes, liens) se fondent
+   pendant que le reste change d'un coup — effet décalé disgracieux. */
+html.theme-switching * {
+  transition: none !important;
 }
 
 body {
@@ -65,14 +93,14 @@ body {
   text-decoration: underline;
 }
 .prose-claude code {
-  background: #1d1d21;
+  background: var(--color-code);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.87em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .prose-claude pre {
-  background: #1d1d21;
+  background: var(--color-code);
   padding: 1em;
   border-radius: 8px;
   overflow-x: auto;
@@ -86,7 +114,7 @@ body {
 .prose-claude blockquote {
   border-left: 3px solid var(--color-border);
   padding-left: 1em;
-  color: #a1a1aa;
+  color: var(--color-muted);
   margin: 0.8em 0;
 }
 .prose-claude table {
@@ -102,5 +130,5 @@ body {
   text-align: left;
 }
 .prose-claude th {
-  background: #1d1d21;
+  background: var(--color-code);
 }

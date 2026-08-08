@@ -16,10 +16,10 @@ export default function Collapsible({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-black/20 overflow-hidden">
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-white/5"
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-[var(--color-hover)]"
         style={accent ? { color: accent } : undefined}
       >
         {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}

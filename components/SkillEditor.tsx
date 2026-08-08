@@ -57,7 +57,7 @@ export default function SkillEditor({ slug, initialRaw, content }: Props) {
               setDraft(savedRaw);
               setEditing(true);
             }}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-white/5"
+            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
           >
             <Pencil size={14} /> Éditer
           </button>
@@ -76,7 +76,7 @@ export default function SkillEditor({ slug, initialRaw, content }: Props) {
                 setEditing(false);
                 setError(null);
               }}
-              className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-white/5"
+              className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
             >
               <X size={14} /> Annuler
             </button>
@@ -101,7 +101,7 @@ export default function SkillEditor({ slug, initialRaw, content }: Props) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           spellCheck={false}
-          className="w-full min-h-[60vh] rounded-xl border border-[var(--color-border)] bg-[#0d0d0f] p-4 font-mono text-[13px] leading-relaxed text-neutral-200 outline-none focus:border-[var(--color-accent)]/50"
+          className="w-full min-h-[60vh] rounded-xl border border-[var(--color-border)] bg-[var(--color-inset)] p-4 font-mono text-[13px] leading-relaxed text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]/50"
         />
       ) : (
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6">
@@ -118,8 +118,8 @@ export default function SkillEditor({ slug, initialRaw, content }: Props) {
         onCancel={() => setConfirmOpen(false)}
         onConfirm={doSave}
         detail={
-          <div className="rounded-lg bg-black/40 border border-[var(--color-border)] p-3 text-xs text-neutral-500">
-            skills/<span className="text-neutral-300">{slug}</span>/SKILL.md
+          <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)]">
+            skills/<span className="text-[var(--color-fg)]">{slug}</span>/SKILL.md
           </div>
         }
       />
