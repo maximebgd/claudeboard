@@ -39,7 +39,7 @@ export default function ThemeToggle() {
       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)] transition-colors"
     >
       {isLight ? <Moon size={16} /> : <Sun size={16} />}
-      {isLight ? "Mode nuit" : "Mode jour"}
+      {isLight ? "" : ""}
     </button>
   );
 }
