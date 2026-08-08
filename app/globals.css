@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0a0b;
+  --color-panel: #131316;
+  --color-border: #26262b;
+  --color-accent: #d97757;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: #e5e5e7;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+/* Rendu markdown */
+.prose-claude {
+  line-height: 1.7;
+}
+.prose-claude h1,
+.prose-claude h2,
+.prose-claude h3 {
+  font-weight: 600;
+  margin: 1.4em 0 0.5em;
+  line-height: 1.25;
+}
+.prose-claude h1 {
+  font-size: 1.6rem;
+}
+.prose-claude h2 {
+  font-size: 1.3rem;
+}
+.prose-claude h3 {
+  font-size: 1.1rem;
+}
+.prose-claude p {
+  margin: 0.7em 0;
+}
+.prose-claude ul,
+.prose-claude ol {
+  margin: 0.7em 0;
+  padding-left: 1.4em;
+}
+.prose-claude ul {
+  list-style: disc;
+}
+.prose-claude ol {
+  list-style: decimal;
+}
+.prose-claude li {
+  margin: 0.25em 0;
+}
+.prose-claude a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.prose-claude code {
+  background: #1d1d21;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.87em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.prose-claude pre {
+  background: #1d1d21;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.9em 0;
+  border: 1px solid var(--color-border);
+}
+.prose-claude pre code {
+  background: transparent;
+  padding: 0;
+}
+.prose-claude blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1em;
+  color: #a1a1aa;
+  margin: 0.8em 0;
+}
+.prose-claude table {
+  border-collapse: collapse;
+  margin: 0.9em 0;
+  display: block;
+  overflow-x: auto;
+}
+.prose-claude th,
+.prose-claude td {
+  border: 1px solid var(--color-border);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.prose-claude th {
+  background: #1d1d21;
+}
