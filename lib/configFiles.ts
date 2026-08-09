@@ -1,0 +1,92 @@
+import fs from "fs/promises";
+import { safeResolve } from "./claude";
+
+/**
+ * Fichiers de configuration « uniques » de ~/.claude (par opposition aux
+ * dossiers d'entrées comme skills/agents/commands). Chaque cible connaît son
+ * nom de fichier, son format et un libellé lisible. Tout reste dans CLAUDE_DIR
+ * (garde `safeResolve`).
+ */
+export type ConfigTarget = "settings" | "settingsLocal" | "claudeMd" | "keybindings";
+
+interface TargetDef {
+  file: string;
+  format: "json" | "markdown";
+  label: string;
+}
+
+const TARGETS: Record<ConfigTarget, TargetDef> = {
+  settings: { file: "settings.json", format: "json", label: "settings.json" },
+  settingsLocal: { file: "settings.local.json", format: "json", label: "settings.local.json" },
+  claudeMd: { file: "CLAUDE.md", format: "markdown", label: "CLAUDE.md (global)" },
+  keybindings: { file: "keybindings.json", format: "json", label: "keybindings.json" },
+};
+
+export function isConfigTarget(v: unknown): v is ConfigTarget {
+  return typeof v === "string" && v in TARGETS;
+}
+
+export interface ConfigFile {
+  target: ConfigTarget;
+  file: string;
+  path: string;
+  format: "json" | "markdown";
+  label: string;
+  exists: boolean;
+  raw: string; // "" si le fichier n'existe pas
+  /** Objet parsé pour les cibles JSON (null si absent ou JSON invalide). */
+  data: Record<string, unknown> | null;
+  updatedAt: number | null;
+}
+
+export async function readConfigFile(target: ConfigTarget): Promise<ConfigFile> {
+  const def = TARGETS[target];
+  const filePath = safeResolve(def.file);
+  const base: Omit<ConfigFile, "exists" | "raw" | "data" | "updatedAt"> = {
+    target,
+    file: def.file,
+    path: filePath,
+    format: def.format,
+    label: def.label,
+  };
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    const st = await fs.stat(filePath);
+    let data: Record<string, unknown> | null = null;
+    if (def.format === "json") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") data = parsed as Record<string, unknown>;
+      } catch {
+        data = null; // JSON cassé : on renvoie quand même le raw pour édition/correction
+      }
+    }
+    return { ...base, exists: true, raw, data, updatedAt: st.mtimeMs };
+  } catch {
+    return { ...base, exists: false, raw: "", data: null, updatedAt: null };
+  }
+}
+
+/**
+ * Écrit une cible de config. Les cibles JSON sont validées (JSON.parse) avant
+ * écriture. Un backup horodaté `.bak.<ts>` est créé si le fichier existait déjà
+ * (les créations — settings.local.json, keybindings.json, CLAUDE.md global —
+ * sont explicites côté UI). Retourne le chemin du backup, ou null si création.
+ */
+export async function writeConfigFile(target: ConfigTarget, raw: string): Promise<string | null> {
+  const def = TARGETS[target];
+  if (def.format === "json") {
+    JSON.parse(raw); // lève si invalide → l'appelant renvoie une 400
+  }
+  const filePath = safeResolve(def.file);
+  let backupPath: string | null = null;
+  try {
+    await fs.access(filePath);
+    backupPath = `${filePath}.bak.${Date.now()}`;
+    await fs.copyFile(filePath, backupPath);
+  } catch {
+    // le fichier n'existe pas encore : création explicite, pas de backup
+  }
+  await fs.writeFile(filePath, raw, "utf8");
+  return backupPath;
+}
