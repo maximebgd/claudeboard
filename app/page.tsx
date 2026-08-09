@@ -272,7 +272,24 @@ export default async function HomePage({
           value={`${fmtNum(totals.projects)} / ${fmtNum(totals.sessions)}`}
           href="/projects"
         />
-        <StatCard icon={MessagesSquare} label="Messages" value={full.format(totals.messages)} />
+        <StatCard
+          icon={MessagesSquare}
+          label="Messages"
+          value={full.format(totals.messages)}
+          sub={
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.userMessages)}
+              </span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.assistantMessages)}
+              </span>
+            </span>
+          }
+        />
         <StatCard
           icon={Cpu}
           label="Tokens (in/out)"

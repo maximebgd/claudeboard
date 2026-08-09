@@ -110,6 +110,10 @@ export interface Analytics {
     projects: number;
     sessions: number;
     messages: number;
+    /** Messages envoyés (lignes de type `user`, résultats d'outils inclus). */
+    userMessages: number;
+    /** Messages reçus (lignes de type `assistant`). */
+    assistantMessages: number;
     tokensIn: number;
     tokensOut: number;
     cacheRead: number;
@@ -156,6 +160,8 @@ export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
   const msgCounts: number[] = [];
 
   let totalMessages = 0;
+  let userMessages = 0;
+  let assistantMessages = 0;
   let tokensIn = 0;
   let tokensOut = 0;
   let cacheRead = 0;
@@ -249,6 +255,8 @@ export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
         if (!inRange) continue;
 
         totalMessages++;
+        if (t === "user") userMessages++;
+        else assistantMessages++;
         msgs++;
         if (!Number.isNaN(ts)) {
           first = Math.min(first, ts);
@@ -350,6 +358,8 @@ export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
       projects: projects.length,
       sessions: sessionCount,
       messages: totalMessages,
+      userMessages,
+      assistantMessages,
       tokensIn,
       tokensOut,
       cacheRead,
