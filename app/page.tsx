@@ -11,7 +11,8 @@ import {
   Brain,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
-import { getAnalytics, parseModel, type DayStat, type ModelStat } from "@/lib/analytics";
+import { getAnalytics, type ModelStat } from "@/lib/analytics";
+import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 
 export const dynamic = "force-dynamic";
 
@@ -60,127 +61,6 @@ function StatCard({
       </div>
       <div className="mt-2 text-2xl font-semibold tabular-nums">{value}</div>
       {sub && <div className="text-xs text-[var(--color-faint)]">{sub}</div>}
-    </div>
-  );
-}
-
-/* --------------------------------- Heatmap -------------------------------- */
-
-const WEEKS = 53;
-const DAY_MS = 86400000;
-const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
-
-function heatLevel(msgs: number, max: number): number {
-  if (msgs <= 0) return 0;
-  const r = msgs / max;
-  if (r > 0.66) return 4;
-  if (r > 0.33) return 3;
-  if (r > 0.12) return 2;
-  return 1;
-}
-const LEVEL_ALPHA = [0, 0.22, 0.42, 0.68, 1];
-
-function dayTooltip(d: DayStat): string {
-  const date = new Date(d.date + "T00:00:00Z").toLocaleDateString("fr-FR", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  const totalAssistant = Object.values(d.models).reduce((a, b) => a + (b ?? 0), 0);
-  let models = "";
-  if (totalAssistant > 0) {
-    models =
-      " · " +
-      Object.entries(d.models)
-        .sort((a, b) => b[1] - a[1])
-        .map(([id, c]) => `${parseModel(id).label} ${Math.round((c / totalAssistant) * 100)}%`)
-        .join(" · ");
-  }
-  return `${date} — ${d.sessions} session${d.sessions > 1 ? "s" : ""}, ${d.messages} msg${models}`;
-}
-
-function Heatmap({ days }: { days: DayStat[] }) {
-  const map = new Map(days.map((d) => [d.date, d]));
-  const maxMsgs = Math.max(1, ...days.map((d) => d.messages));
-
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayUTC = Date.parse(todayKey + "T00:00:00Z");
-  const dow = new Date(todayUTC).getUTCDay();
-  const weekStart = todayUTC - dow * DAY_MS;
-  const gridStart = weekStart - (WEEKS - 1) * 7 * DAY_MS;
-
-  const columns: { key: string; future: boolean; data?: DayStat }[][] = [];
-  const monthLabels: (string | null)[] = [];
-  let prevMonth = -1;
-  for (let c = 0; c < WEEKS; c++) {
-    const col: { key: string; future: boolean; data?: DayStat }[] = [];
-    for (let r = 0; r < 7; r++) {
-      const t = gridStart + (c * 7 + r) * DAY_MS;
-      const key = new Date(t).toISOString().slice(0, 10);
-      col.push({ key, future: t > todayUTC, data: map.get(key) });
-    }
-    const firstMonth = new Date(gridStart + c * 7 * DAY_MS).getUTCMonth();
-    if (firstMonth !== prevMonth) {
-      monthLabels.push(MONTHS_FR[firstMonth]);
-      prevMonth = firstMonth;
-    } else {
-      monthLabels.push(null);
-    }
-    columns.push(col);
-  }
-
-  return (
-    <div className="overflow-x-auto pb-1">
-      <div className="inline-flex flex-col gap-[3px]">
-        <div className="flex gap-[3px] text-[10px] text-[var(--color-faint)] h-3">
-          {monthLabels.map((label, i) => (
-            <div key={i} className="w-3 shrink-0 whitespace-nowrap overflow-visible">
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-[3px]">
-          {columns.map((col, ci) => (
-            <div key={ci} className="flex flex-col gap-[3px]">
-              {col.map((cell) => {
-                const level = cell.data ? heatLevel(cell.data.messages, maxMsgs) : 0;
-                const alpha = LEVEL_ALPHA[level];
-                return (
-                  <div
-                    key={cell.key}
-                    title={cell.future ? undefined : cell.data ? dayTooltip(cell.data) : `${cell.key} — aucune activité`}
-                    className="h-3 w-3 rounded-[3px]"
-                    style={{
-                      backgroundColor: cell.future
-                        ? "transparent"
-                        : alpha === 0
-                          ? "var(--color-inset)"
-                          : `color-mix(in srgb, var(--color-accent) ${alpha * 100}%, transparent)`,
-                      border: cell.future ? "none" : "1px solid var(--color-border)",
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-[var(--color-faint)] mt-1">
-          <span>Moins</span>
-          {LEVEL_ALPHA.map((a, i) => (
-            <span
-              key={i}
-              className="h-3 w-3 rounded-[3px] border border-[var(--color-border)]"
-              style={{
-                backgroundColor:
-                  a === 0 ? "var(--color-inset)" : `color-mix(in srgb, var(--color-accent) ${a * 100}%, transparent)`,
-              }}
-            />
-          ))}
-          <span>Plus</span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -248,6 +128,24 @@ export default async function HomePage() {
   const totalText = totals.thinkingChars + totals.textChars;
   const thinkingPct = totalText > 0 ? (totals.thinkingChars / totalText) * 100 : 0;
 
+  // Données de la heatmap : % et couleurs des modèles pré-calculés côté serveur
+  // pour éviter d'importer lib/analytics (qui dépend de `fs`) dans le composant client.
+  const modelMeta = new Map(a.models.map((m) => [m.key, { label: m.label, color: m.color }]));
+  const heatDays: HeatDay[] = a.days.map((d) => {
+    const totalAssistant = Object.values(d.models).reduce((s, n) => s + n, 0);
+    const models = Object.entries(d.models)
+      .sort((x, y) => y[1] - x[1])
+      .map(([id, c]) => {
+        const meta = modelMeta.get(id);
+        return {
+          label: meta?.label ?? id,
+          color: meta?.color ?? "#71717a",
+          pct: totalAssistant > 0 ? Math.round((c / totalAssistant) * 100) : 0,
+        };
+      });
+    return { date: d.date, sessions: d.sessions, messages: d.messages, models };
+  });
+
   return (
     <div className="max-w-6xl mx-auto px-8 py-10">
       <h1 className="text-2xl font-semibold">Vue d&apos;ensemble</h1>
@@ -275,7 +173,7 @@ export default async function HomePage() {
             survolez un jour pour le détail des modèles
           </span>
         </div>
-        <Heatmap days={a.days} />
+        <ActivityHeatmap days={heatDays} />
       </section>
 
       {/* Modèles : camembert + tokens/coût */}
