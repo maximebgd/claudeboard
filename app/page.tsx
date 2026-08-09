@@ -205,7 +205,6 @@ export default async function HomePage({
         </div>
         <div className="flex flex-col items-end gap-1">
           <RangeSelector active={range.key} />
-          <span className="text-[11px] text-[var(--color-faint)]">période appliquée aux chiffres (hors heatmap)</span>
         </div>
       </div>
 
@@ -225,11 +224,8 @@ export default async function HomePage({
 
       {/* Heatmap */}
       <section className="mt-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h2 className="text-sm font-medium">Activité (12 derniers mois)</h2>
-          <span className="text-xs text-[var(--color-faint)]">
-            survolez un jour pour le détail des modèles
-          </span>
         </div>
         <ActivityHeatmap days={heatDays} />
       </section>
