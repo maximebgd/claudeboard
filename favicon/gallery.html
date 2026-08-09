@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claudeboard — planche favicon</title>
+<style>
+  :root { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { margin: 0; padding: 32px; background: #f5f2ec; color: #1f1b17; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 28px; color: #5b544c; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .card { border: 1px solid #e5ded4; border-radius: 12px; overflow: hidden; background: #fffdfa; }
+  .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+          padding: 8px 12px; border-bottom: 1px solid #e5ded4; color: #1f1b17; }
+  .rows { display: grid; grid-template-columns: 1fr 1fr; }
+  .swatch { display: flex; align-items: center; justify-content: center; gap: 14px;
+            padding: 18px 8px; }
+  .light { background: #f5f2ec; color: #1f1b17; }
+  .dark  { background: #0b0a09; color: #ece8e2; }
+  .s16 { width: 16px; height: 16px; }
+  .s32 { width: 32px; height: 32px; }
+  .s64 { width: 64px; height: 64px; }
+  img { display: block; }
+</style>
+</head>
+<body>
+  <h1>claudeboard — planche favicon</h1>
+  <p class="sub">Chaque icône à 16 / 32 / 64&nbsp;px, sur fond clair (gauche) et sombre (droite). Ouvre ce fichier dans un navigateur.</p>
+  <div class="grid" id="grid"></div>
+  <script>
+    const files = [
+      "gauge-dark","gauge-terracotta","gauge-transparent",
+      "sparkline-dark","sparkline-terracotta","sparkline-transparent",
+      "heatmap-dark","heatmap-terracotta","heatmap-transparent",
+      "bars-dark","bars-terracotta","bars-transparent",
+      "scope-dark","scope-terracotta","scope-transparent",
+      "donut-dark","donut-terracotta",
+      "pulse-dark","pulse-terracotta",
+      "mono-cb-dark","mono-cb-terracotta",
+      "terminal-dark","terminal-terracotta",
+      "braces-dark","braces-terracotta",
+      "bento-dark","bento-terracotta",
+      "radar-dark","radar-terracotta",
+      "equalizer-dark","equalizer-terracotta",
+      "spark-dark","spark-terracotta",
+      "nodes-dark","nodes-terracotta",
+      "dotmatrix-c-dark","dotmatrix-c-terracotta",
+      "burst-dark","burst-terracotta","burst-transparent","burst-cream","burst-ring",
+      "heatmap-c-terracotta","heatmap-c-dark","heatmap-c-mono","heatmap-c-cream"
+    ];
+    const grid = document.getElementById("grid");
+    for (const f of files) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const sizes = s => `
+        <img class="s16" src="${f}.svg" alt="${f}">
+        <img class="s32" src="${f}.svg" alt="${f}">
+        <img class="s64" src="${f}.svg" alt="${f}">`;
+      card.innerHTML = `
+        <div class="name">${f}.svg</div>
+        <div class="rows">
+          <div class="swatch light">${sizes()}</div>
+          <div class="swatch dark">${sizes()}</div>
+        </div>`;
+      grid.appendChild(card);
+    }
+  </script>
+</body>
+</html>

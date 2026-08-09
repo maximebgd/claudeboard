@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0b0a09"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#292420"/>
+  <text x="16" y="22" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="15" font-weight="600" letter-spacing="-0.5">
+    <tspan fill="#ece8e2">c</tspan><tspan fill="#d97757">b</tspan>
+  </text>
+</svg>
