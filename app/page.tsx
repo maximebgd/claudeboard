@@ -269,7 +269,7 @@ export default async function HomePage({
           pct: totalAssistant > 0 ? Math.round((c / totalAssistant) * 100) : 0,
         };
       });
-    return { date: d.date, sessions: d.sessions, messages: d.messages, models };
+    return { date: d.date, sessions: d.sessions, messages: d.messages, costUSD: d.costUSD, models };
   });
 
   return (
@@ -346,8 +346,12 @@ export default async function HomePage({
 
       {/* Heatmap */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <SectionTitle>Activité · 12 derniers mois</SectionTitle>
-        <ActivityHeatmap days={heatDays} windowFrom={windowFrom} windowTo={windowTo} />
+        <ActivityHeatmap
+          days={heatDays}
+          windowFrom={windowFrom}
+          windowTo={windowTo}
+          title={<SectionTitle>Activité · 12 derniers mois</SectionTitle>}
+        />
       </section>
 
       {/* Modèles : camembert + tokens/coût */}

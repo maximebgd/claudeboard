@@ -103,6 +103,8 @@ export interface DayStat {
   messages: number;
   /** Nombre de messages assistant par id de modèle, pour le % dans le tooltip. */
   models: Record<string, number>;
+  /** Coût estimé (USD) du jour — historique complet, indépendant de la fenêtre. */
+  costUSD: number;
 }
 
 export interface Analytics {
@@ -156,7 +158,10 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   }
 
   const models = new Map<string, ModelStat>();
-  const days = new Map<string, { sessions: Set<string>; messages: number; models: Map<string, number> }>();
+  const days = new Map<
+    string,
+    { sessions: Set<string>; messages: number; models: Map<string, number>; costUSD: number }
+  >();
   const tools = new Map<string, number>();
   const durations: number[] = [];
   const msgCounts: number[] = [];
@@ -197,7 +202,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   const dayStat = (d: string) => {
     let s = days.get(d);
     if (!s) {
-      s = { sessions: new Set(), messages: 0, models: new Map() };
+      s = { sessions: new Set(), messages: 0, models: new Map(), costUSD: 0 };
       days.set(d, s);
     }
     return s;
@@ -253,6 +258,16 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         if (t === "assistant" && day) {
           const ds = dayStat(day);
           ds.models.set(rawModel, (ds.models.get(rawModel) ?? 0) + 1);
+          // Coût du jour : agrégé sur tout l'historique (comme la heatmap), donc
+          // calculé ici avant le filtre de fenêtre.
+          const u = (m.usage ?? {}) as Record<string, unknown>;
+          ds.costUSD += costUSD(
+            parseModel(rawModel).family,
+            num(u.input_tokens),
+            num(u.output_tokens),
+            num(u.cache_read_input_tokens),
+            num(u.cache_creation_input_tokens),
+          );
         }
 
         // À partir d'ici : statistiques filtrées par la fenêtre sélectionnée.
@@ -326,6 +341,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       sessions: v.sessions.size,
       messages: v.messages,
       models: Object.fromEntries(v.models),
+      costUSD: v.costUSD,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 

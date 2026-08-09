@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export interface HeatDay {
   date: string; // YYYY-MM-DD (UTC)
   sessions: number;
   messages: number;
+  /** Coût estimé (USD) du jour — tarifs indicatifs. */
+  costUSD: number;
   /** Répartition par modèle (déjà triée, avec % pré-calculé). */
   models: { label: string; color: string; pct: number }[];
 }
@@ -24,6 +26,11 @@ function heatLevel(msgs: number, max: number): number {
   return 1;
 }
 
+function fmtUSD(n: number): string {
+  if (n > 0 && n < 0.01) return "< 0,01 $";
+  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
 function fmtDayLong(date: string): string {
   return new Date(date + "T00:00:00Z").toLocaleDateString("fr-FR", {
     weekday: "short",
@@ -40,11 +47,15 @@ export default function ActivityHeatmap({
   days,
   windowFrom,
   windowTo,
+  title,
 }: {
   days: HeatDay[];
   /** Bornes (clés YYYY-MM-DD, incluses) de la fenêtre sélectionnée — jours mis en avant. */
   windowFrom?: string;
   windowTo?: string;
+  /** Titre de section rendu au-dessus de la grille (dans la colonne de gauche) pour
+   *  que le panneau de détail s'étende sur toute la hauteur (titre + heatmap). */
+  title?: ReactNode;
 }) {
   const hasWindow = !!windowFrom && !!windowTo;
   const [hover, setHover] = useState<Cell | null>(null);
@@ -87,7 +98,9 @@ export default function ActivityHeatmap({
 
   return (
     <div className="flex flex-wrap gap-4 lg:flex-nowrap">
-      <div className="overflow-x-auto pb-1">
+      <div className="min-w-0">
+        {title}
+        <div className="overflow-x-auto pb-1">
         <div className="inline-flex flex-col gap-[3px]">
           <div className="flex gap-[3px] text-[10px] text-[var(--color-faint)] h-3">
             {monthLabels.map((label, i) => (
@@ -148,9 +161,11 @@ export default function ActivityHeatmap({
             <span className="ml-auto text-[var(--color-faint)]">survolez ou cliquez un jour pour le détail</span>
           </div>
         </div>
+        </div>
       </div>
 
-      {/* Panneau de détail : reste affiché à droite, suit le survol puis le jour épinglé. */}
+      {/* Panneau de détail : reste affiché à droite, suit le survol puis le jour épinglé.
+          Il s'étend sur toute la hauteur de la colonne de gauche (titre + heatmap). */}
       <div className="flex-1 min-w-[220px] rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] p-4">
         {display ? (
           <>
@@ -164,17 +179,28 @@ export default function ActivityHeatmap({
               )}
             </div>
             {display.data && display.data.messages > 0 ? (
-              display.data.models.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
-                  {display.data.models.map((m) => (
-                    <div key={m.label} className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: m.color }} />
-                      <span className="text-[var(--color-fg)]">{m.label}</span>
-                      <span className="tabular-nums text-[var(--color-faint)]">{m.pct}%</span>
-                    </div>
-                  ))}
+              <>
+                <div className="mt-3 text-xs">
+                  <div className="flex items-baseline gap-2 whitespace-nowrap">
+                    <span className="text-[var(--color-muted)]">Coût estimé</span>
+                    <span className="tabular-nums font-medium text-[var(--color-fg)]">
+                      {fmtUSD(display.data.costUSD)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[var(--color-faint)]">tarifs indicatifs</div>
                 </div>
-              )
+                {display.data.models.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
+                    {display.data.models.map((m) => (
+                      <div key={m.label} className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: m.color }} />
+                        <span className="text-[var(--color-fg)]">{m.label}</span>
+                        <span className="tabular-nums text-[var(--color-faint)]">{m.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="mt-1 text-xs text-[var(--color-faint)]">Aucune activité ce jour.</div>
             )}
