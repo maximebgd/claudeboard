@@ -6,12 +6,15 @@ import {
   Coins,
   Cpu,
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   Wrench,
   Clock,
   Brain,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
+import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 
 export const dynamic = "force-dynamic";
@@ -89,24 +92,44 @@ function StatCard({
   label,
   value,
   sub,
+  href,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   value: string | number;
-  sub?: string;
+  sub?: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <div className="group relative overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4 transition-colors hover:border-[var(--color-accent)]/45">
+  const inner = (
+    <>
       {/* Tick d'accent : discret au repos, s'allonge au survol (jauge d'instrument). */}
       <span className="absolute left-0 top-0 h-6 w-px bg-[var(--color-accent)]/40 transition-all group-hover:h-10 group-hover:bg-[var(--color-accent)]" />
-      <div className="flex items-center gap-2">
-        <Icon size={14} className="text-[var(--color-accent)]" />
-        <span className="eyebrow">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <Icon size={14} className="shrink-0 text-[var(--color-accent)]" />
+        <span className="eyebrow whitespace-nowrap tracking-[0.05em]">{label}</span>
+        {href && (
+          <ArrowRight
+            size={12}
+            className="ml-auto shrink-0 text-[var(--color-faint)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+          />
+        )}
       </div>
       <div className="mt-3 font-mono text-[1.7rem] font-medium leading-none tabular-nums">{value}</div>
       {sub && <div className="mt-1.5 font-mono text-[11px] text-[var(--color-faint)]">{sub}</div>}
-    </div>
+    </>
   );
+
+  const cls =
+    "group relative overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4 transition-colors hover:border-[var(--color-accent)]/45";
+
+  if (href) {
+    return (
+      <Link href={href} className={`${cls} block`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={cls}>{inner}</div>;
 }
 
 /* ------------------------------- SectionTitle ----------------------------- */
@@ -190,7 +213,7 @@ export default async function HomePage({
 }) {
   const range = resolveRange((await searchParams).range);
   const sinceMs = range.days > 0 ? Date.now() - range.days * DAY_MS : 0;
-  const a = await getAnalytics(sinceMs);
+  const [a, skills] = await Promise.all([getAnalytics(sinceMs), listSkills()]);
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
   const totalText = totals.thinkingChars + totals.textChars;
@@ -242,14 +265,31 @@ export default async function HomePage({
 
       {/* KPI */}
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={FolderGit2} label="Projets" value={fmtNum(totals.projects)} />
-        <StatCard icon={MessagesSquare} label="Sessions" value={fmtNum(totals.sessions)} />
-        <StatCard icon={MessagesSquare} label="Messages" value={fmtNum(totals.messages)} />
+        <StatCard icon={Sparkles} label="Skills" value={fmtNum(skills.length)} href="/skills" />
+        <StatCard
+          icon={FolderGit2}
+          label="Projets / Sessions"
+          value={`${fmtNum(totals.projects)} / ${fmtNum(totals.sessions)}`}
+          href="/projects"
+        />
+        <StatCard icon={MessagesSquare} label="Messages" value={full.format(totals.messages)} />
         <StatCard
           icon={Cpu}
           label="Tokens (in/out)"
           value={fmtNum(totals.tokensIn + totals.tokensOut)}
-          sub={`${fmtNum(totals.tokensIn)} in · ${fmtNum(totals.tokensOut)} out`}
+          sub={
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensIn)} in
+              </span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensOut)} out
+              </span>
+            </span>
+          }
         />
         <StatCard icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
       </div>
