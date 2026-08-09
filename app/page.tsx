@@ -16,6 +16,7 @@ import { CLAUDE_DIR, formatDate } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
 import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
+import RangeSelector from "@/components/RangeSelector";
 
 export const dynamic = "force-dynamic";
 
@@ -47,42 +48,68 @@ function fmtDuration(ms: number): string {
 
 const DAY_MS = 86400000;
 
-const RANGES = [
-  { key: "all", label: "Tout", days: 0 },
-  { key: "30j", label: "30 j", days: 30 },
-  { key: "7j", label: "7 j", days: 7 },
-] as const;
-
-type RangeKey = (typeof RANGES)[number]["key"];
-const DEFAULT_RANGE: RangeKey = "all";
-
-function resolveRange(raw: string | string[] | undefined): (typeof RANGES)[number] {
-  const key = Array.isArray(raw) ? raw[0] : raw;
-  return RANGES.find((r) => r.key === key) ?? RANGES.find((r) => r.key === DEFAULT_RANGE)!;
+interface ResolvedRange {
+  key: string; // all | 30j | 7j | month | custom
+  sinceMs: number;
+  untilMs: number; // 0 = pas de borne haute
+  month: string; // YYYY-MM (préremplissage)
+  from: string; // YYYY-MM-DD (préremplissage)
+  to: string;
 }
 
-function RangeSelector({ active }: { active: RangeKey }) {
-  return (
-    <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] p-0.5">
-      {RANGES.map((r) => {
-        const on = r.key === active;
-        return (
-          <Link
-            key={r.key}
-            href={r.key === DEFAULT_RANGE ? "/" : `/?range=${r.key}`}
-            scroll={false}
-            className={`rounded-md px-3 py-1 font-mono text-xs tabular-nums transition-colors ${
-              on
-                ? "bg-[var(--color-panel)] text-[var(--color-fg)] shadow-sm"
-                : "text-[var(--color-muted)] hover:text-[var(--color-fg)]"
-            }`}
-          >
-            {r.label}
-          </Link>
-        );
-      })}
-    </div>
-  );
+const PRESET_DAYS: Record<string, number> = { all: 0, "30j": 30, "7j": 7 };
+
+function one(v: string | string[] | undefined): string {
+  return (Array.isArray(v) ? v[0] : v) ?? "";
+}
+
+/** epoch ms à minuit UTC pour une date `YYYY-MM-DD`, ou NaN si invalide. */
+function utcMs(day: string): number {
+  return Date.parse(day + "T00:00:00Z");
+}
+
+function resolveRange(params: { [key: string]: string | string[] | undefined }): ResolvedRange {
+  const key = one(params.range);
+
+  if (key === "month") {
+    const raw = one(params.month);
+    const m = /^\d{4}-\d{2}$/.test(raw) ? raw : new Date().toISOString().slice(0, 7);
+    const [y, mo] = m.split("-").map(Number);
+    return {
+      key: "month",
+      sinceMs: Date.UTC(y, mo - 1, 1),
+      untilMs: Date.UTC(y, mo, 1) - 1, // fin de mois incluse
+      month: m,
+      from: "",
+      to: "",
+    };
+  }
+
+  if (key === "custom") {
+    const from = one(params.from);
+    const to = one(params.to);
+    const okFrom = /^\d{4}-\d{2}-\d{2}$/.test(from);
+    const okTo = /^\d{4}-\d{2}-\d{2}$/.test(to);
+    return {
+      key: "custom",
+      sinceMs: okFrom ? utcMs(from) : 0,
+      untilMs: okTo ? utcMs(to) + DAY_MS - 1 : 0, // jour de fin inclus
+      month: "",
+      from: okFrom ? from : "",
+      to: okTo ? to : "",
+    };
+  }
+
+  const rk = key in PRESET_DAYS ? key : "all";
+  const days = PRESET_DAYS[rk];
+  return {
+    key: rk,
+    sinceMs: days > 0 ? Date.now() - days * DAY_MS : 0,
+    untilMs: 0,
+    month: "",
+    from: "",
+    to: "",
+  };
 }
 
 /* --------------------------------- StatCard ------------------------------- */
@@ -211,9 +238,8 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const range = resolveRange((await searchParams).range);
-  const sinceMs = range.days > 0 ? Date.now() - range.days * DAY_MS : 0;
-  const [a, skills] = await Promise.all([getAnalytics(sinceMs), listSkills()]);
+  const range = resolveRange(await searchParams);
+  const [a, skills] = await Promise.all([getAnalytics(range.sinceMs, range.untilMs), listSkills()]);
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
   const totalText = totals.thinkingChars + totals.textChars;
@@ -258,7 +284,7 @@ export default async function HomePage({
             <span className="cb-cursor shrink-0" aria-hidden />
           </p>
         </div>
-        <RangeSelector active={range.key} />
+        <RangeSelector activeKey={range.key} month={range.month} from={range.from} to={range.to} />
       </header>
 
       <div className="mt-6 h-px bg-gradient-to-r from-[var(--color-border)] via-[var(--color-border)] to-transparent" />

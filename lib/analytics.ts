@@ -140,11 +140,13 @@ export interface Analytics {
  * dashboard : activité par jour, tokens/coût par modèle, top outils, durées de
  * session, ratio thinking/texte.
  *
- * `sinceMs` (optionnel) restreint l'agrégation aux messages dont le timestamp est
- * postérieur à cette borne (ms epoch). Les lignes sans timestamp sont alors
- * ignorées. `0` = pas de filtre (tout l'historique).
+ * `sinceMs` / `untilMs` (optionnels) restreignent l'agrégation aux messages dont le
+ * timestamp tombe dans la fenêtre `[sinceMs, untilMs]` (ms epoch, bornes incluses).
+ * Dès qu'une borne est posée, les lignes sans timestamp sont ignorées. `0` sur une
+ * borne = pas de limite de ce côté (donc `0, 0` = tout l'historique).
  */
-export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
+export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics> {
+  const hasBound = sinceMs > 0 || untilMs > 0;
   const dir = safeResolve(PROJECTS_DIR);
   let entries: Dirent[] = [];
   try {
@@ -234,7 +236,9 @@ export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
         const tsStr = typeof o.timestamp === "string" ? o.timestamp : undefined;
         const ts = tsStr ? Date.parse(tsStr) : NaN;
         const day = tsStr ? tsStr.slice(0, 10) : null;
-        const inRange = sinceMs === 0 || (!Number.isNaN(ts) && ts >= sinceMs);
+        const inRange =
+          !hasBound ||
+          (!Number.isNaN(ts) && ts >= sinceMs && (untilMs === 0 || ts <= untilMs));
 
         // Activité quotidienne (heatmap) : TOUJOURS agrégée, indépendante de la
         // fenêtre — la heatmap montre l'historique complet quel que soit le filtre.
@@ -306,7 +310,9 @@ export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
   }
 
   const allProjects = await listProjects();
-  const projects = sinceMs > 0 ? allProjects.filter((p) => p.lastModified >= sinceMs) : allProjects;
+  const projects = hasBound
+    ? allProjects.filter((p) => p.lastModified >= sinceMs && (untilMs === 0 || p.lastModified <= untilMs))
+    : allProjects;
   const recentProjects = projects.slice(0, 6).map((p) => ({
     id: p.id,
     label: projectLabel(p.realPath),
