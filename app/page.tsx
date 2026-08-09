@@ -11,14 +11,7 @@ import {
   Brain,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
-import {
-  getAnalytics,
-  MODEL_COLOR,
-  MODEL_LABEL,
-  type DayStat,
-  type ModelFamily,
-  type ModelStat,
-} from "@/lib/analytics";
+import { getAnalytics, parseModel, type DayStat, type ModelStat } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -100,9 +93,9 @@ function dayTooltip(d: DayStat): string {
   if (totalAssistant > 0) {
     models =
       " · " +
-      (Object.entries(d.models) as [ModelFamily, number][])
+      Object.entries(d.models)
         .sort((a, b) => b[1] - a[1])
-        .map(([f, c]) => `${MODEL_LABEL[f]} ${Math.round((c / totalAssistant) * 100)}%`)
+        .map(([id, c]) => `${parseModel(id).label} ${Math.round((c / totalAssistant) * 100)}%`)
         .join(" · ");
   }
   return `${date} — ${d.sessions} session${d.sessions > 1 ? "s" : ""}, ${d.messages} msg${models}`;
@@ -210,12 +203,12 @@ function Donut({ models }: { models: ModelStat[] }) {
               if (pct <= 0) return null;
               const seg = (
                 <circle
-                  key={m.family}
+                  key={m.key}
                   cx="21"
                   cy="21"
                   r={R}
                   fill="none"
-                  stroke={MODEL_COLOR[m.family]}
+                  stroke={m.color}
                   strokeWidth="5"
                   strokeDasharray={`${pct} ${100 - pct}`}
                   strokeDashoffset={-acc}
@@ -234,9 +227,9 @@ function Donut({ models }: { models: ModelStat[] }) {
         {models.map((m) => {
           const pct = total > 0 ? (m.messages / total) * 100 : 0;
           return (
-            <div key={m.family} className="flex items-center gap-2 text-sm">
-              <span className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: MODEL_COLOR[m.family] }} />
-              <span className="text-[var(--color-fg)]">{MODEL_LABEL[m.family]}</span>
+            <div key={m.key} className="flex items-center gap-2 text-sm">
+              <span className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: m.color }} />
+              <span className="text-[var(--color-fg)]">{m.label}</span>
               <span className="text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
             </div>
           );
@@ -311,11 +304,11 @@ export default async function HomePage() {
               </thead>
               <tbody className="tabular-nums">
                 {a.models.map((m) => (
-                  <tr key={m.family} className="border-t border-[var(--color-border)]">
+                  <tr key={m.key} className="border-t border-[var(--color-border)]">
                     <td className="py-2">
                       <span className="inline-flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: MODEL_COLOR[m.family] }} />
-                        {MODEL_LABEL[m.family]}
+                        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: m.color }} />
+                        {m.label}
                       </span>
                     </td>
                     <td className="py-2 text-right">{fmtNum(m.tokensIn)}</td>

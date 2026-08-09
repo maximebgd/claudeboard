@@ -55,8 +55,40 @@ function costUSD(fam: ModelFamily, inp: number, out: number, cr: number, cw: num
   return (inp * p.in + out * p.out + cr * p.cacheRead + cw * p.cacheWrite) / 1e6;
 }
 
+/**
+ * Dérive un libellé lisible et la famille depuis un id de modèle brut.
+ * Ex. `claude-opus-4-8` → { family: "opus", label: "Opus 4.8" }.
+ */
+export function parseModel(id: string): { family: ModelFamily; label: string } {
+  const family = modelFamily(id);
+  if (family === "autre") {
+    return { family, label: !id || id === "<synthetic>" ? "Synthétique" : id };
+  }
+  // Ne garde que les segments numériques de version (ignore les suffixes de date).
+  const nums = id
+    .toLowerCase()
+    .replace(/^claude-/, "")
+    .split("-")
+    .filter((p) => /^\d+$/.test(p) && p.length < 6)
+    .slice(0, 2);
+  return { family, label: nums.length ? `${MODEL_LABEL[family]} ${nums.join(".")}` : MODEL_LABEL[family] };
+}
+
+/** Éclaircit une couleur hex vers le blanc (t ∈ [0,1]) pour nuancer les versions. */
+function lighten(hex: string, t: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * t);
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 export interface ModelStat {
+  key: string; // id de modèle brut (ex. claude-opus-4-8)
+  label: string; // libellé lisible (ex. Opus 4.8)
   family: ModelFamily;
+  color: string; // teinte d'affichage (base famille, nuancée par version)
   messages: number;
   tokensIn: number;
   tokensOut: number;
@@ -69,8 +101,8 @@ export interface DayStat {
   date: string; // YYYY-MM-DD (UTC)
   sessions: number;
   messages: number;
-  /** Nombre de messages assistant par famille de modèle, pour le % dans le tooltip. */
-  models: Partial<Record<ModelFamily, number>>;
+  /** Nombre de messages assistant par id de modèle, pour le % dans le tooltip. */
+  models: Record<string, number>;
 }
 
 export interface Analytics {
@@ -113,8 +145,8 @@ export async function getAnalytics(): Promise<Analytics> {
     entries = [];
   }
 
-  const models = new Map<ModelFamily, ModelStat>();
-  const days = new Map<string, { sessions: Set<string>; messages: number; models: Map<ModelFamily, number> }>();
+  const models = new Map<string, ModelStat>();
+  const days = new Map<string, { sessions: Set<string>; messages: number; models: Map<string, number> }>();
   const tools = new Map<string, number>();
   const durations: number[] = [];
   const msgCounts: number[] = [];
@@ -130,11 +162,23 @@ export async function getAnalytics(): Promise<Analytics> {
   let toolUses = 0;
   let sessionCount = 0;
 
-  const modelStat = (f: ModelFamily): ModelStat => {
-    let s = models.get(f);
+  const modelStat = (id: string): ModelStat => {
+    let s = models.get(id);
     if (!s) {
-      s = { family: f, messages: 0, tokensIn: 0, tokensOut: 0, cacheRead: 0, cacheWrite: 0, costUSD: 0 };
-      models.set(f, s);
+      const { family, label } = parseModel(id);
+      s = {
+        key: id,
+        label,
+        family,
+        color: MODEL_COLOR[family],
+        messages: 0,
+        tokensIn: 0,
+        tokensOut: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        costUSD: 0,
+      };
+      models.set(id, s);
     }
     return s;
   };
@@ -197,7 +241,7 @@ export async function getAnalytics(): Promise<Analytics> {
 
         if (t === "assistant") {
           const m = (o.message ?? {}) as Record<string, unknown>;
-          const fam = modelFamily(String(m.model ?? ""));
+          const rawModel = String(m.model ?? "");
           const content = Array.isArray(m.content) ? m.content : [];
           for (const b of content) {
             if (!b || typeof b !== "object") continue;
@@ -215,13 +259,13 @@ export async function getAnalytics(): Promise<Analytics> {
           const out = num(u.output_tokens);
           const cr = num(u.cache_read_input_tokens);
           const cw = num(u.cache_creation_input_tokens);
-          const st = modelStat(fam);
+          const st = modelStat(rawModel);
           st.messages++;
           st.tokensIn += inp;
           st.tokensOut += out;
           st.cacheRead += cr;
           st.cacheWrite += cw;
-          const c = costUSD(fam, inp, out, cr, cw);
+          const c = costUSD(st.family, inp, out, cr, cw);
           st.costUSD += c;
           totalCost += c;
           tokensIn += inp;
@@ -230,7 +274,7 @@ export async function getAnalytics(): Promise<Analytics> {
           cacheWrite += cw;
           if (day) {
             const ds = dayStat(day);
-            ds.models.set(fam, (ds.models.get(fam) ?? 0) + 1);
+            ds.models.set(rawModel, (ds.models.get(rawModel) ?? 0) + 1);
           }
         }
       }
@@ -255,7 +299,7 @@ export async function getAnalytics(): Promise<Analytics> {
       date,
       sessions: v.sessions.size,
       messages: v.messages,
-      models: Object.fromEntries(v.models) as Partial<Record<ModelFamily, number>>,
+      models: Object.fromEntries(v.models),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -264,9 +308,25 @@ export async function getAnalytics(): Promise<Analytics> {
   const avgDur = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   const avgMsg = msgCounts.length ? msgCounts.reduce((a, b) => a + b, 0) / msgCounts.length : 0;
 
-  const modelsArr = [...models.values()].sort(
-    (a, b) => MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family),
-  );
+  // Teinte par version : la version la plus récente d'une famille garde la couleur
+  // de base, les plus anciennes sont progressivement éclaircies.
+  const byFamily = new Map<ModelFamily, ModelStat[]>();
+  for (const s of models.values()) {
+    const list = byFamily.get(s.family) ?? [];
+    list.push(s);
+    byFamily.set(s.family, list);
+  }
+  for (const list of byFamily.values()) {
+    list.sort((a, b) => b.key.localeCompare(a.key)); // plus récent d'abord
+    list.forEach((s, i) => {
+      s.color = i === 0 ? MODEL_COLOR[s.family] : lighten(MODEL_COLOR[s.family], Math.min(0.55, i * 0.26));
+    });
+  }
+
+  const modelsArr = [...models.values()].sort((a, b) => {
+    const fam = MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family);
+    return fam !== 0 ? fam : b.messages - a.messages;
+  });
 
   const topTools = [...tools.entries()]
     .map(([name, count]) => ({ name, count }))
