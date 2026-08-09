@@ -11,7 +11,7 @@ import {
   Brain,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
-import { getAnalytics, type ModelStat } from "@/lib/analytics";
+import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,48 @@ function fmtDuration(ms: number): string {
   if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
   if (m > 0) return `${m} min`;
   return `${s} s`;
+}
+
+/* ------------------------------ range selector ---------------------------- */
+
+const DAY_MS = 86400000;
+
+const RANGES = [
+  { key: "all", label: "Tout", days: 0 },
+  { key: "30j", label: "30 j", days: 30 },
+  { key: "7j", label: "7 j", days: 7 },
+] as const;
+
+type RangeKey = (typeof RANGES)[number]["key"];
+const DEFAULT_RANGE: RangeKey = "all";
+
+function resolveRange(raw: string | string[] | undefined): (typeof RANGES)[number] {
+  const key = Array.isArray(raw) ? raw[0] : raw;
+  return RANGES.find((r) => r.key === key) ?? RANGES.find((r) => r.key === DEFAULT_RANGE)!;
+}
+
+function RangeSelector({ active }: { active: RangeKey }) {
+  return (
+    <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] p-0.5">
+      {RANGES.map((r) => {
+        const on = r.key === active;
+        return (
+          <Link
+            key={r.key}
+            href={r.key === DEFAULT_RANGE ? "/" : `/?range=${r.key}`}
+            scroll={false}
+            className={`rounded-md px-3 py-1 text-xs transition-colors ${
+              on
+                ? "bg-[var(--color-panel)] text-[var(--color-fg)] shadow-sm"
+                : "text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+            }`}
+          >
+            {r.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 /* --------------------------------- StatCard ------------------------------- */
@@ -121,8 +163,14 @@ function Donut({ models }: { models: ModelStat[] }) {
 
 /* ----------------------------------- Page --------------------------------- */
 
-export default async function HomePage() {
-  const a = await getAnalytics();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const range = resolveRange((await searchParams).range);
+  const sinceMs = range.days > 0 ? Date.now() - range.days * DAY_MS : 0;
+  const a = await getAnalytics(sinceMs);
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
   const totalText = totals.thinkingChars + totals.textChars;
@@ -130,16 +178,18 @@ export default async function HomePage() {
 
   // Données de la heatmap : % et couleurs des modèles pré-calculés côté serveur
   // pour éviter d'importer lib/analytics (qui dépend de `fs`) dans le composant client.
+  // La heatmap couvre tout l'historique ; certains modèles peuvent être absents de
+  // l'ensemble filtré `a.models` → repli sur parseModel + couleur de famille.
   const modelMeta = new Map(a.models.map((m) => [m.key, { label: m.label, color: m.color }]));
   const heatDays: HeatDay[] = a.days.map((d) => {
     const totalAssistant = Object.values(d.models).reduce((s, n) => s + n, 0);
     const models = Object.entries(d.models)
       .sort((x, y) => y[1] - x[1])
       .map(([id, c]) => {
-        const meta = modelMeta.get(id);
+        const meta = modelMeta.get(id) ?? { label: parseModel(id).label, color: MODEL_COLOR[parseModel(id).family] };
         return {
-          label: meta?.label ?? id,
-          color: meta?.color ?? "#71717a",
+          label: meta.label,
+          color: meta.color,
           pct: totalAssistant > 0 ? Math.round((c / totalAssistant) * 100) : 0,
         };
       });
@@ -148,8 +198,16 @@ export default async function HomePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-10">
-      <h1 className="text-2xl font-semibold">Vue d&apos;ensemble</h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)] font-mono">{CLAUDE_DIR}</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Vue d&apos;ensemble</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted)] font-mono">{CLAUDE_DIR}</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <RangeSelector active={range.key} />
+          <span className="text-[11px] text-[var(--color-faint)]">période appliquée aux chiffres (hors heatmap)</span>
+        </div>
+      </div>
 
       {/* KPI */}
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

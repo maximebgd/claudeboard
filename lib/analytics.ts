@@ -135,8 +135,12 @@ export interface Analytics {
  * Scanne tous les transcripts JSONL une seule fois et agrège les métriques du
  * dashboard : activité par jour, tokens/coût par modèle, top outils, durées de
  * session, ratio thinking/texte.
+ *
+ * `sinceMs` (optionnel) restreint l'agrégation aux messages dont le timestamp est
+ * postérieur à cette borne (ms epoch). Les lignes sans timestamp sont alors
+ * ignorées. `0` = pas de filtre (tout l'historique).
  */
-export async function getAnalytics(): Promise<Analytics> {
+export async function getAnalytics(sinceMs = 0): Promise<Analytics> {
   const dir = safeResolve(PROJECTS_DIR);
   let entries: Dirent[] = [];
   try {
@@ -207,7 +211,6 @@ export async function getAnalytics(): Promise<Analytics> {
       } catch {
         continue;
       }
-      sessionCount++;
       let first = Infinity;
       let last = -Infinity;
       let msgs = 0;
@@ -221,27 +224,38 @@ export async function getAnalytics(): Promise<Analytics> {
           continue;
         }
         const t = o.type;
+        if (t !== "user" && t !== "assistant") continue;
         const tsStr = typeof o.timestamp === "string" ? o.timestamp : undefined;
         const ts = tsStr ? Date.parse(tsStr) : NaN;
         const day = tsStr ? tsStr.slice(0, 10) : null;
+        const inRange = sinceMs === 0 || (!Number.isNaN(ts) && ts >= sinceMs);
 
-        if (t === "user" || t === "assistant") {
-          totalMessages++;
-          msgs++;
-          if (!Number.isNaN(ts)) {
-            first = Math.min(first, ts);
-            last = Math.max(last, ts);
-          }
-          if (day) {
-            const ds = dayStat(day);
-            ds.messages++;
-            ds.sessions.add(sessionId);
-          }
+        // Activité quotidienne (heatmap) : TOUJOURS agrégée, indépendante de la
+        // fenêtre — la heatmap montre l'historique complet quel que soit le filtre.
+        if (day) {
+          const ds = dayStat(day);
+          ds.messages++;
+          ds.sessions.add(sessionId);
+        }
+
+        const m = (o.message ?? {}) as Record<string, unknown>;
+        const rawModel = t === "assistant" ? String(m.model ?? "") : "";
+        if (t === "assistant" && day) {
+          const ds = dayStat(day);
+          ds.models.set(rawModel, (ds.models.get(rawModel) ?? 0) + 1);
+        }
+
+        // À partir d'ici : statistiques filtrées par la fenêtre sélectionnée.
+        if (!inRange) continue;
+
+        totalMessages++;
+        msgs++;
+        if (!Number.isNaN(ts)) {
+          first = Math.min(first, ts);
+          last = Math.max(last, ts);
         }
 
         if (t === "assistant") {
-          const m = (o.message ?? {}) as Record<string, unknown>;
-          const rawModel = String(m.model ?? "");
           const content = Array.isArray(m.content) ? m.content : [];
           for (const b of content) {
             if (!b || typeof b !== "object") continue;
@@ -272,21 +286,19 @@ export async function getAnalytics(): Promise<Analytics> {
           tokensOut += out;
           cacheRead += cr;
           cacheWrite += cw;
-          if (day) {
-            const ds = dayStat(day);
-            ds.models.set(rawModel, (ds.models.get(rawModel) ?? 0) + 1);
-          }
         }
       }
 
       if (msgs > 0) {
+        sessionCount++;
         msgCounts.push(msgs);
         if (first !== Infinity && last > first) durations.push(last - first);
       }
     }
   }
 
-  const projects = await listProjects();
+  const allProjects = await listProjects();
+  const projects = sinceMs > 0 ? allProjects.filter((p) => p.lastModified >= sinceMs) : allProjects;
   const recentProjects = projects.slice(0, 6).map((p) => ({
     id: p.id,
     label: projectLabel(p.realPath),

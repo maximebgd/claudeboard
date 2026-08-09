@@ -11,7 +11,7 @@ export interface HeatDay {
 }
 
 const DAY_MS = 86400000;
-const WEEKS = 53;
+const WEEKS = 53; // ~12 mois, taille fixe (indépendante du filtre)
 const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const LEVEL_ALPHA = [0, 0.22, 0.42, 0.68, 1];
 
