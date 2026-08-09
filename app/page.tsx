@@ -68,7 +68,7 @@ function RangeSelector({ active }: { active: RangeKey }) {
             key={r.key}
             href={r.key === DEFAULT_RANGE ? "/" : `/?range=${r.key}`}
             scroll={false}
-            className={`rounded-md px-3 py-1 text-xs transition-colors ${
+            className={`rounded-md px-3 py-1 font-mono text-xs tabular-nums transition-colors ${
               on
                 ? "bg-[var(--color-panel)] text-[var(--color-fg)] shadow-sm"
                 : "text-[var(--color-muted)] hover:text-[var(--color-fg)]"
@@ -96,13 +96,33 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
-      <div className="flex items-center gap-2 text-[var(--color-muted)]">
-        <Icon size={15} className="text-[var(--color-accent)]" />
-        <span className="text-xs">{label}</span>
+    <div className="group relative overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4 transition-colors hover:border-[var(--color-accent)]/45">
+      {/* Tick d'accent : discret au repos, s'allonge au survol (jauge d'instrument). */}
+      <span className="absolute left-0 top-0 h-6 w-px bg-[var(--color-accent)]/40 transition-all group-hover:h-10 group-hover:bg-[var(--color-accent)]" />
+      <div className="flex items-center gap-2">
+        <Icon size={14} className="text-[var(--color-accent)]" />
+        <span className="eyebrow">{label}</span>
       </div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums">{value}</div>
-      {sub && <div className="text-xs text-[var(--color-faint)]">{sub}</div>}
+      <div className="mt-3 font-mono text-[1.7rem] font-medium leading-none tabular-nums">{value}</div>
+      {sub && <div className="mt-1.5 font-mono text-[11px] text-[var(--color-faint)]">{sub}</div>}
+    </div>
+  );
+}
+
+/* ------------------------------- SectionTitle ----------------------------- */
+
+function SectionTitle({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
+      {Icon && <Icon size={13} className="text-[var(--color-accent)]" />}
+      <h2 className="eyebrow text-[var(--color-muted)]">{children}</h2>
     </div>
   );
 }
@@ -141,8 +161,8 @@ function Donut({ models }: { models: ModelStat[] }) {
             })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-semibold tabular-nums">{fmtNum(total)}</span>
-          <span className="text-[10px] text-[var(--color-muted)]">réponses</span>
+          <span className="font-mono text-xl font-medium tabular-nums">{fmtNum(total)}</span>
+          <span className="eyebrow mt-0.5">réponses</span>
         </div>
       </div>
       <div className="flex flex-col gap-2 min-w-0">
@@ -152,7 +172,7 @@ function Donut({ models }: { models: ModelStat[] }) {
             <div key={m.key} className="flex items-center gap-2 text-sm">
               <span className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: m.color }} />
               <span className="text-[var(--color-fg)]">{m.label}</span>
-              <span className="text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
+              <span className="font-mono text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
             </div>
           );
         })}
@@ -198,15 +218,27 @@ export default async function HomePage({
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Vue d&apos;ensemble</h1>
-          <p className="mt-1 text-sm text-[var(--color-muted)] font-mono">{CLAUDE_DIR}</p>
+      {/* Hero « status-line » : le chemin ~/.claude traité comme un vrai prompt shell. */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="eyebrow flex items-center gap-2">
+            <span className="text-[var(--color-accent)]">claudeboard</span>
+            <span aria-hidden className="text-[var(--color-faint)]">/</span>
+            <span>readout</span>
+          </div>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Vue d&apos;ensemble</h1>
+          <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
+            <span className="text-[var(--color-accent)]" aria-hidden>
+              $
+            </span>
+            <span className="truncate">{CLAUDE_DIR}</span>
+            <span className="cb-cursor shrink-0" aria-hidden />
+          </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <RangeSelector active={range.key} />
-        </div>
-      </div>
+        <RangeSelector active={range.key} />
+      </header>
+
+      <div className="mt-6 h-px bg-gradient-to-r from-[var(--color-border)] via-[var(--color-border)] to-transparent" />
 
       {/* KPI */}
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -223,17 +255,15 @@ export default async function HomePage({
       </div>
 
       {/* Heatmap */}
-      <section className="mt-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <div className="mb-4">
-          <h2 className="text-sm font-medium">Activité (12 derniers mois)</h2>
-        </div>
+      <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+        <SectionTitle>Activité · 12 derniers mois</SectionTitle>
         <ActivityHeatmap days={heatDays} />
       </section>
 
       {/* Modèles : camembert + tokens/coût */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <h2 className="text-sm font-medium mb-4">Répartition des modèles</h2>
+        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <SectionTitle>Répartition des modèles</SectionTitle>
           {a.models.length === 0 ? (
             <p className="text-sm text-[var(--color-muted)]">Aucune donnée de modèle.</p>
           ) : (
@@ -241,23 +271,23 @@ export default async function HomePage({
           )}
         </section>
 
-        <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <h2 className="text-sm font-medium mb-4">Tokens &amp; coût par modèle</h2>
+        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <SectionTitle>Tokens &amp; coût par modèle</SectionTitle>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-[var(--color-muted)]">
-                  <th className="font-normal pb-2">Modèle</th>
-                  <th className="font-normal pb-2 text-right">In</th>
-                  <th className="font-normal pb-2 text-right">Out</th>
-                  <th className="font-normal pb-2 text-right">Cache</th>
-                  <th className="font-normal pb-2 text-right">Coût</th>
+                <tr className="text-left eyebrow">
+                  <th className="pb-2 font-normal">Modèle</th>
+                  <th className="pb-2 text-right font-normal">In</th>
+                  <th className="pb-2 text-right font-normal">Out</th>
+                  <th className="pb-2 text-right font-normal">Cache</th>
+                  <th className="pb-2 text-right font-normal">Coût</th>
                 </tr>
               </thead>
-              <tbody className="tabular-nums">
+              <tbody className="font-mono tabular-nums">
                 {a.models.map((m) => (
                   <tr key={m.key} className="border-t border-[var(--color-border)]">
-                    <td className="py-2">
+                    <td className="py-2 font-sans">
                       <span className="inline-flex items-center gap-2">
                         <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: m.color }} />
                         {m.label}
@@ -270,7 +300,7 @@ export default async function HomePage({
                   </tr>
                 ))}
                 <tr className="border-t border-[var(--color-border)] font-medium">
-                  <td className="py-2">Total</td>
+                  <td className="py-2 font-sans">Total</td>
                   <td className="py-2 text-right">{fmtNum(totals.tokensIn)}</td>
                   <td className="py-2 text-right">{fmtNum(totals.tokensOut)}</td>
                   <td className="py-2 text-right text-[var(--color-muted)]">
@@ -286,11 +316,8 @@ export default async function HomePage({
 
       {/* Top outils + stats sessions */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Wrench size={15} className="text-[var(--color-accent)]" />
-            <h2 className="text-sm font-medium">Outils &amp; skills les plus utilisés</h2>
-          </div>
+        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <SectionTitle icon={Wrench}>Outils &amp; skills les plus utilisés</SectionTitle>
           {a.topTools.length === 0 ? (
             <p className="text-sm text-[var(--color-muted)]">Aucun appel d&apos;outil.</p>
           ) : (
@@ -306,7 +333,7 @@ export default async function HomePage({
                       style={{ width: `${(t.count / maxTool) * 100}%` }}
                     />
                   </div>
-                  <span className="w-12 text-right text-sm tabular-nums text-[var(--color-muted)]">
+                  <span className="w-12 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
                     {fmtNum(t.count)}
                   </span>
                 </div>
@@ -315,27 +342,24 @@ export default async function HomePage({
           )}
         </section>
 
-        <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock size={15} className="text-[var(--color-accent)]" />
-            <h2 className="text-sm font-medium">Sessions</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <SectionTitle icon={Clock}>Sessions</SectionTitle>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
             <div>
-              <div className="text-xs text-[var(--color-muted)]">Messages / session</div>
-              <div className="text-xl font-semibold tabular-nums">{session.avgMessages.toFixed(1)}</div>
+              <div className="eyebrow">Messages / session</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{session.avgMessages.toFixed(1)}</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--color-muted)]">Outils appelés</div>
-              <div className="text-xl font-semibold tabular-nums">{fmtNum(totals.toolUses)}</div>
+              <div className="eyebrow">Outils appelés</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtNum(totals.toolUses)}</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--color-muted)]">Durée moyenne</div>
-              <div className="text-xl font-semibold tabular-nums">{fmtDuration(session.avgDurationMs)}</div>
+              <div className="eyebrow">Durée moyenne</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtDuration(session.avgDurationMs)}</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--color-muted)]">Durée médiane</div>
-              <div className="text-xl font-semibold tabular-nums">{fmtDuration(session.medianDurationMs)}</div>
+              <div className="eyebrow">Durée médiane</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtDuration(session.medianDurationMs)}</div>
             </div>
           </div>
           <div className="mt-5">
@@ -344,7 +368,7 @@ export default async function HomePage({
                 <Brain size={13} className="text-[var(--color-accent)]" />
                 Ratio thinking / texte
               </span>
-              <span className="tabular-nums">{thinkingPct.toFixed(0)}% thinking</span>
+              <span className="font-mono tabular-nums">{thinkingPct.toFixed(0)}% thinking</span>
             </div>
             <div className="flex h-2.5 rounded-full overflow-hidden bg-[var(--color-inset)]">
               <div className="h-full bg-[var(--color-accent)]" style={{ width: `${thinkingPct}%` }} />
@@ -356,11 +380,8 @@ export default async function HomePage({
 
       {/* Projets récents */}
       <section className="mt-6">
-        <div className="flex items-center gap-2 mb-3">
-          <FolderGit2 size={15} className="text-[var(--color-accent)]" />
-          <h2 className="text-sm font-medium">Projets récemment modifiés</h2>
-        </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+        <SectionTitle icon={FolderGit2}>Projets récemment modifiés</SectionTitle>
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
           {a.recentProjects.length === 0 && (
             <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
           )}

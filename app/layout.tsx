@@ -1,6 +1,20 @@
 import type { Metadata } from "next";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+
+/* Space Grotesk : voix UI/titres — géométrique, technique, un peu de caractère.
+   JetBrains Mono : voix « instrument » — tous les chiffres, chemins, eyebrows. */
+const sans = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space",
+  display: "swap",
+});
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Claudeboard — gestion de ~/.claude",
@@ -9,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         {/* Applique le thème avant le premier rendu pour éviter tout flash. */}
         <script

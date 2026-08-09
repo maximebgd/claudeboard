@@ -9,12 +9,14 @@ export default async function SkillsPage() {
   const skills = await listSkills();
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
-      <h1 className="text-2xl font-semibold flex items-center gap-2">
-        <Sparkles size={22} className="text-[var(--color-accent)]" />
-        Skills
-      </h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        {skills.length} skill{skills.length > 1 ? "s" : ""} dans ~/.claude/skills
+      <div className="eyebrow flex items-center gap-2">
+        <Sparkles size={13} className="text-[var(--color-accent)]" />
+        <span>{skills.length} skill{skills.length > 1 ? "s" : ""}</span>
+      </div>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Skills</h1>
+      <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
+        <span className="text-[var(--color-accent)]" aria-hidden>$</span>
+        ~/.claude/skills
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
@@ -27,7 +29,7 @@ export default async function SkillsPage() {
           <Link
             key={s.slug}
             href={`/skills/${encodeURIComponent(s.slug)}`}
-            className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-start gap-4"
+            className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-start gap-4"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
