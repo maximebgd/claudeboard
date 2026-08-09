@@ -36,7 +36,17 @@ function fmtDayLong(date: string): string {
 
 type Cell = { key: string; future: boolean; data?: HeatDay };
 
-export default function ActivityHeatmap({ days }: { days: HeatDay[] }) {
+export default function ActivityHeatmap({
+  days,
+  windowFrom,
+  windowTo,
+}: {
+  days: HeatDay[];
+  /** Bornes (clés YYYY-MM-DD, incluses) de la fenêtre sélectionnée — jours mis en avant. */
+  windowFrom?: string;
+  windowTo?: string;
+}) {
+  const hasWindow = !!windowFrom && !!windowTo;
   const [hover, setHover] = useState<Cell | null>(null);
   const [selected, setSelected] = useState<Cell | null>(null);
 
@@ -93,6 +103,12 @@ export default function ActivityHeatmap({ days }: { days: HeatDay[] }) {
                   const level = cell.data ? heatLevel(cell.data.messages, maxMsgs) : 0;
                   const alpha = LEVEL_ALPHA[level];
                   const isSelected = selected?.key === cell.key;
+                  const inWindow =
+                    hasWindow && !cell.future && cell.key >= windowFrom! && cell.key <= windowTo!;
+                  // Fenêtre active : on estompe fortement les jours hors fenêtre pour faire
+                  // ressortir la sélection, sans toucher au remplissage (l'intensité reste
+                  // lisible). Pas de bordure accent : elle écraserait les nuances de couleur.
+                  const dimmed = hasWindow && !inWindow && !cell.future;
                   return (
                     <div
                       key={cell.key}
@@ -106,6 +122,7 @@ export default function ActivityHeatmap({ days }: { days: HeatDay[] }) {
                             ? "var(--color-inset)"
                             : `color-mix(in srgb, var(--color-accent) ${alpha * 100}%, transparent)`,
                         border: cell.future ? "none" : "1px solid var(--color-border)",
+                        opacity: dimmed ? 0.18 : 1,
                         outline: isSelected ? "1.5px solid var(--color-fg)" : "none",
                         outlineOffset: "1px",
                       }}

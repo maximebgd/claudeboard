@@ -240,6 +240,13 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const [a, skills] = await Promise.all([getAnalytics(range.sinceMs, range.untilMs), listSkills()]);
+
+  // Bornes de la fenêtre en clés de jour UTC, pour surligner les jours concernés
+  // dans la heatmap (qui, elle, reste sur l'historique complet). Pas de fenêtre = « Tout ».
+  const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const hasWindow = range.sinceMs > 0;
+  const windowFrom = hasWindow ? dayKey(range.sinceMs) : undefined;
+  const windowTo = hasWindow ? dayKey(range.untilMs > 0 ? range.untilMs : Date.now()) : undefined;
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
   const totalText = totals.thinkingChars + totals.textChars;
@@ -340,7 +347,7 @@ export default async function HomePage({
       {/* Heatmap */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
         <SectionTitle>Activité · 12 derniers mois</SectionTitle>
-        <ActivityHeatmap days={heatDays} />
+        <ActivityHeatmap days={heatDays} windowFrom={windowFrom} windowTo={windowTo} />
       </section>
 
       {/* Modèles : camembert + tokens/coût */}
