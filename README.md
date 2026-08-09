@@ -14,6 +14,8 @@ Built with **Next.js 16** (App Router, React Server Components) and **React 19**
 
 > 💡 **Why this project?** Claude Code scatters its config across `~/.claude` — skills as `SKILL.md` files, conversation transcripts as raw `.jsonl`. claudeboard turns that opaque directory into a browsable, editable dashboard without ever leaving your machine.
 
+> 📥 **Data source.** The transcripts read by claudeboard come **only** from Claude Code itself: the **CLI** (`entrypoint: cli`) and the **VS Code extension** (`entrypoint: claude-vscode`), both of which write to `~/.claude/projects/*/*.jsonl`. Nothing else is included — not claude.ai (web), not the Claude Desktop app, not raw API usage.
+
 ![claudeboard screenshot](public/screenshot.png)
 
 ## Stack
