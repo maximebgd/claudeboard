@@ -5,6 +5,7 @@ import { getSession, type Block } from "@/lib/projects";
 import { formatDate } from "@/lib/claude";
 import Markdown from "@/components/Markdown";
 import Collapsible from "@/components/Collapsible";
+import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,10 @@ export default async function SessionPage({
       </Link>
 
       <div className="mt-4 mb-8">
-        <h1 className="text-xl font-semibold">{session.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-semibold">{session.title}</h1>
+          <ReadOnlyBadge />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)] font-mono">
           <span>{session.events.length} messages</span>
           {session.gitBranch && <span>branche : {session.gitBranch}</span>}

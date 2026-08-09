@@ -1,41 +1,92 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0b;
-  --color-panel: #131316;
-  --color-border: #26262b;
+  /* Graphite chaud teinté vers l'accent — pas un noir neutre. */
+  --color-bg: #0b0a09;
+  --color-panel: #151310;
+  --color-border: #292420;
   --color-accent: #d97757;
-  --color-fg: #e5e5e7;
-  --color-muted: #a1a1aa;
-  --color-faint: #71717a;
-  --color-code: #1d1d21;
-  --color-inset: #0d0d0f;
-  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-accent-soft: rgba(217, 119, 87, 0.14);
+  --color-fg: #ece8e2;
+  --color-muted: #a8a29a;
+  --color-faint: #6f6a62;
+  --color-code: #201d19;
+  --color-inset: #100e0c;
+  --color-hover: rgba(255, 255, 255, 0.045);
+
+  /* next/font → rôles typographiques. Space Grotesk pour l'UI, JetBrains Mono
+     pour la voix « instrument » (chiffres, chemins, eyebrows). */
+  --font-sans: var(--font-space), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 :root {
   color-scheme: dark;
 }
 
-/* Mode jour */
+/* Mode jour — papier chaud plutôt que blanc/gris froid. */
 :root.light {
   color-scheme: light;
-  --color-bg: #f6f6f7;
-  --color-panel: #ffffff;
-  --color-border: #e3e3e6;
+  --color-bg: #f5f2ec;
+  --color-panel: #fffdfa;
+  --color-border: #e5ded4;
   --color-accent: #c15532;
-  --color-fg: #1b1b1e;
-  --color-muted: #55555d;
-  --color-faint: #8b8b93;
-  --color-code: #f0f0f2;
-  --color-inset: #f4f4f6;
-  --color-hover: rgba(0, 0, 0, 0.05);
+  --color-accent-soft: rgba(193, 85, 50, 0.12);
+  --color-fg: #1f1b17;
+  --color-muted: #5b544c;
+  --color-faint: #8f887e;
+  --color-code: #efe9df;
+  --color-inset: #f2ede4;
+  --color-hover: rgba(0, 0, 0, 0.04);
 }
 
 html,
 body {
   background: var(--color-bg);
   color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+/* Eyebrow « instrument » : capitales mono espacées, pour labels et titres de
+   section. Le tick d'accent qui précède est ajouté au cas par cas. Placé dans
+   la couche `components` pour rester surchargeable par les utilitaires Tailwind
+   (ex. `text-[var(--color-muted)]`). */
+@layer components {
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+}
+
+/* Curseur clignotant de la status-line du hero. */
+@keyframes cb-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.cb-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  vertical-align: -0.15em;
+  background: var(--color-accent);
+  animation: cb-blink 1.1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-cursor {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 
 /* Coupe toutes les transitions le temps d'une bascule de thème,
@@ -97,7 +148,7 @@ body {
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.87em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .prose-claude pre {
   background: var(--color-code);

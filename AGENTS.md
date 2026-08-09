@@ -19,6 +19,19 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 - **Projets & Sessions** : navigation **en lecture seule** dans
   `~/.claude/projects/*/*.jsonl` (transcripts de conversations). Chaque ligne JSONL
   est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`).
+- **Config Claude** (section « Config » de la Sidebar) :
+  - **Settings** : édition de `settings.json` et `settings.local.json` (JSON validé
+    live + backup, création de `.local` à la demande) → `lib/configFiles.ts`.
+  - **Hooks** : visualiseur **lecture seule** groupé par event (fusion des deux
+    fichiers settings) → `lib/hooks.ts`.
+  - **Agents** (`~/.claude/agents/*`) et **Commandes** (`~/.claude/commands/**`) :
+    liste/aperçu/édition sur le modèle des skills (`lib/mdEntries.ts` ; les
+    sous-dossiers de commands = namespaces).
+  - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création si absent.
+  - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux +
+    par projet) + statut d'auth (`lib/mcp.ts`) ; valeurs d'`env` masquées.
+  - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
+    création si absent.
 - **Thème** : bascule clair/sombre (`ThemeToggle` dans la Sidebar), persistée dans
   `localStorage` et appliquée avant le premier rendu par un script inline dans
   `layout.tsx` (pas de flash).
@@ -43,6 +56,14 @@ lib/
                normalisation des blocs JSONL
   analytics.ts getAnalytics(sinceMs) : scan unique des JSONL → totaux, jours (heatmap),
                stats par modèle, top outils, durées ; parseModel + tarifs indicatifs
+  configFiles.ts read/writeConfigFile : fichiers uniques (settings, settings.local,
+               CLAUDE.md, keybindings) — JSON validé, backup si existant, création explicite
+  mdEntries.ts list/get/writeMdEntry(kind) : agents & commandes (.md à frontmatter,
+               slugs imbriqués = namespaces) ; même modèle que skills
+  hooks.ts     getHooks : normalise les hooks des deux settings, groupés par event
+  mcp.ts       getMcpServers : LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR), MCP
+               globaux + par projet, statut via mcp-needs-auth-cache.json, env masqué
+  keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
 app/
   page.tsx                       Dashboard analytics (KPI, heatmap, modèles, outils,
                                  sessions, projets récents) + sélecteur ?range=
@@ -51,10 +72,21 @@ app/
   projects/page.tsx              Liste des projets
   projects/[id]/page.tsx         Sessions d'un projet
   projects/[id]/[session]/page.tsx   Transcript d'une session
+  config/settings/page.tsx       Éditeur settings.json + settings.local.json
+  config/hooks/page.tsx          Visualiseur de hooks (lecture seule)
+  config/agents/page.tsx · [...slug]/page.tsx   Liste + détail/éditeur d'agents
+  config/commands/page.tsx · [...slug]/page.tsx Liste + détail/éditeur de commandes
+  config/claude-md/page.tsx      Éditeur du CLAUDE.md global
+  config/mcp/page.tsx            MCP servers (lecture seule)
+  config/keybindings/page.tsx    Aperçu + éditeur des keybindings
   api/skills/route.ts            POST { slug, raw } → écrit le SKILL.md (+ validations)
+  api/config-file/route.ts       POST { target, raw } → fichiers uniques (JSON validé)
+  api/md/route.ts                POST { kind, slug, raw } → agents/commandes (frontmatter validé)
   layout.tsx · globals.css · icon.svg
 components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
+  ConfigEditor (éditeur générique JSON/markdown : validation live, backup au save) ·
+  MdEntryList · MdEntryDetail (liste/détail partagés agents & commandes) ·
   ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre)
 ```
 
@@ -66,10 +98,16 @@ components/
 - Toutes les pages qui lisent le FS déclarent `export const dynamic = "force-dynamic"`
   (les données changent hors du cycle de build).
 - **Sécurité** : tout accès fichier passe par `safeResolve(...)` pour empêcher une
-  traversée de répertoire (`../`) via un slug/id d'URL. L'API `/api/skills` refuse en
-  plus les slugs contenant `/` ou `..` et valide le frontmatter avant d'écrire.
-- L'écriture de skills n'est jamais silencieuse : `writeSkill` vérifie que le fichier
-  existe déjà (pas de création) et crée toujours un backup.
+  traversée de répertoire (`../`) via un slug/id d'URL. Les API `/api/skills` et
+  `/api/md` refusent en plus les slugs de traversée et valident le frontmatter avant
+  d'écrire ; `/api/config-file` n'accepte que des cibles whitelistées.
+  - **Exception documentée** : `lib/mcp.ts` lit `~/.claude.json`, qui est **hors de
+    CLAUDE_DIR** et contient des secrets. C'est donc un accès **lecture seule** et
+    **ciblé** (uniquement les clés `mcpServers`), qui n'expose jamais les valeurs d'`env`.
+- L'écriture n'est jamais silencieuse : `writeSkill`/`writeMdEntry` vérifient que le
+  fichier existe déjà (pas de création) et créent toujours un backup. Les créations de
+  fichiers de config (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) via
+  `writeConfigFile` sont explicites (flux « Créer » dans `ConfigEditor`).
 - **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs
   par famille de modèle dans `lib/analytics.ts`, en USD/million de tokens), pas une
   facturation réelle. `getAnalytics` fait un seul passage sur tous les JSONL — garder

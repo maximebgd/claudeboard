@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, MessagesSquare, ChevronRight } from "lucide-react";
 import { listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { formatDate, formatSize } from "@/lib/claude";
+import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,12 @@ export default async function ProjectSessionsPage({
       </Link>
 
       <div className="mt-4 mb-6">
-        <h1 className="text-2xl font-semibold">
-          {project ? projectLabel(project.realPath) : id}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold">
+            {project ? projectLabel(project.realPath) : id}
+          </h1>
+          <ReadOnlyBadge />
+        </div>
         {project && (
           <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
         )}
