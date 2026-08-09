@@ -6,12 +6,22 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 
 ## Ce que fait l'app
 
+- **Dashboard / analytics** (page d'accueil) : agrège tous les transcripts JSONL en
+  un seul passage (`lib/analytics.ts` → `getAnalytics`) pour afficher KPI (projets,
+  sessions, messages, tokens, coût estimé), heatmap d'activité sur 12 mois,
+  répartition des modèles (camembert), tokens & coût par modèle, outils/skills les
+  plus utilisés, stats de session (moyennes, durées, ratio thinking/texte) et projets
+  récents. Un sélecteur de fenêtre (`Tout` / `30 j` / `7 j`, via `?range=`) filtre les
+  stats ; la heatmap montre toujours l'historique complet.
 - **Skills** : liste, aperçu et **édition** des `~/.claude/skills/*/SKILL.md`
   (frontmatter YAML + corps markdown). Toute écriture crée d'abord un backup
   horodaté `SKILL.md.bak.<timestamp>` à côté du fichier.
 - **Projets & Sessions** : navigation **en lecture seule** dans
   `~/.claude/projects/*/*.jsonl` (transcripts de conversations). Chaque ligne JSONL
   est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`).
+- **Thème** : bascule clair/sombre (`ThemeToggle` dans la Sidebar), persistée dans
+  `localStorage` et appliquée avant le premier rendu par un script inline dans
+  `layout.tsx` (pas de flash).
 
 ## Stack
 
@@ -29,9 +39,13 @@ lib/
   claude.ts    CLAUDE_DIR (override via env CLAUDE_DIR) · safeResolve (garde anti-
                traversée, tout doit rester dans CLAUDE_DIR) · formatDate/formatSize
   skills.ts    listSkills · getSkill · writeSkill (backup .bak avant écrasement)
-  projects.ts  listProjects · listSessions · getSession · normalisation des blocs JSONL
+  projects.ts  listProjects · listSessions · getSession · projectLabel ·
+               normalisation des blocs JSONL
+  analytics.ts getAnalytics(sinceMs) : scan unique des JSONL → totaux, jours (heatmap),
+               stats par modèle, top outils, durées ; parseModel + tarifs indicatifs
 app/
-  page.tsx                       Vue d'ensemble (compteurs + skills récents)
+  page.tsx                       Dashboard analytics (KPI, heatmap, modèles, outils,
+                                 sessions, projets récents) + sélecteur ?range=
   skills/page.tsx                Liste des skills
   skills/[name]/page.tsx         Détail + éditeur d'un skill
   projects/page.tsx              Liste des projets
@@ -40,7 +54,8 @@ app/
   api/skills/route.ts            POST { slug, raw } → écrit le SKILL.md (+ validations)
   layout.tsx · globals.css · icon.svg
 components/
-  Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor
+  Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
+  ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre)
 ```
 
 ## Conventions importantes
@@ -55,6 +70,10 @@ components/
   plus les slugs contenant `/` ou `..` et valide le frontmatter avant d'écrire.
 - L'écriture de skills n'est jamais silencieuse : `writeSkill` vérifie que le fichier
   existe déjà (pas de création) et crée toujours un backup.
+- **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs
+  par famille de modèle dans `lib/analytics.ts`, en USD/million de tokens), pas une
+  facturation réelle. `getAnalytics` fait un seul passage sur tous les JSONL — garder
+  l'agrégation dans cette fonction plutôt que de multiplier les scans du FS.
 
 ## Développement
 
