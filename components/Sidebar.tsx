@@ -42,7 +42,7 @@ export default function Sidebar() {
             ›_
           </div>
           <div>
-            <div className="text-sm font-semibold leading-tight tracking-tight">Claudeboard</div>
+            <div className="text-sm font-semibold leading-tight tracking-tight">Claude Board</div>
             <div className="font-mono text-[11px] leading-tight text-[var(--color-muted)]">~/.claude</div>
           </div>
         </div>

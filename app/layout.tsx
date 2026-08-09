@@ -17,8 +17,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claudeboard — gestion de ~/.claude",
-  description: "Dashboard local pour visualiser et éditer votre configuration Claude Code",
+  title: "Claudeboard",
+  description:
+    "Dashboard local pour visualiser et éditer votre configuration Claude Code qui est dans ~/.claude",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

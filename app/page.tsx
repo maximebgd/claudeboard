@@ -278,7 +278,7 @@ export default async function HomePage({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="eyebrow flex items-center gap-2">
-            <span className="text-[var(--color-accent)]">claudeboard</span>
+            <span className="text-[var(--color-accent)]">claude board</span>
             <span aria-hidden className="text-[var(--color-faint)]">/</span>
             <span>readout</span>
           </div>
