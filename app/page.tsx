@@ -11,9 +11,11 @@ import {
   Wrench,
   Clock,
   Brain,
+  Wallet,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
+import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 import RangeSelector from "@/components/RangeSelector";
@@ -34,6 +36,10 @@ function fmtUSD(n: number): string {
   return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 }
 
+function fmtMonths(n: number): string {
+  return n.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
+}
+
 function fmtDuration(ms: number): string {
   if (ms <= 0) return "—";
   const s = Math.round(ms / 1000);
@@ -47,6 +53,8 @@ function fmtDuration(ms: number): string {
 /* ------------------------------ range selector ---------------------------- */
 
 const DAY_MS = 86400000;
+/** Durée moyenne d'un mois (jours), pour proratiser le coût de l'abonnement. */
+const MONTH_MS = 30.44 * DAY_MS;
 
 interface ResolvedRange {
   key: string; // all | 30j | 7j | month | custom
@@ -239,7 +247,27 @@ export default async function HomePage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const range = resolveRange(await searchParams);
-  const [a, skills] = await Promise.all([getAnalytics(range.sinceMs, range.untilMs), listSkills()]);
+  const [a, skills, sub] = await Promise.all([
+    getAnalytics(range.sinceMs, range.untilMs),
+    listSkills(),
+    getSubscription(),
+  ]);
+
+  // Nombre de mois d'abonnement facturés sur la fenêtre. La facturation est
+  // mensuelle : tout mois entamé compte pour un mois plein (arrondi au sup., min 1).
+  // Fenêtre bornée : durée / mois moyen (30j → 1). « Tout » : depuis le début de
+  // l'abonnement (repli sur la 1re activité si la date d'abo manque).
+  const firstActivityMs = a.days.length ? utcMs(a.days[0].date) : 0;
+  const subMonths = (() => {
+    if (range.sinceMs > 0) {
+      const until = range.untilMs > 0 ? range.untilMs : Date.now();
+      return Math.max(1, Math.ceil((until - range.sinceMs) / MONTH_MS));
+    }
+    const startMs = sub.since ?? firstActivityMs;
+    return startMs > 0 ? Math.max(1, Math.ceil((Date.now() - startMs) / MONTH_MS)) : 0;
+  })();
+  const subCost = sub.monthlyPriceUSD * subMonths;
+  const netSavings = a.totals.costUSD - subCost;
 
   // Bornes de la fenêtre en clés de jour UTC, pour surligner les jours concernés
   // dans la heatmap (qui, elle, reste sur l'historique complet). Pas de fenêtre = « Tout ».
@@ -343,6 +371,60 @@ export default async function HomePage({
         />
         <StatCard icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
       </div>
+
+      {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
+      <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+        <SectionTitle icon={Wallet}>Abonnement</SectionTitle>
+        {!sub.known ? (
+          <p className="text-sm text-[var(--color-muted)]">
+            Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2.5 py-1 text-sm font-medium text-[var(--color-accent)]">
+                <Wallet size={14} />
+                {sub.label}
+              </span>
+              {sub.since && (
+                <span className="font-mono text-xs text-[var(--color-faint)]">depuis le {formatDate(sub.since)}</span>
+              )}
+              <span className="font-mono text-xs text-[var(--color-faint)]">
+                {fmtUSD(sub.monthlyPriceUSD)}/mois
+              </span>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <div className="eyebrow">Coût usage estimé</div>
+                <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtUSD(a.totals.costUSD)}</div>
+                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">sans abonnement (tarifs indicatifs)</div>
+              </div>
+              <div>
+                <div className="eyebrow">Coût abonnement</div>
+                <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtUSD(subCost)}</div>
+                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">
+                  {fmtMonths(subMonths)} mois × {fmtUSD(sub.monthlyPriceUSD)}
+                </div>
+              </div>
+              <div>
+                <div className="eyebrow">Économie nette</div>
+                <div
+                  className={`mt-1 font-mono text-xl font-medium tabular-nums ${
+                    netSavings >= 0 ? "text-emerald-500" : "text-red-400"
+                  }`}
+                >
+                  {netSavings >= 0 ? "+" : "−"}
+                  {fmtUSD(Math.abs(netSavings))}
+                </div>
+                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">
+                  {netSavings >= 0 ? "gagné grâce à l'abonnement" : "l'abonnement coûte plus que l'usage"}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
 
       {/* Heatmap */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
