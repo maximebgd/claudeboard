@@ -8,6 +8,8 @@ import {
   Wrench,
   FolderGit2,
   CalendarDays,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { getProjectStats } from "@/lib/analytics";
@@ -28,16 +30,28 @@ function fmtUSD(n: number): string {
   return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 }
 
+/** Jour compact « 8 août » (sans année) pour les cartes KPI étroites. */
+function fmtDay(ms: number): string {
+  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+/** Heure « 20:50 ». */
+function fmtTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function Stat({
   icon: Icon,
   label,
   value,
   sub,
+  valueClassName = "text-[1.4rem] leading-none",
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
-  value: string;
+  value: React.ReactNode;
   sub?: React.ReactNode;
+  valueClassName?: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
@@ -46,7 +60,7 @@ function Stat({
         <Icon size={14} className="shrink-0 text-[var(--color-accent)]" />
         <span className="eyebrow whitespace-nowrap tracking-[0.05em]">{label}</span>
       </div>
-      <div className="mt-3 font-mono text-[1.4rem] font-medium leading-none tabular-nums">{value}</div>
+      <div className={`mt-3 font-mono font-medium tabular-nums ${valueClassName}`}>{value}</div>
       {sub && <div className="mt-1.5 font-mono text-[11px] text-[var(--color-faint)]">{sub}</div>}
     </div>
   );
@@ -84,11 +98,21 @@ export default async function ProjectSessionsPage({
   const { totals } = stats;
   const maxTool = Math.max(1, ...stats.topTools.map((t) => t.count));
   const hasActivity = stats.firstActivity > 0;
-  const lastLabel = hasActivity ? formatDate(stats.lastActivity) : "—";
-  const sinceLabel =
-    hasActivity && stats.firstActivity !== stats.lastActivity
-      ? `depuis ${formatDate(stats.firstActivity)}`
-      : undefined;
+  const hasRange = hasActivity && stats.firstActivity !== stats.lastActivity;
+  const activityValue = hasActivity ? (
+    <span className="flex flex-col leading-tight">
+      <span>{fmtDay(stats.lastActivity)}</span>
+      <span>{fmtTime(stats.lastActivity)}</span>
+    </span>
+  ) : (
+    "—"
+  );
+  const activitySub = hasRange ? (
+    <span className="flex flex-col">
+      <span>depuis le {fmtDay(stats.firstActivity)}</span>
+      <span>{fmtTime(stats.firstActivity)}</span>
+    </span>
+  ) : undefined;
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -117,17 +141,50 @@ export default async function ProjectSessionsPage({
           icon={FolderGit2}
           label="Sessions"
           value={fmtNum(totals.sessions)}
-          sub={`${fmtNum(totals.messages)} messages`}
+          sub={
+            <span className="flex flex-col gap-0.5">
+              <span>{fmtNum(totals.messages)} messages</span>
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-0.5">
+                  <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                  {fmtNum(totals.userMessages)}
+                </span>
+                <span aria-hidden>·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                  {fmtNum(totals.assistantMessages)}
+                </span>
+              </span>
+            </span>
+          }
         />
         <Stat
           icon={Cpu}
           label="Tokens (in/out)"
           value={fmtNum(totals.tokensIn + totals.tokensOut)}
-          sub={`${fmtNum(totals.tokensIn)} in · ${fmtNum(totals.tokensOut)} out`}
+          sub={
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensIn)}
+              </span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensOut)}
+              </span>
+            </span>
+          }
         />
         <Stat icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
         <Stat icon={Wrench} label="Outils appelés" value={fmtNum(totals.toolUses)} />
-        <Stat icon={CalendarDays} label="Dernière activité" value={lastLabel} sub={sinceLabel} />
+        <Stat
+          icon={CalendarDays}
+          label="Activité"
+          value={activityValue}
+          sub={activitySub}
+          valueClassName="text-[1.4rem] leading-none"
+        />
       </div>
 
       {/* Modèles utilisés */}
