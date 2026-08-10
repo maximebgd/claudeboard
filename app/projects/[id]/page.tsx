@@ -165,12 +165,12 @@ export default async function ProjectSessionsPage({
           sub={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-0.5">
-                <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                <ArrowUp size={12} className="text-[var(--color-accent)]" />
                 {fmtNum(totals.tokensIn)}
               </span>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-0.5">
-                <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                <ArrowDown size={12} className="text-[var(--color-accent)]" />
                 {fmtNum(totals.tokensOut)}
               </span>
             </span>
