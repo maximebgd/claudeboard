@@ -89,7 +89,8 @@ export interface ModelStat {
   label: string; // libellé lisible (ex. Opus 4.8)
   family: ModelFamily;
   color: string; // teinte d'affichage (base famille, nuancée par version)
-  messages: number;
+  messages: number; // réponses de l'assistant pour ce modèle (messages OUT)
+  messagesIn: number; // messages utilisateur ayant précédé une réponse de ce modèle (IN)
   tokensIn: number;
   tokensOut: number;
   cacheRead: number;
@@ -189,6 +190,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         family,
         color: MODEL_COLOR[family],
         messages: 0,
+        messagesIn: 0,
         tokensIn: 0,
         tokensOut: 0,
         cacheRead: 0,
@@ -227,6 +229,9 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       let first = Infinity;
       let last = -Infinity;
       let msgs = 0;
+      // Messages utilisateur en attente d'attribution : ils comptent comme « IN »
+      // du prochain modèle qui répond (dans le même transcript).
+      let pendingUsers = 0;
 
       for (const line of raw.split("\n")) {
         if (!line.trim()) continue;
@@ -274,8 +279,10 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         if (!inRange) continue;
 
         totalMessages++;
-        if (t === "user") userMessages++;
-        else assistantMessages++;
+        if (t === "user") {
+          userMessages++;
+          pendingUsers++;
+        } else assistantMessages++;
         msgs++;
         if (!Number.isNaN(ts)) {
           first = Math.min(first, ts);
@@ -302,6 +309,8 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
           const cw = num(u.cache_creation_input_tokens);
           const st = modelStat(rawModel);
           st.messages++;
+          st.messagesIn += pendingUsers;
+          pendingUsers = 0;
           st.tokensIn += inp;
           st.tokensOut += out;
           st.cacheRead += cr;

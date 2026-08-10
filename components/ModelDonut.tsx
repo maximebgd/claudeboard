@@ -9,7 +9,8 @@ export interface DonutModel {
   key: string;
   label: string;
   color: string;
-  messages: number;
+  messages: number; // réponses de l'assistant (messages OUT)
+  messagesIn: number; // messages utilisateur (IN)
   tokensIn: number;
   tokensOut: number;
 }
@@ -83,15 +84,29 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
                 <span className="font-mono text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
               </div>
               {isActive && (
-                <div className="mt-1 flex items-center gap-3 pl-5 font-mono text-xs tabular-nums text-[var(--color-muted)]">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="text-[var(--color-faint)]">In</span>
-                    {fmtNum(m.tokensIn)}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="text-[var(--color-faint)]">Out</span>
-                    {fmtNum(m.tokensOut)}
-                  </span>
+                <div className="mt-1 pl-5 font-mono text-xs tabular-nums text-[var(--color-muted)]">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 font-sans text-[var(--color-faint)]">Msg</span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-[var(--color-faint)]">In</span>
+                      {fmtNum(m.messagesIn)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-[var(--color-faint)]">Out</span>
+                      {fmtNum(m.messages)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-3">
+                    <span className="w-10 font-sans text-[var(--color-faint)]">Tok</span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-[var(--color-faint)]">In</span>
+                      {fmtNum(m.tokensIn)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-[var(--color-faint)]">Out</span>
+                      {fmtNum(m.tokensOut)}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
