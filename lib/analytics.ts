@@ -365,10 +365,17 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     });
   }
 
-  const modelsArr = [...models.values()].sort((a, b) => {
-    const fam = MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family);
-    return fam !== 0 ? fam : b.messages - a.messages;
-  });
+  const modelsArr = [...models.values()]
+    // Masque les messages « Synthétiques » (générés localement, sans appel modèle)
+    // uniquement quand leur coût est nul ; s'ils ont un coût réel, on les garde.
+    .filter((m) => {
+      const synthetic = m.key === "" || m.key === "<synthetic>";
+      return !(synthetic && Math.round(m.costUSD * 100) === 0);
+    })
+    .sort((a, b) => {
+      const fam = MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family);
+      return fam !== 0 ? fam : b.messages - a.messages;
+    });
 
   const topTools = [...tools.entries()]
     .map(([name, count]) => ({ name, count }))
