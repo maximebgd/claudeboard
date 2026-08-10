@@ -323,13 +323,13 @@ export default async function HomePage({
           sub={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-0.5">
-                <ArrowDown size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensIn)} in
+                <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensIn)}
               </span>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-0.5">
-                <ArrowUp size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensOut)} out
+                <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                {fmtNum(totals.tokensOut)}
               </span>
             </span>
           }
@@ -378,8 +378,18 @@ export default async function HomePage({
               <thead>
                 <tr className="text-left eyebrow">
                   <th className="pb-2 font-normal">Modèle</th>
-                  <th className="pb-2 text-right font-normal">In</th>
-                  <th className="pb-2 text-right font-normal">Out</th>
+                  <th className="pb-2 text-right font-normal">
+                    <span className="inline-flex items-center justify-end gap-0.5">
+                      <ArrowUp size={11} className="text-[var(--color-accent)]" />
+                      In
+                    </span>
+                  </th>
+                  <th className="pb-2 text-right font-normal">
+                    <span className="inline-flex items-center justify-end gap-0.5">
+                      <ArrowDown size={11} className="text-[var(--color-accent)]" />
+                      Out
+                    </span>
+                  </th>
                   <th className="pb-2 text-right font-normal">Cache</th>
                   <th className="pb-2 text-right font-normal">Coût</th>
                 </tr>
