@@ -11,7 +11,6 @@ import {
   Wrench,
   Clock,
   Brain,
-  Wallet,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
@@ -19,6 +18,7 @@ import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 import RangeSelector from "@/components/RangeSelector";
+import SubscriptionCard from "@/components/SubscriptionCard";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +34,6 @@ function fmtNum(n: number): string {
 function fmtUSD(n: number): string {
   if (n > 0 && n < 0.01) return "< 0,01 $";
   return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
-
-function fmtMonths(n: number): string {
-  return n.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
 }
 
 function fmtDuration(ms: number): string {
@@ -384,63 +380,17 @@ export default async function HomePage({
       </div>
 
       {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
-      <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
-            <Wallet size={13} className="text-[var(--color-accent)]" />
-            <h2 className="eyebrow text-[var(--color-muted)]">Abonnement</h2>
-          </div>
-          {sub.known && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2.5 py-1 text-sm font-medium text-[var(--color-accent)]">
-                <Wallet size={14} />
-                {sub.label}
-              </span>
-              {sub.since && (
-                <span className="font-mono text-xs text-[var(--color-faint)]">depuis le {formatDate(sub.since)}</span>
-              )}
-              <span className="font-mono text-xs text-[var(--color-faint)]">
-                {fmtUSD(sub.monthlyPriceUSD)}/mois
-              </span>
-            </div>
-          )}
-        </div>
-        {!sub.known ? (
-          <p className="mt-4 text-sm text-[var(--color-muted)]">
-            Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
-          </p>
-        ) : (
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <div className="eyebrow">Coût usage estimé</div>
-                <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtUSD(a.totals.costUSD)}</div>
-                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">sans abonnement (tarifs indicatifs)</div>
-              </div>
-              <div>
-                <div className="eyebrow">Coût abonnement</div>
-                <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtUSD(subCost)}</div>
-                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">
-                  {fmtMonths(subMonths)} mois × {fmtUSD(sub.monthlyPriceUSD)}
-                </div>
-              </div>
-              <div>
-                <div className="eyebrow">Économie nette</div>
-                <div
-                  className={`mt-1 font-mono text-xl font-medium tabular-nums ${
-                    netSavings >= 0 ? "text-emerald-500" : "text-red-400"
-                  }`}
-                >
-                  {netSavings >= 0 ? "+" : "−"}
-                  {fmtUSD(Math.abs(netSavings))}
-                </div>
-                <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">
-                  {netSavings >= 0 ? "gagné grâce à l'abonnement" : "l'abonnement coûte plus que l'usage"}
-                </div>
-              </div>
-          </div>
-        )}
-      </section>
+      <SubscriptionCard
+        known={sub.known}
+        label={sub.label}
+        sinceLabel={sub.since ? formatDate(sub.since) : null}
+        monthlyPrice={fmtUSD(sub.monthlyPriceUSD)}
+        usageCost={fmtUSD(totals.costUSD)}
+        subCost={fmtUSD(subCost)}
+        months={subMonths}
+        netPositive={netSavings >= 0}
+        netAbs={fmtUSD(Math.abs(netSavings))}
+      />
 
       {/* Heatmap */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
