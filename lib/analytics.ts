@@ -27,14 +27,15 @@ const MODEL_ORDER: ModelFamily[] = ["opus", "sonnet", "haiku", "fable", "autre"]
 
 /**
  * Tarifs indicatifs en USD par million de tokens (input / output / écriture cache /
- * lecture cache). L'écriture cache utilise le tarif TTL 1 h (celui de Claude Code).
- * Sert uniquement à une estimation locale du coût.
+ * lecture cache). L'écriture cache utilise le tarif TTL 5 min de Claude Code
+ * (1,25× input) et la lecture cache 0,1× input. Sert uniquement à une estimation
+ * locale du coût.
  */
 export const PRICING: Record<ModelFamily, { in: number; out: number; cacheWrite: number; cacheRead: number }> = {
-  opus: { in: 5, out: 25, cacheWrite: 10, cacheRead: 0.5 },
-  sonnet: { in: 3, out: 15, cacheWrite: 6, cacheRead: 0.3 },
-  haiku: { in: 1, out: 5, cacheWrite: 2, cacheRead: 0.1 },
-  fable: { in: 10, out: 50, cacheWrite: 20, cacheRead: 1.0 },
+  opus: { in: 5, out: 25, cacheWrite: 6.25, cacheRead: 0.5 },
+  sonnet: { in: 3, out: 15, cacheWrite: 3.75, cacheRead: 0.3 },
+  haiku: { in: 1, out: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+  fable: { in: 10, out: 50, cacheWrite: 12.5, cacheRead: 1.0 },
   autre: { in: 0, out: 0, cacheWrite: 0, cacheRead: 0 },
 };
 
@@ -83,6 +84,60 @@ function lighten(hex: string, t: number): string {
   const g = mix((n >> 8) & 255);
   const b = mix(n & 255);
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** Récupère (ou crée) la ligne de stat d'un modèle dans la map partagée. */
+function ensureModelStat(models: Map<string, ModelStat>, id: string): ModelStat {
+  let s = models.get(id);
+  if (!s) {
+    const { family, label } = parseModel(id);
+    s = {
+      key: id,
+      label,
+      family,
+      color: MODEL_COLOR[family],
+      messages: 0,
+      messagesIn: 0,
+      tokensIn: 0,
+      tokensOut: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      costUSD: 0,
+    };
+    models.set(id, s);
+  }
+  return s;
+}
+
+/**
+ * Applique la teinte par version (récent = couleur de base, ancien éclairci) puis
+ * renvoie les modèles filtrés (masque les « Synthétiques » à coût nul) et triés
+ * pour l'affichage.
+ */
+function finalizeModels(models: Map<string, ModelStat>): ModelStat[] {
+  const byFamily = new Map<ModelFamily, ModelStat[]>();
+  for (const s of models.values()) {
+    const list = byFamily.get(s.family) ?? [];
+    list.push(s);
+    byFamily.set(s.family, list);
+  }
+  for (const list of byFamily.values()) {
+    list.sort((a, b) => b.key.localeCompare(a.key)); // plus récent d'abord
+    list.forEach((s, i) => {
+      s.color = i === 0 ? MODEL_COLOR[s.family] : lighten(MODEL_COLOR[s.family], Math.min(0.55, i * 0.26));
+    });
+  }
+  return [...models.values()]
+    // Masque les messages « Synthétiques » (générés localement, sans appel modèle)
+    // uniquement quand leur coût est nul ; s'ils ont un coût réel, on les garde.
+    .filter((m) => {
+      const synthetic = m.key === "" || m.key === "<synthetic>";
+      return !(synthetic && Math.round(m.costUSD * 100) === 0);
+    })
+    .sort((a, b) => {
+      const fam = MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family);
+      return fam !== 0 ? fam : b.messages - a.messages;
+    });
 }
 
 export interface ModelStat {
@@ -185,27 +240,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   let toolUses = 0;
   let sessionCount = 0;
 
-  const modelStat = (id: string): ModelStat => {
-    let s = models.get(id);
-    if (!s) {
-      const { family, label } = parseModel(id);
-      s = {
-        key: id,
-        label,
-        family,
-        color: MODEL_COLOR[family],
-        messages: 0,
-        messagesIn: 0,
-        tokensIn: 0,
-        tokensOut: 0,
-        cacheRead: 0,
-        cacheWrite: 0,
-        costUSD: 0,
-      };
-      models.set(id, s);
-    }
-    return s;
-  };
+  const modelStat = (id: string): ModelStat => ensureModelStat(models, id);
   const dayStat = (d: string) => {
     let s = days.get(d);
     if (!s) {
@@ -370,32 +405,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   const avgDur = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   const avgMsg = msgCounts.length ? msgCounts.reduce((a, b) => a + b, 0) / msgCounts.length : 0;
 
-  // Teinte par version : la version la plus récente d'une famille garde la couleur
-  // de base, les plus anciennes sont progressivement éclaircies.
-  const byFamily = new Map<ModelFamily, ModelStat[]>();
-  for (const s of models.values()) {
-    const list = byFamily.get(s.family) ?? [];
-    list.push(s);
-    byFamily.set(s.family, list);
-  }
-  for (const list of byFamily.values()) {
-    list.sort((a, b) => b.key.localeCompare(a.key)); // plus récent d'abord
-    list.forEach((s, i) => {
-      s.color = i === 0 ? MODEL_COLOR[s.family] : lighten(MODEL_COLOR[s.family], Math.min(0.55, i * 0.26));
-    });
-  }
-
-  const modelsArr = [...models.values()]
-    // Masque les messages « Synthétiques » (générés localement, sans appel modèle)
-    // uniquement quand leur coût est nul ; s'ils ont un coût réel, on les garde.
-    .filter((m) => {
-      const synthetic = m.key === "" || m.key === "<synthetic>";
-      return !(synthetic && Math.round(m.costUSD * 100) === 0);
-    })
-    .sort((a, b) => {
-      const fam = MODEL_ORDER.indexOf(a.family) - MODEL_ORDER.indexOf(b.family);
-      return fam !== 0 ? fam : b.messages - a.messages;
-    });
+  const modelsArr = finalizeModels(models);
 
   const topTools = [...tools.entries()]
     .map(([name, count]) => ({ name, count }))
@@ -429,5 +439,152 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     },
     recentProjects,
     projectCosts,
+  };
+}
+
+export interface ProjectStats {
+  totals: {
+    sessions: number;
+    messages: number;
+    userMessages: number;
+    assistantMessages: number;
+    tokensIn: number;
+    tokensOut: number;
+    cacheRead: number;
+    cacheWrite: number;
+    costUSD: number;
+    toolUses: number;
+  };
+  models: ModelStat[];
+  topTools: { name: string; count: number }[];
+  /** Bornes d'activité (ms epoch) ; `0` si aucun message daté. */
+  firstActivity: number;
+  lastActivity: number;
+}
+
+/**
+ * Statistiques d'un **seul** projet : scanne uniquement son dossier (pas tout le
+ * FS comme `getAnalytics`) et agrège modèles, tokens, coût estimé et top outils.
+ */
+export async function getProjectStats(projectId: string): Promise<ProjectStats> {
+  const models = new Map<string, ModelStat>();
+  const tools = new Map<string, number>();
+
+  let files: string[] = [];
+  try {
+    files = (await fs.readdir(safeResolve(PROJECTS_DIR, projectId))).filter((f) => f.endsWith(".jsonl"));
+  } catch {
+    files = [];
+  }
+
+  let sessions = 0;
+  let messages = 0;
+  let userMessages = 0;
+  let assistantMessages = 0;
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let cacheRead = 0;
+  let cacheWrite = 0;
+  let totalCost = 0;
+  let toolUses = 0;
+  let firstActivity = Infinity;
+  let lastActivity = -Infinity;
+
+  for (const file of files) {
+    let raw: string;
+    try {
+      raw = await fs.readFile(safeResolve(PROJECTS_DIR, projectId, file), "utf8");
+    } catch {
+      continue;
+    }
+    let msgs = 0;
+    // Messages utilisateur en attente : comptés comme « IN » du prochain modèle qui répond.
+    let pendingUsers = 0;
+
+    for (const line of raw.split("\n")) {
+      if (!line.trim()) continue;
+      let o: Record<string, unknown>;
+      try {
+        o = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const t = o.type;
+      if (t !== "user" && t !== "assistant") continue;
+
+      const ts = typeof o.timestamp === "string" ? Date.parse(o.timestamp) : NaN;
+      if (!Number.isNaN(ts)) {
+        firstActivity = Math.min(firstActivity, ts);
+        lastActivity = Math.max(lastActivity, ts);
+      }
+
+      messages++;
+      msgs++;
+      if (t === "user") {
+        userMessages++;
+        pendingUsers++;
+        continue;
+      }
+      assistantMessages++;
+
+      const m = (o.message ?? {}) as Record<string, unknown>;
+      const content = Array.isArray(m.content) ? m.content : [];
+      for (const b of content) {
+        if (!b || typeof b !== "object") continue;
+        const rec = b as Record<string, unknown>;
+        if (rec.type === "tool_use") {
+          toolUses++;
+          const name = String(rec.name ?? "tool");
+          tools.set(name, (tools.get(name) ?? 0) + 1);
+        }
+      }
+
+      const u = (m.usage ?? {}) as Record<string, unknown>;
+      const inp = num(u.input_tokens);
+      const out = num(u.output_tokens);
+      const cr = num(u.cache_read_input_tokens);
+      const cw = num(u.cache_creation_input_tokens);
+      const st = ensureModelStat(models, String(m.model ?? ""));
+      st.messages++;
+      st.messagesIn += pendingUsers;
+      pendingUsers = 0;
+      st.tokensIn += inp;
+      st.tokensOut += out;
+      st.cacheRead += cr;
+      st.cacheWrite += cw;
+      const c = costUSD(st.family, inp, out, cr, cw);
+      st.costUSD += c;
+      totalCost += c;
+      tokensIn += inp;
+      tokensOut += out;
+      cacheRead += cr;
+      cacheWrite += cw;
+    }
+
+    if (msgs > 0) sessions++;
+  }
+
+  const topTools = [...tools.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+
+  return {
+    totals: {
+      sessions,
+      messages,
+      userMessages,
+      assistantMessages,
+      tokensIn,
+      tokensOut,
+      cacheRead,
+      cacheWrite,
+      costUSD: totalCost,
+      toolUses,
+    },
+    models: finalizeModels(models),
+    topTools,
+    firstActivity: firstActivity === Infinity ? 0 : firstActivity,
+    lastActivity: lastActivity === -Infinity ? 0 : lastActivity,
   };
 }
