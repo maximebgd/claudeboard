@@ -13,6 +13,7 @@ import {
   FileText,
   Plug,
   Keyboard,
+  DollarSign,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -30,6 +31,7 @@ const CONFIG_NAV = [
   { href: "/config/claude-md", label: "CLAUDE.md", icon: FileText },
   { href: "/config/mcp", label: "MCP servers", icon: Plug },
   { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
+  { href: "/config/pricing", label: "Tarifs d'estimation", icon: DollarSign },
 ];
 
 export default function Sidebar() {

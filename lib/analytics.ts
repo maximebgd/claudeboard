@@ -27,13 +27,14 @@ const MODEL_ORDER: ModelFamily[] = ["opus", "sonnet", "haiku", "fable", "autre"]
 
 /**
  * Tarifs indicatifs en USD par million de tokens (input / output / écriture cache /
- * lecture cache). Sert uniquement à une estimation locale du coût.
+ * lecture cache). L'écriture cache utilise le tarif TTL 1 h (celui de Claude Code).
+ * Sert uniquement à une estimation locale du coût.
  */
-const PRICING: Record<ModelFamily, { in: number; out: number; cacheWrite: number; cacheRead: number }> = {
-  opus: { in: 15, out: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  sonnet: { in: 3, out: 15, cacheWrite: 3.75, cacheRead: 0.3 },
-  haiku: { in: 1, out: 5, cacheWrite: 1.25, cacheRead: 0.1 },
-  fable: { in: 15, out: 75, cacheWrite: 18.75, cacheRead: 1.5 },
+export const PRICING: Record<ModelFamily, { in: number; out: number; cacheWrite: number; cacheRead: number }> = {
+  opus: { in: 5, out: 25, cacheWrite: 10, cacheRead: 0.5 },
+  sonnet: { in: 3, out: 15, cacheWrite: 6, cacheRead: 0.3 },
+  haiku: { in: 1, out: 5, cacheWrite: 2, cacheRead: 0.1 },
+  fable: { in: 10, out: 50, cacheWrite: 20, cacheRead: 1.0 },
   autre: { in: 0, out: 0, cacheWrite: 0, cacheRead: 0 },
 };
 
