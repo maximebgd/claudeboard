@@ -39,6 +39,13 @@ export default async function HooksPage() {
         </Link>
         .
       </p>
+      <div className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
+        {sources.map((s) => (
+          <div key={s.file}>
+            {s.path} {s.hasHooks ? "· contient des hooks" : "· pas de hooks"}
+          </div>
+        ))}
+      </div>
 
       {events.length === 0 ? (
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
@@ -103,14 +110,6 @@ export default async function HooksPage() {
           ))}
         </div>
       )}
-
-      <div className="mt-8 text-[11px] text-[var(--color-faint)] font-mono">
-        {sources.map((s) => (
-          <div key={s.file}>
-            {s.path} {s.hasHooks ? "· contient des hooks" : "· pas de hooks"}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

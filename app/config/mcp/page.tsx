@@ -61,6 +61,7 @@ export default async function McpPage() {
         {totalCount > 1 ? "s" : ""}, lu{totalCount > 1 ? "s" : ""} depuis ~/.claude.json.
         Lecture seule — les valeurs d&apos;environnement sont masquées.
       </p>
+      <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">{configPath}</p>
 
       {!configExists && (
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
@@ -110,8 +111,6 @@ export default async function McpPage() {
           </div>
         </section>
       )}
-
-      <div className="mt-8 text-[11px] text-[var(--color-faint)] font-mono">{configPath}</div>
     </div>
   );
 }

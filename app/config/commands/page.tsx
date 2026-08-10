@@ -1,5 +1,7 @@
+import path from "path";
 import { SquareSlash } from "lucide-react";
 import { listMdEntries } from "@/lib/mdEntries";
+import { CLAUDE_DIR } from "@/lib/claude";
 import MdEntryList from "@/components/MdEntryList";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,9 @@ export default async function CommandsPage() {
       <p className="mt-1 text-sm text-[var(--color-muted)]">
         {commands.length} commande{commands.length > 1 ? "s" : ""} dans ~/.claude/commands.
         Les sous-dossiers forment des namespaces de slash-commands.
+      </p>
+      <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
+        {path.join(CLAUDE_DIR, "commands")}
       </p>
 
       <div className="mt-6">
