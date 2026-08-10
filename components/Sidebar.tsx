@@ -14,6 +14,7 @@ import {
   Plug,
   Keyboard,
   DollarSign,
+  FolderTree,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -45,6 +46,7 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
       { href: "/config/mcp", label: "MCP servers", icon: Plug },
       { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
       { href: "/config/pricing", label: "Tarifs d'estimation", icon: DollarSign },
+      { href: "/config/directory", label: "Structure du dossier", icon: FolderTree },
     ],
   },
 ];
