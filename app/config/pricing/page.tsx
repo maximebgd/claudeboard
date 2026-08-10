@@ -1,4 +1,4 @@
-import { DollarSign } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign } from "lucide-react";
 import { PRICING, MODEL_LABEL, MODEL_COLOR, type ModelFamily } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +70,29 @@ export default function PricingPage() {
       </div>
 
       <div className="mt-8 space-y-4 text-sm text-[var(--color-muted)]">
+        <div>
+          <div className="eyebrow pb-1">Convention IN / OUT</div>
+          <p>
+            Partout dans le dashboard, l'affichage suit ce sens&nbsp;:
+          </p>
+          <ul className="mt-2 space-y-1">
+            <li className="inline-flex items-center gap-2">
+              <ArrowUp size={14} className="text-[var(--color-accent)]" />
+              <span>
+                <strong>IN</strong> = ce que tu envoies (ton prompt&nbsp;: instructions,
+                historique, fichiers…) — <em>flèche vers le haut</em>.
+              </span>
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <ArrowDown size={14} className="text-[var(--color-accent)]" />
+              <span>
+                <strong>OUT</strong> = ce que tu reçois (la réponse générée par le
+                modèle) — <em>flèche vers le bas</em>.
+              </span>
+            </li>
+          </ul>
+        </div>
+
         <div>
           <div className="eyebrow pb-1">Comment le coût est calculé</div>
           <p>
