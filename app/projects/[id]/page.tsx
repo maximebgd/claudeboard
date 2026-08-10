@@ -197,8 +197,18 @@ export default async function ProjectSessionsPage({
                 <tr className="text-left eyebrow">
                   <th className="pb-2 font-normal">Modèle</th>
                   <th className="pb-2 text-right font-normal">Msg</th>
-                  <th className="pb-2 text-right font-normal">In</th>
-                  <th className="pb-2 text-right font-normal">Out</th>
+                  <th className="pb-2 text-right font-normal">
+                    <span className="inline-flex items-center gap-0.5">
+                      <ArrowUp size={12} className="text-[var(--color-accent)]" />
+                      In
+                    </span>
+                  </th>
+                  <th className="pb-2 text-right font-normal">
+                    <span className="inline-flex items-center gap-0.5">
+                      <ArrowDown size={12} className="text-[var(--color-accent)]" />
+                      Out
+                    </span>
+                  </th>
                   <th className="pb-2 text-right font-normal">Cache</th>
                   <th className="pb-2 text-right font-normal">Coût</th>
                 </tr>
