@@ -8,7 +8,6 @@ import {
   ArrowRight,
   ArrowDown,
   ArrowUp,
-  Wrench,
   Clock,
   Brain,
 } from "lucide-react";
@@ -20,6 +19,8 @@ import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 import ModelDonut from "@/components/ModelDonut";
 import RangeSelector from "@/components/RangeSelector";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import ProjectCostList from "@/components/ProjectCostList";
+import ToolUsageList from "@/components/ToolUsageList";
 
 export const dynamic = "force-dynamic";
 
@@ -237,11 +238,9 @@ export default async function HomePage({
   const recentSkills = [...skills].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, a.recentProjects.length || 6);
 
   const { totals, session } = a;
-  const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
-  // Classement « Coût par projet » : on ne garde que les projets à coût non nul,
-  // limité aux 10 plus coûteux (la liste complète reste sur /projects).
-  const projectCosts = a.projectCosts.filter((p) => p.costUSD > 0).slice(0, 10);
-  const maxProjectCost = Math.max(1e-9, ...projectCosts.map((p) => p.costUSD));
+  // Classement « Coût par projet » : on ne garde que les projets à coût non nul.
+  // Recherche, tri et scroll sont gérés côté client (ProjectCostList).
+  const projectCosts = a.projectCosts.filter((p) => p.costUSD > 0);
   const totalText = totals.thinkingChars + totals.textChars;
   const thinkingPct = totalText > 0 ? (totals.thinkingChars / totalText) * 100 : 0;
 
@@ -428,60 +427,14 @@ export default async function HomePage({
       {projectCosts.length > 0 && (
         <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
           <SectionTitle icon={Coins}>Coût estimé par projet</SectionTitle>
-          <div className="flex flex-col gap-2">
-            {projectCosts.map((p) => (
-              <Link
-                key={p.id}
-                href={`/projects/${encodeURIComponent(p.id)}`}
-                className="group flex items-center gap-3"
-              >
-                <span
-                  className="w-44 shrink-0 truncate text-sm group-hover:text-[var(--color-accent)] transition-colors"
-                  title={p.label}
-                >
-                  {p.label}
-                </span>
-                <div className="flex-1 h-2 rounded-full bg-[var(--color-inset)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[var(--color-accent)]"
-                    style={{ width: `${(p.costUSD / maxProjectCost) * 100}%` }}
-                  />
-                </div>
-                <span className="w-20 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                  {fmtUSD(p.costUSD)}
-                </span>
-              </Link>
-            ))}
-          </div>
+          <ProjectCostList projects={projectCosts} />
         </section>
       )}
 
       {/* Top outils + stats sessions */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle icon={Wrench}>Outils &amp; skills les plus utilisés</SectionTitle>
-          {a.topTools.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted)]">Aucun appel d&apos;outil.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {a.topTools.map((t) => (
-                <div key={t.name} className="flex items-center gap-3">
-                  <span className="w-40 shrink-0 truncate text-sm font-mono" title={t.name}>
-                    {t.name}
-                  </span>
-                  <div className="flex-1 h-2 rounded-full bg-[var(--color-inset)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[var(--color-accent)]"
-                      style={{ width: `${(t.count / maxTool) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-12 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                    {fmtNum(t.count)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <ToolUsageList tools={a.topTools} />
         </section>
 
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
