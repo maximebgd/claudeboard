@@ -1,13 +1,20 @@
 import Link from "next/link";
-import { FolderGit2, ChevronRight, MessagesSquare } from "lucide-react";
+import { FolderGit2, ChevronRight, MessagesSquare, Coins } from "lucide-react";
 import { listProjects, projectLabel } from "@/lib/projects";
+import { getAnalytics } from "@/lib/analytics";
 import { formatDate } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
 
+function fmtUSD(n: number): string {
+  if (n > 0 && n < 0.01) return "< 0,01 $";
+  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
 export default async function ProjectsPage() {
-  const projects = await listProjects();
+  const [projects, analytics] = await Promise.all([listProjects(), getAnalytics()]);
+  const costById = new Map(analytics.projectCosts.map((p) => [p.id, p.costUSD]));
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="flex flex-wrap items-center gap-3">
@@ -44,6 +51,12 @@ export default async function ProjectsPage() {
                   {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
                 </span>
                 <span>Activité : {formatDate(p.lastModified)}</span>
+                {(costById.get(p.id) ?? 0) > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Coins size={12} />
+                    {fmtUSD(costById.get(p.id) ?? 0)}
+                  </span>
+                )}
               </div>
             </div>
             <ChevronRight

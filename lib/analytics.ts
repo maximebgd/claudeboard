@@ -135,7 +135,9 @@ export interface Analytics {
     avgDurationMs: number;
     medianDurationMs: number;
   };
-  recentProjects: { id: string; label: string; sessionCount: number; lastModified: number }[];
+  recentProjects: { id: string; label: string; sessionCount: number; lastModified: number; costUSD: number }[];
+  /** Coût estimé (USD) agrégé par projet sur la fenêtre, trié décroissant. */
+  projectCosts: { id: string; label: string; costUSD: number }[];
 }
 
 /**
@@ -164,6 +166,8 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     { sessions: Set<string>; messages: number; models: Map<string, number>; costUSD: number }
   >();
   const tools = new Map<string, number>();
+  // Coût estimé (USD) accumulé par dossier de projet (clé = e.name), fenêtre incluse.
+  const projCost = new Map<string, number>();
   const durations: number[] = [];
   const msgCounts: number[] = [];
 
@@ -318,6 +322,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
           const c = costUSD(st.family, inp, out, cr, cw);
           st.costUSD += c;
           totalCost += c;
+          projCost.set(e.name, (projCost.get(e.name) ?? 0) + c);
           tokensIn += inp;
           tokensOut += out;
           cacheRead += cr;
@@ -342,7 +347,12 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     label: projectLabel(p.realPath),
     sessionCount: p.sessionCount,
     lastModified: p.lastModified,
+    costUSD: projCost.get(p.id) ?? 0,
   }));
+
+  const projectCosts = projects
+    .map((p) => ({ id: p.id, label: projectLabel(p.realPath), costUSD: projCost.get(p.id) ?? 0 }))
+    .sort((a, b) => b.costUSD - a.costUSD);
 
   const daysArr: DayStat[] = [...days.entries()]
     .map(([date, v]) => ({
@@ -417,5 +427,6 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       medianDurationMs: median,
     },
     recentProjects,
+    projectCosts,
   };
 }

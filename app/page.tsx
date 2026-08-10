@@ -186,15 +186,18 @@ function StatCard({
 function SectionTitle({
   children,
   icon: Icon,
+  action,
 }: {
   children: React.ReactNode;
   icon?: React.ComponentType<{ size?: number; className?: string }>;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="mb-4 flex items-center gap-2">
       <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
       {Icon && <Icon size={13} className="text-[var(--color-accent)]" />}
       <h2 className="eyebrow text-[var(--color-muted)]">{children}</h2>
+      {action && <div className="ml-auto">{action}</div>}
     </div>
   );
 }
@@ -235,6 +238,10 @@ export default async function HomePage({
 
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
+  // Classement « Coût par projet » : on ne garde que les projets à coût non nul,
+  // limité aux 10 plus coûteux (la liste complète reste sur /projects).
+  const projectCosts = a.projectCosts.filter((p) => p.costUSD > 0).slice(0, 10);
+  const maxProjectCost = Math.max(1e-9, ...projectCosts.map((p) => p.costUSD));
   const totalText = totals.thinkingChars + totals.textChars;
   const thinkingPct = totalText > 0 ? (totals.thinkingChars / totalText) * 100 : 0;
 
@@ -407,6 +414,38 @@ export default async function HomePage({
         </section>
       </div>
 
+      {/* Coût par projet */}
+      {projectCosts.length > 0 && (
+        <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <SectionTitle icon={Coins}>Coût estimé par projet</SectionTitle>
+          <div className="flex flex-col gap-2">
+            {projectCosts.map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${encodeURIComponent(p.id)}`}
+                className="group flex items-center gap-3"
+              >
+                <span
+                  className="w-44 shrink-0 truncate text-sm group-hover:text-[var(--color-accent)] transition-colors"
+                  title={p.label}
+                >
+                  {p.label}
+                </span>
+                <div className="flex-1 h-2 rounded-full bg-[var(--color-inset)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[var(--color-accent)]"
+                    style={{ width: `${(p.costUSD / maxProjectCost) * 100}%` }}
+                  />
+                </div>
+                <span className="w-20 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
+                  {fmtUSD(p.costUSD)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Top outils + stats sessions */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
@@ -475,7 +514,19 @@ export default async function HomePage({
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Projets récemment modifiés */}
         <section>
-          <SectionTitle icon={FolderGit2}>Projets récemment modifiés</SectionTitle>
+          <SectionTitle
+            icon={FolderGit2}
+            action={
+              <Link
+                href="/projects"
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
+              >
+                <FolderGit2 size={14} /> Tous les projets
+              </Link>
+            }
+          >
+            Projets récemment modifiés
+          </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
             {a.recentProjects.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
@@ -491,6 +542,7 @@ export default async function HomePage({
                   <div className="text-sm font-medium truncate">{p.label}</div>
                   <div className="text-xs text-[var(--color-muted)]">
                     {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""} · {formatDate(p.lastModified)}
+                    {p.costUSD > 0 && <> · {fmtUSD(p.costUSD)}</>}
                   </div>
                 </div>
                 <ArrowRight
@@ -500,19 +552,23 @@ export default async function HomePage({
               </Link>
             ))}
           </div>
-          <div className="mt-3 text-sm">
-            <Link
-              href="/projects"
-              className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline"
-            >
-              <FolderGit2 size={14} /> Tous les projets
-            </Link>
-          </div>
         </section>
 
         {/* Skills */}
         <section>
-          <SectionTitle icon={Sparkles}>Skills</SectionTitle>
+          <SectionTitle
+            icon={Sparkles}
+            action={
+              <Link
+                href="/skills"
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
+              >
+                <Sparkles size={14} /> Voir les skills
+              </Link>
+            }
+          >
+            Skills
+          </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
             {recentSkills.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">Aucun skill trouvé.</div>
@@ -536,14 +592,6 @@ export default async function HomePage({
                 />
               </Link>
             ))}
-          </div>
-          <div className="mt-3 text-sm">
-            <Link
-              href="/skills"
-              className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline"
-            >
-              <Sparkles size={14} /> Voir les skills
-            </Link>
           </div>
         </section>
       </div>
