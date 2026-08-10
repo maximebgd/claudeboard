@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 /** Sous-ensemble de `ModelStat` (lib/analytics) nécessaire au camembert.
  *  Défini localement pour garder ce composant client indépendant de `lib`
@@ -88,22 +89,22 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
                   <div className="flex items-center gap-3">
                     <span className="w-10 font-sans text-[var(--color-faint)]">Msg</span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="text-[var(--color-faint)]">In</span>
+                      <ArrowUp size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.messagesIn)}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="text-[var(--color-faint)]">Out</span>
+                      <ArrowDown size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.messages)}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-3">
                     <span className="w-10 font-sans text-[var(--color-faint)]">Tok</span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="text-[var(--color-faint)]">In</span>
+                      <ArrowUp size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.tokensIn)}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="text-[var(--color-faint)]">Out</span>
+                      <ArrowDown size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.tokensOut)}
                     </span>
                   </div>
