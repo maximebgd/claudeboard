@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
+import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
 import RangeSelector from "@/components/RangeSelector";
+import SubscriptionCard from "@/components/SubscriptionCard";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +112,25 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
     from: "",
     to: "",
   };
+}
+
+/**
+ * Nombre de prélèvements mensuels de l'abonnement tombant dans la fenêtre
+ * `[winStart, winEnd]`. L'abo est facturé chaque mois à la date anniversaire de
+ * `anchorMs` (souscription) ; on compte ces échéances, bornées à maintenant.
+ * `winStart = 0` (fenêtre « Tout ») = pas de borne basse.
+ */
+function billedMonths(anchorMs: number, winStart: number, winEnd: number): number {
+  if (anchorMs <= 0) return 0;
+  const end = Math.min(winEnd, Date.now());
+  if (anchorMs > end) return 0;
+  let count = 0;
+  const d = new Date(anchorMs);
+  while (d.getTime() <= end) {
+    if (d.getTime() >= winStart) count++;
+    d.setUTCMonth(d.getUTCMonth() + 1);
+  }
+  return count;
 }
 
 /* --------------------------------- StatCard ------------------------------- */
@@ -239,7 +260,21 @@ export default async function HomePage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const range = resolveRange(await searchParams);
-  const [a, skills] = await Promise.all([getAnalytics(range.sinceMs, range.untilMs), listSkills()]);
+  const [a, skills, sub] = await Promise.all([
+    getAnalytics(range.sinceMs, range.untilMs),
+    listSkills(),
+    getSubscription(),
+  ]);
+
+  // Nombre de mois d'abonnement facturés sur la fenêtre : on compte les échéances
+  // mensuelles depuis le début de l'abonnement (repli sur la 1re activité si la date
+  // d'abo manque). Une fenêtre entièrement avant la souscription → 0 mois.
+  const firstActivityMs = a.days.length ? utcMs(a.days[0].date) : 0;
+  const anchorMs = sub.since ?? firstActivityMs;
+  const winEnd = range.untilMs > 0 ? range.untilMs : Date.now();
+  const subMonths = sub.known ? billedMonths(anchorMs, range.sinceMs, winEnd) : 0;
+  const subCost = sub.monthlyPriceUSD * subMonths;
+  const netSavings = a.totals.costUSD - subCost;
 
   // Bornes de la fenêtre en clés de jour UTC, pour surligner les jours concernés
   // dans la heatmap (qui, elle, reste sur l'historique complet). Pas de fenêtre = « Tout ».
@@ -343,6 +378,19 @@ export default async function HomePage({
         />
         <StatCard icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
       </div>
+
+      {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
+      <SubscriptionCard
+        known={sub.known}
+        label={sub.label}
+        sinceLabel={sub.since ? formatDate(sub.since) : null}
+        monthlyPrice={fmtUSD(sub.monthlyPriceUSD)}
+        usageCost={fmtUSD(totals.costUSD)}
+        subCost={fmtUSD(subCost)}
+        months={subMonths}
+        netPositive={netSavings >= 0}
+        netAbs={fmtUSD(Math.abs(netSavings))}
+      />
 
       {/* Heatmap */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
