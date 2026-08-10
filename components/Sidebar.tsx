@@ -98,7 +98,6 @@ export default function Sidebar() {
       </nav>
       <div className="mt-auto p-3">
         <ThemeToggle />
-        <div className="eyebrow px-3 pt-3">Lecture + édition locale</div>
       </div>
     </aside>
   );
