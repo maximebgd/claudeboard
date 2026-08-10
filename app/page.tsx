@@ -374,13 +374,13 @@ export default async function HomePage({
 
       {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
       <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <SectionTitle icon={Wallet}>Abonnement</SectionTitle>
-        {!sub.known ? (
-          <p className="text-sm text-[var(--color-muted)]">
-            Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
-          </p>
-        ) : (
-          <>
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
+            <Wallet size={13} className="text-[var(--color-accent)]" />
+            <h2 className="eyebrow text-[var(--color-muted)]">Abonnement</h2>
+          </div>
+          {sub.known && (
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2.5 py-1 text-sm font-medium text-[var(--color-accent)]">
                 <Wallet size={14} />
@@ -393,8 +393,14 @@ export default async function HomePage({
                 {fmtUSD(sub.monthlyPriceUSD)}/mois
               </span>
             </div>
-
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          )}
+        </div>
+        {!sub.known ? (
+          <p className="mt-4 text-sm text-[var(--color-muted)]">
+            Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
+          </p>
+        ) : (
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <div className="eyebrow">Coût usage estimé</div>
                 <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtUSD(a.totals.costUSD)}</div>
@@ -421,8 +427,7 @@ export default async function HomePage({
                   {netSavings >= 0 ? "gagné grâce à l'abonnement" : "l'abonnement coûte plus que l'usage"}
                 </div>
               </div>
-            </div>
-          </>
+          </div>
         )}
       </section>
 
