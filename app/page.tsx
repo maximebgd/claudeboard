@@ -282,6 +282,10 @@ export default async function HomePage({
   const hasWindow = range.sinceMs > 0;
   const windowFrom = hasWindow ? dayKey(range.sinceMs) : undefined;
   const windowTo = hasWindow ? dayKey(range.untilMs > 0 ? range.untilMs : Date.now()) : undefined;
+  // Skills les plus récemment modifiés, alignés sur le nombre de projets affichés
+  // (`listSkills` renvoie trié par nom → on re-trie par date pour la colonne « récents »).
+  const recentSkills = [...skills].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, a.recentProjects.length || 6);
+
   const { totals, session } = a;
   const maxTool = Math.max(1, ...a.topTools.map((t) => t.count));
   const totalText = totals.thinkingChars + totals.textChars;
@@ -520,42 +524,82 @@ export default async function HomePage({
         </section>
       </div>
 
-      {/* Projets récents */}
-      <section className="mt-6">
-        <SectionTitle icon={FolderGit2}>Projets récemment modifiés</SectionTitle>
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
-          {a.recentProjects.length === 0 && (
-            <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
-          )}
-          {a.recentProjects.map((p) => (
-            <Link
-              key={p.id}
-              href={`/projects/${encodeURIComponent(p.id)}`}
-              className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
-            >
-              <FolderGit2 size={15} className="text-[var(--color-accent)] shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium">{p.label}</div>
-                <div className="text-xs text-[var(--color-muted)]">
-                  {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""} · {formatDate(p.lastModified)}
+      {/* Projets récents + Skills */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Projets récemment modifiés */}
+        <section>
+          <SectionTitle icon={FolderGit2}>Projets récemment modifiés</SectionTitle>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+            {a.recentProjects.length === 0 && (
+              <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
+            )}
+            {a.recentProjects.map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${encodeURIComponent(p.id)}`}
+                className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
+              >
+                <FolderGit2 size={15} className="text-[var(--color-accent)] shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{p.label}</div>
+                  <div className="text-xs text-[var(--color-muted)]">
+                    {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""} · {formatDate(p.lastModified)}
+                  </div>
                 </div>
-              </div>
-              <ArrowRight
-                size={16}
-                className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] transition-colors shrink-0"
-              />
+                <ArrowRight
+                  size={16}
+                  className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] transition-colors shrink-0"
+                />
+              </Link>
+            ))}
+          </div>
+          <div className="mt-3 text-sm">
+            <Link
+              href="/projects"
+              className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline"
+            >
+              <FolderGit2 size={14} /> Tous les projets
             </Link>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-4 text-sm">
-          <Link href="/skills" className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline">
-            <Sparkles size={14} /> Voir les skills
-          </Link>
-          <Link href="/projects" className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline">
-            <FolderGit2 size={14} /> Tous les projets
-          </Link>
-        </div>
-      </section>
+          </div>
+        </section>
+
+        {/* Skills */}
+        <section>
+          <SectionTitle icon={Sparkles}>Skills</SectionTitle>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+            {recentSkills.length === 0 && (
+              <div className="p-4 text-sm text-[var(--color-muted)]">Aucun skill trouvé.</div>
+            )}
+            {recentSkills.map((s) => (
+              <Link
+                key={s.slug}
+                href={`/skills/${encodeURIComponent(s.slug)}`}
+                className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
+              >
+                <Sparkles size={15} className="text-[var(--color-accent)] shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{s.name}</div>
+                  {s.description && (
+                    <div className="text-xs text-[var(--color-muted)] truncate">{s.description}</div>
+                  )}
+                </div>
+                <ArrowRight
+                  size={16}
+                  className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] transition-colors shrink-0"
+                />
+              </Link>
+            ))}
+          </div>
+          <div className="mt-3 text-sm">
+            <Link
+              href="/skills"
+              className="inline-flex items-center gap-1.5 text-[var(--color-accent)] hover:underline"
+            >
+              <Sparkles size={14} /> Voir les skills
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
