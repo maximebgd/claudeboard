@@ -87,7 +87,8 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
               {isActive && (
                 // Overlay flottant : hors du flux (`absolute`) pour ne pas décaler les
                 // lignes voisines → pas de « saut » quand on survole de modèle en modèle.
-                <div className="absolute left-0 top-full z-10 mt-1 rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-2 shadow-lg font-mono text-xs tabular-nums text-[var(--color-muted)]">
+                // Affiché à droite du modèle.
+                <div className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-2 shadow-lg font-mono text-xs tabular-nums text-[var(--color-muted)]">
                   <div className="flex items-center gap-3">
                     <span className="w-10 font-sans text-[var(--color-faint)]">Msg</span>
                     <span className="inline-flex items-center gap-1">
