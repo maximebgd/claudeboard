@@ -13,10 +13,11 @@ import {
   Brain,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate } from "@/lib/claude";
-import { getAnalytics, MODEL_COLOR, parseModel, type ModelStat } from "@/lib/analytics";
+import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
 import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
+import ModelDonut from "@/components/ModelDonut";
 import RangeSelector from "@/components/RangeSelector";
 import SubscriptionCard from "@/components/SubscriptionCard";
 
@@ -198,60 +199,6 @@ function SectionTitle({
   );
 }
 
-/* ---------------------------------- Donut --------------------------------- */
-
-function Donut({ models }: { models: ModelStat[] }) {
-  const total = models.reduce((n, m) => n + m.messages, 0);
-  const R = 15.9155; // circonférence ≈ 100 → dasharray en %
-  let acc = 0;
-
-  return (
-    <div className="flex items-center gap-5">
-      <div className="relative h-36 w-36 shrink-0">
-        <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90">
-          <circle cx="21" cy="21" r={R} fill="none" stroke="var(--color-inset)" strokeWidth="5" />
-          {total > 0 &&
-            models.map((m) => {
-              const pct = (m.messages / total) * 100;
-              if (pct <= 0) return null;
-              const seg = (
-                <circle
-                  key={m.key}
-                  cx="21"
-                  cy="21"
-                  r={R}
-                  fill="none"
-                  stroke={m.color}
-                  strokeWidth="5"
-                  strokeDasharray={`${pct} ${100 - pct}`}
-                  strokeDashoffset={-acc}
-                />
-              );
-              acc += pct;
-              return seg;
-            })}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-mono text-xl font-medium tabular-nums">{fmtNum(total)}</span>
-          <span className="eyebrow mt-0.5">réponses</span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 min-w-0">
-        {models.map((m) => {
-          const pct = total > 0 ? (m.messages / total) * 100 : 0;
-          return (
-            <div key={m.key} className="flex items-center gap-2 text-sm">
-              <span className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: m.color }} />
-              <span className="text-[var(--color-fg)]">{m.label}</span>
-              <span className="font-mono text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /* ----------------------------------- Page --------------------------------- */
 
 export default async function HomePage({
@@ -413,7 +360,7 @@ export default async function HomePage({
           {a.models.length === 0 ? (
             <p className="text-sm text-[var(--color-muted)]">Aucune donnée de modèle.</p>
           ) : (
-            <Donut models={a.models} />
+            <ModelDonut models={a.models} />
           )}
         </section>
 
