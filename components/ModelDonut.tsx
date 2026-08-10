@@ -33,7 +33,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
   let acc = 0;
 
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex items-start gap-5">
       <div className="relative h-36 w-36 shrink-0" onMouseLeave={() => setActive(null)}>
         <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90">
           <circle cx="21" cy="21" r={R} fill="none" stroke="var(--color-inset)" strokeWidth="5" />
@@ -74,7 +74,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
           return (
             <div
               key={m.key}
-              className="flex flex-col rounded-md px-1.5 py-1 -mx-1.5 cursor-pointer transition-colors"
+              className="relative flex flex-col rounded-md px-1.5 py-1 -mx-1.5 cursor-pointer transition-colors"
               style={{ backgroundColor: isActive ? "var(--color-inset)" : "transparent" }}
               onMouseEnter={() => setActive(m.key)}
               onMouseLeave={() => setActive(null)}
@@ -85,7 +85,9 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
                 <span className="font-mono text-[var(--color-faint)] tabular-nums">{pct.toFixed(0)}%</span>
               </div>
               {isActive && (
-                <div className="mt-1 pl-5 font-mono text-xs tabular-nums text-[var(--color-muted)]">
+                // Overlay flottant : hors du flux (`absolute`) pour ne pas décaler les
+                // lignes voisines → pas de « saut » quand on survole de modèle en modèle.
+                <div className="absolute left-0 top-full z-10 mt-1 rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-2 shadow-lg font-mono text-xs tabular-nums text-[var(--color-muted)]">
                   <div className="flex items-center gap-3">
                     <span className="w-10 font-sans text-[var(--color-faint)]">Msg</span>
                     <span className="inline-flex items-center gap-1">
