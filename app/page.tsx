@@ -53,8 +53,6 @@ function fmtDuration(ms: number): string {
 /* ------------------------------ range selector ---------------------------- */
 
 const DAY_MS = 86400000;
-/** Durée moyenne d'un mois (jours), pour proratiser le coût de l'abonnement. */
-const MONTH_MS = 30.44 * DAY_MS;
 
 interface ResolvedRange {
   key: string; // all | 30j | 7j | month | custom
@@ -118,6 +116,25 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
     from: "",
     to: "",
   };
+}
+
+/**
+ * Nombre de prélèvements mensuels de l'abonnement tombant dans la fenêtre
+ * `[winStart, winEnd]`. L'abo est facturé chaque mois à la date anniversaire de
+ * `anchorMs` (souscription) ; on compte ces échéances, bornées à maintenant.
+ * `winStart = 0` (fenêtre « Tout ») = pas de borne basse.
+ */
+function billedMonths(anchorMs: number, winStart: number, winEnd: number): number {
+  if (anchorMs <= 0) return 0;
+  const end = Math.min(winEnd, Date.now());
+  if (anchorMs > end) return 0;
+  let count = 0;
+  const d = new Date(anchorMs);
+  while (d.getTime() <= end) {
+    if (d.getTime() >= winStart) count++;
+    d.setUTCMonth(d.getUTCMonth() + 1);
+  }
+  return count;
 }
 
 /* --------------------------------- StatCard ------------------------------- */
@@ -253,19 +270,13 @@ export default async function HomePage({
     getSubscription(),
   ]);
 
-  // Nombre de mois d'abonnement facturés sur la fenêtre. La facturation est
-  // mensuelle : tout mois entamé compte pour un mois plein (arrondi au sup., min 1).
-  // Fenêtre bornée : durée / mois moyen (30j → 1). « Tout » : depuis le début de
-  // l'abonnement (repli sur la 1re activité si la date d'abo manque).
+  // Nombre de mois d'abonnement facturés sur la fenêtre : on compte les échéances
+  // mensuelles depuis le début de l'abonnement (repli sur la 1re activité si la date
+  // d'abo manque). Une fenêtre entièrement avant la souscription → 0 mois.
   const firstActivityMs = a.days.length ? utcMs(a.days[0].date) : 0;
-  const subMonths = (() => {
-    if (range.sinceMs > 0) {
-      const until = range.untilMs > 0 ? range.untilMs : Date.now();
-      return Math.max(1, Math.ceil((until - range.sinceMs) / MONTH_MS));
-    }
-    const startMs = sub.since ?? firstActivityMs;
-    return startMs > 0 ? Math.max(1, Math.ceil((Date.now() - startMs) / MONTH_MS)) : 0;
-  })();
+  const anchorMs = sub.since ?? firstActivityMs;
+  const winEnd = range.untilMs > 0 ? range.untilMs : Date.now();
+  const subMonths = sub.known ? billedMonths(anchorMs, range.sinceMs, winEnd) : 0;
   const subCost = sub.monthlyPriceUSD * subMonths;
   const netSavings = a.totals.costUSD - subCost;
 
