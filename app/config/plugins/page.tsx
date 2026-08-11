@@ -17,6 +17,8 @@ function Kpi({ label, value }: { label: string; value: number | string }) {
 }
 
 function MarketplaceCard({ m }: { m: Marketplace }) {
+  const available = m.plugins.filter((p) => !p.installed);
+  const installed = m.plugins.filter((p) => p.installed);
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-inset)] p-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -55,7 +57,7 @@ function MarketplaceCard({ m }: { m: Marketplace }) {
         </span>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-2">
         {!m.catalogFound ? (
           <p className="text-xs text-[var(--color-faint)]">
             Catalogue introuvable à cet emplacement.
@@ -63,9 +65,18 @@ function MarketplaceCard({ m }: { m: Marketplace }) {
         ) : m.plugins.length === 0 ? (
           <p className="text-xs text-[var(--color-faint)]">Aucun plugin dans ce catalogue.</p>
         ) : (
-          <Collapsible label={`Catalogue (${m.plugins.length})`}>
-            <PluginCatalog plugins={m.plugins} />
-          </Collapsible>
+          <>
+            {available.length > 0 && (
+              <Collapsible label={`À installer (${available.length})`}>
+                <PluginCatalog plugins={available} marketplace={m.name} showInstall />
+              </Collapsible>
+            )}
+            {installed.length > 0 && (
+              <Collapsible label={`Installés (${installed.length})`}>
+                <PluginCatalog plugins={installed} marketplace={m.name} />
+              </Collapsible>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,10 +1,54 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, CheckCircle2, Ban, ExternalLink } from "lucide-react";
+import { Search, CheckCircle2, Ban, ExternalLink, Copy, Check } from "lucide-react";
 import type { MarketplacePluginEntry } from "@/lib/plugins";
 
-function PluginRow({ p }: { p: MarketplacePluginEntry }) {
+/** Commande CLI pour installer un plugin depuis sa marketplace. */
+function installCommand(name: string, marketplace: string) {
+  return `/plugin install ${name}@${marketplace}`;
+}
+
+function CopyCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard indisponible — on ignore */
+    }
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <code className="flex-1 truncate rounded bg-[var(--color-code)] px-2 py-1 font-mono text-[11px] text-[var(--color-muted)]">
+        {command}
+      </code>
+      <button
+        type="button"
+        onClick={copy}
+        title="Copier la commande"
+        className="flex items-center gap-1 rounded border border-[var(--color-border)] px-1.5 py-1 text-[10px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+      >
+        {copied ? <Check size={11} /> : <Copy size={11} />}
+        {copied ? "copié" : "copier"}
+      </button>
+    </div>
+  );
+}
+
+function PluginRow({
+  p,
+  marketplace,
+  showInstall,
+}: {
+  p: MarketplacePluginEntry;
+  marketplace: string;
+  showInstall: boolean;
+}) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -47,6 +91,9 @@ function PluginRow({ p }: { p: MarketplacePluginEntry }) {
           </a>
         )}
       </div>
+      {showInstall && !p.blocked && (
+        <CopyCommand command={installCommand(p.name, marketplace)} />
+      )}
     </div>
   );
 }
@@ -54,8 +101,19 @@ function PluginRow({ p }: { p: MarketplacePluginEntry }) {
 /**
  * Catalogue de plugins d'une marketplace : recherche + zone scrollable qui
  * n'affiche qu'environ 4 plugins à la fois (le reste est accessible au scroll).
+ *
+ * `showInstall` affiche la commande d'installation sous chaque plugin (utilisé
+ * pour le catalogue des plugins non installés).
  */
-export default function PluginCatalog({ plugins }: { plugins: MarketplacePluginEntry[] }) {
+export default function PluginCatalog({
+  plugins,
+  marketplace,
+  showInstall = false,
+}: {
+  plugins: MarketplacePluginEntry[];
+  marketplace: string;
+  showInstall?: boolean;
+}) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -89,7 +147,7 @@ export default function PluginCatalog({ plugins }: { plugins: MarketplacePluginE
       ) : (
         <div className="max-h-[22rem] overflow-y-auto flex flex-col gap-2 pr-1">
           {filtered.map((p) => (
-            <PluginRow key={p.name} p={p} />
+            <PluginRow key={p.name} p={p} marketplace={marketplace} showInstall={showInstall} />
           ))}
         </div>
       )}
