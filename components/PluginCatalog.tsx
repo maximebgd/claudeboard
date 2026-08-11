@@ -9,6 +9,11 @@ function installCommand(name: string, marketplace: string) {
   return `/plugin install ${name}@${marketplace}`;
 }
 
+/** Commande CLI pour désinstaller un plugin. */
+function uninstallCommand(name: string, marketplace: string) {
+  return `/plugin uninstall ${name}@${marketplace}`;
+}
+
 function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -91,8 +96,11 @@ function PluginRow({
           </a>
         )}
       </div>
-      {showInstall && !p.blocked && (
-        <CopyCommand command={installCommand(p.name, marketplace)} />
+      {p.installed ? (
+        <CopyCommand command={uninstallCommand(p.name, marketplace)} />
+      ) : (
+        showInstall &&
+        !p.blocked && <CopyCommand command={installCommand(p.name, marketplace)} />
       )}
     </div>
   );
