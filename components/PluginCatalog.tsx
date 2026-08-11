@@ -1,8 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, CheckCircle2, Ban, ExternalLink, Copy, Check } from "lucide-react";
+import { Search, CheckCircle2, Ban, ExternalLink, Copy, Check, Download } from "lucide-react";
 import type { MarketplacePluginEntry } from "@/lib/plugins";
+
+/** Formate un nombre d'installs (1636 → « 1 636 », 63906 → « 63,9 k »). */
+function formatInstalls(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".", ",")} k`;
+  return n.toLocaleString("fr-FR");
+}
 
 /** Commande CLI pour installer un plugin depuis sa marketplace. */
 function installCommand(name: string, marketplace: string) {
@@ -78,6 +84,14 @@ function PluginRow({
         )}
         {p.author && (
           <span className="text-[11px] text-[var(--color-faint)]">par {p.author}</span>
+        )}
+        {p.uniqueInstalls != null && (
+          <span
+            title={`${p.uniqueInstalls.toLocaleString("fr-FR")} installations (communauté)`}
+            className="ml-auto flex items-center gap-1 rounded bg-[var(--color-code)] px-1.5 py-0.5 text-[10px] text-[var(--color-muted)]"
+          >
+            <Download size={10} /> {formatInstalls(p.uniqueInstalls)}
+          </span>
         )}
       </div>
       {p.description && (

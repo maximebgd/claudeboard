@@ -93,6 +93,8 @@ export default async function PluginsPage() {
     installedCount,
     blocked,
     usage,
+    totalUniqueInstalls,
+    installsGeneratedAt,
   } = await getPlugins();
 
   return (
@@ -116,12 +118,22 @@ export default async function PluginsPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Kpi label="Marketplaces" value={totalMarketplaces} />
             <Kpi label="Plugins disponibles" value={totalAvailable} />
             <Kpi label="Installés" value={installedCount} />
             <Kpi label="Bloqués" value={blocked.length} />
+            <Kpi
+              label="Installs (communauté)"
+              value={totalUniqueInstalls.toLocaleString("fr-FR")}
+            />
           </div>
+          {installsGeneratedAt && (
+            <p className="mt-2 text-[11px] text-[var(--color-faint)]">
+              Installs uniques agrégées sur toute la communauté Claude Code, au{" "}
+              {formatDate(installsGeneratedAt)}.
+            </p>
+          )}
 
           <section className="mt-8 flex flex-col gap-4">
             {marketplaces.map((m) => (

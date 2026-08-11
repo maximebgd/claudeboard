@@ -19,12 +19,18 @@ import { CLAUDE_DIR, safeResolve } from "./claude";
  *
  * Les compteurs d'usage sont lus dans `~/.claude.json` (`pluginUsage`), hors
  * CLAUDE_DIR — lecture seule et ciblée elle aussi.
+ *
+ * Le nombre d'installs uniques (à l'échelle de la communauté) de chaque plugin
+ * provient de `plugins/plugin-catalog-cache.json` (`catalog.plugins[clé]
+ * .unique_installs`), un cache DANS CLAUDE_DIR rafraîchi par le CLI.
  */
 
 const PLUGINS_DIR = "plugins";
 const KNOWN_MARKETPLACES = "plugins/known_marketplaces.json";
 const INSTALLED_PLUGINS = "plugins/installed_plugins.json";
 const BLOCKLIST = "plugins/blocklist.json";
+/** Cache du catalogue Claude Code : nombre d'installs uniques (communauté) par plugin. */
+const CATALOG_CACHE = "plugins/plugin-catalog-cache.json";
 
 /** `~/.claude.json` — sibling de CLAUDE_DIR (respecte un override CLAUDE_DIR). */
 const CLAUDE_JSON = path.join(path.dirname(CLAUDE_DIR), ".claude.json");
@@ -39,6 +45,8 @@ export interface MarketplacePluginEntry {
   installed: boolean;
   blocked: boolean;
   blockReason: string | null;
+  /** Installs uniques (échelle communauté) issues du cache catalogue, si connu. */
+  uniqueInstalls: number | null;
 }
 
 export interface Marketplace {
@@ -77,6 +85,10 @@ export interface PluginsResult {
   installedCount: number;
   blocked: BlockedPlugin[];
   usage: PluginUsage[];
+  /** Total des installs uniques (communauté) sur tous les plugins connus du catalogue. */
+  totalUniqueInstalls: number;
+  /** Date de génération des compteurs d'installs dans le cache catalogue. */
+  installsGeneratedAt: string | null;
 }
 
 async function readJson(absPath: string): Promise<unknown> {
@@ -142,6 +154,21 @@ function parseBlocklist(v: unknown): BlockedPlugin[] {
   });
 }
 
+/**
+ * Extrait la carte `nom@marketplace` → installs uniques (communauté) du cache
+ * catalogue, ainsi que la date de génération de ces compteurs.
+ */
+function parseInstalls(v: unknown): { installs: Map<string, number>; generatedAt: string | null } {
+  const catalog = asRecord(asRecord(v).catalog);
+  const plugins = asRecord(catalog.plugins);
+  const installs = new Map<string, number>();
+  for (const [key, entry] of Object.entries(plugins)) {
+    const n = asRecord(entry).unique_installs;
+    if (typeof n === "number" && Number.isFinite(n)) installs.set(key, n);
+  }
+  return { installs, generatedAt: str(catalog.installs_generated_at) };
+}
+
 function parseUsage(v: unknown): PluginUsage[] {
   const rec = asRecord(v);
   return Object.entries(rec)
@@ -160,7 +187,8 @@ async function loadCatalog(
   marketplaceName: string,
   installLocation: string,
   installed: Set<string>,
-  blockedByKey: Map<string, BlockedPlugin>
+  blockedByKey: Map<string, BlockedPlugin>,
+  installsByKey: Map<string, number>
 ): Promise<{
   found: boolean;
   description: string | null;
@@ -189,6 +217,7 @@ async function loadCatalog(
       installed: installed.has(key),
       blocked: Boolean(blocked),
       blockReason: blocked?.reason ?? null,
+      uniqueInstalls: installsByKey.get(key) ?? null,
     };
   });
   plugins.sort((a, b) => a.name.localeCompare(b.name));
@@ -204,12 +233,14 @@ async function loadCatalog(
 export async function getPlugins(): Promise<PluginsResult> {
   const pluginsDir = safeResolve(PLUGINS_DIR);
 
-  const [knownRaw, installedRaw, blocklistRaw, claudeJsonRaw] = await Promise.all([
-    readJson(safeResolve(KNOWN_MARKETPLACES)),
-    readJson(safeResolve(INSTALLED_PLUGINS)),
-    readJson(safeResolve(BLOCKLIST)),
-    readJson(CLAUDE_JSON),
-  ]);
+  const [knownRaw, installedRaw, blocklistRaw, claudeJsonRaw, catalogCacheRaw] =
+    await Promise.all([
+      readJson(safeResolve(KNOWN_MARKETPLACES)),
+      readJson(safeResolve(INSTALLED_PLUGINS)),
+      readJson(safeResolve(BLOCKLIST)),
+      readJson(CLAUDE_JSON),
+      readJson(safeResolve(CATALOG_CACHE)),
+    ]);
 
   const known = asRecord(knownRaw);
   const configExists = Object.keys(known).length > 0;
@@ -217,6 +248,8 @@ export async function getPlugins(): Promise<PluginsResult> {
   const blocked = parseBlocklist(blocklistRaw);
   const blockedByKey = new Map(blocked.map((b) => [b.plugin, b]));
   const usage = parseUsage(asRecord(claudeJsonRaw).pluginUsage);
+  const { installs: installsByKey, generatedAt: installsGeneratedAt } =
+    parseInstalls(catalogCacheRaw);
 
   const marketplaces: Marketplace[] = [];
   for (const [name, val] of Object.entries(known)) {
@@ -228,7 +261,7 @@ export async function getPlugins(): Promise<PluginsResult> {
       !path.relative(CLAUDE_DIR, installLocation).startsWith("..");
 
     const catalog = installLocation
-      ? await loadCatalog(name, installLocation, installed, blockedByKey)
+      ? await loadCatalog(name, installLocation, installed, blockedByKey, installsByKey)
       : { found: false, description: null, owner: null, plugins: [] };
 
     marketplaces.push({
@@ -248,6 +281,10 @@ export async function getPlugins(): Promise<PluginsResult> {
   marketplaces.sort((a, b) => a.name.localeCompare(b.name));
 
   const totalAvailable = marketplaces.reduce((n, m) => n + m.plugins.length, 0);
+  const totalUniqueInstalls = marketplaces.reduce(
+    (n, m) => n + m.plugins.reduce((s, p) => s + (p.uniqueInstalls ?? 0), 0),
+    0
+  );
 
   return {
     pluginsDir,
@@ -258,5 +295,7 @@ export async function getPlugins(): Promise<PluginsResult> {
     installedCount: installed.size,
     blocked,
     usage,
+    totalUniqueInstalls,
+    installsGeneratedAt,
   };
 }
