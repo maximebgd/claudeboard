@@ -7,6 +7,13 @@ import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
 
+/** Format compact d'un nombre : 8157417 → « 8,1 M », 63906 → « 63,9 k ». */
+function formatCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".", ",")} k`;
+  return n.toLocaleString("fr-FR");
+}
+
 function Kpi({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
@@ -124,8 +131,8 @@ export default async function PluginsPage() {
             <Kpi label="Installés" value={installedCount} />
             <Kpi label="Bloqués" value={blocked.length} />
             <Kpi
-              label="Installs (communauté)"
-              value={totalUniqueInstalls.toLocaleString("fr-FR")}
+              label="Total d'installations"
+              value={formatCompact(totalUniqueInstalls)}
             />
           </div>
           {installsGeneratedAt && (
