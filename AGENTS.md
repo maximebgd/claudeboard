@@ -9,16 +9,23 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 - **Dashboard / analytics** (page d'accueil) : agrège tous les transcripts JSONL en
   un seul passage (`lib/analytics.ts` → `getAnalytics`) pour afficher KPI (projets,
   sessions, messages, tokens, coût estimé), heatmap d'activité sur 12 mois,
-  répartition des modèles (camembert), tokens & coût par modèle, outils/skills les
-  plus utilisés, stats de session (moyennes, durées, ratio thinking/texte) et projets
-  récents. Un sélecteur de fenêtre (`Tout` / `30 j` / `7 j`, via `?range=`) filtre les
-  stats ; la heatmap montre toujours l'historique complet.
+  répartition des modèles (camembert `ModelDonut`), tokens & coût par modèle, coût par
+  projet (`ProjectCostList`, recherche/tri côté client), outils/skills les plus utilisés
+  (`ToolUsageList`), stats de session (moyennes, durées, ratio thinking/texte) et projets
+  récents. Une carte d'abonnement (`SubscriptionCard`) compare le coût estimé de l'usage
+  au prix du plan Claude (via `lib/subscription.ts`) pour afficher l'économie nette.
+  Un sélecteur de fenêtre (`RangeSelector`) filtre les stats — `Tout` / `30 j` / `7 j`,
+  un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
+  (`?range=custom&from=…&to=…`) ; `getAnalytics(sinceMs, untilMs)` prend les deux bornes.
+  La heatmap montre toujours l'historique complet (la fenêtre active y est surlignée).
 - **Skills** : liste, aperçu et **édition** des `~/.claude/skills/*/SKILL.md`
   (frontmatter YAML + corps markdown). Toute écriture crée d'abord un backup
   horodaté `SKILL.md.bak.<timestamp>` à côté du fichier.
 - **Projets & Sessions** : navigation **en lecture seule** dans
   `~/.claude/projects/*/*.jsonl` (transcripts de conversations). Chaque ligne JSONL
-  est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`).
+  est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`). La page d'un
+  projet affiche aussi ses statistiques agrégées (`getProjectStats` dans `lib/analytics.ts` :
+  modèles, tokens, coût estimé, top outils) au-dessus de la liste des sessions.
 - **Config Claude** (section « Config » de la Sidebar) :
   - **Settings** : édition de `settings.json` et `settings.local.json` (JSON validé
     live + backup, création de `.local` à la demande) → `lib/configFiles.ts`.
@@ -30,8 +37,19 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création si absent.
   - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux +
     par projet) + statut d'auth (`lib/mcp.ts`) ; valeurs d'`env` masquées.
+  - **Plugins & Marketplaces** : **lecture seule** des marketplaces connues et de leurs
+    catalogues de plugins (`lib/plugins.ts`), avec KPI (marketplaces, plugins disponibles,
+    installés, bloqués, total d'installs uniques communauté), plugins bloqués et compteurs
+    d'usage. Affichage via `PluginCatalog`, qui propose sous chaque plugin la commande
+    CLI `/plugin install|uninstall <nom>@<marketplace>` (copiable dans le presse-papier) ;
+    l'installation elle-même reste du ressort du CLI (aucune écriture depuis l'app).
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
     création si absent.
+  - **Tarifs d'estimation** (`/config/pricing`) : tableau **lecture seule** des tarifs
+    `PRICING` de `lib/analytics.ts` (in/out/cache), convention IN/OUT et formule de coût.
+  - **Structure du dossier** (`/config/directory`) : arbre pédagogique (`DirectoryExplorer`)
+    du contenu de `.claude/` (projet) et `~/.claude` (rôle, chargement, exemple par fichier) ;
+    contenu statique, reproduit d'après la doc officielle.
 - **Thème** : bascule clair/sombre (`ThemeToggle` dans la Sidebar), persistée dans
   `localStorage` et appliquée avant le premier rendu par un script inline dans
   `layout.tsx` (pas de flash).
@@ -54,8 +72,15 @@ lib/
   skills.ts    listSkills · getSkill · writeSkill (backup .bak avant écrasement)
   projects.ts  listProjects · listSessions · getSession · projectLabel ·
                normalisation des blocs JSONL
-  analytics.ts getAnalytics(sinceMs) : scan unique des JSONL → totaux, jours (heatmap),
-               stats par modèle, top outils, durées ; parseModel + tarifs indicatifs
+  analytics.ts getAnalytics(sinceMs, untilMs) : scan unique des JSONL → totaux, jours
+               (heatmap), stats par modèle, top outils, coût par projet, durées ;
+               getProjectStats(id) pour un projet ; parseModel + PRICING/MODEL_LABEL/
+               MODEL_COLOR exportés (réutilisés par les pages pricing & donut)
+  plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
+               catalogues à leur installLocation, usage dans ~/.claude.json, installs du
+               plugin-catalog-cache.json) — jamais d'écriture, installation = CLI
+  subscription.ts getSubscription : LECTURE SEULE du plan Claude via l'`oauthAccount` de
+               ~/.claude.json (champs non sensibles only : type d'orga, facturation, date)
   configFiles.ts read/writeConfigFile : fichiers uniques (settings, settings.local,
                CLAUDE.md, keybindings) — JSON validé, backup si existant, création explicite
   mdEntries.ts list/get/writeMdEntry(kind) : agents & commandes (.md à frontmatter,
@@ -65,8 +90,8 @@ lib/
                globaux + par projet, statut via mcp-needs-auth-cache.json, env masqué
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
 app/
-  page.tsx                       Dashboard analytics (KPI, heatmap, modèles, outils,
-                                 sessions, projets récents) + sélecteur ?range=
+  page.tsx                       Dashboard analytics (KPI, heatmap, modèles, coût par
+                                 projet, outils, sessions, abonnement) + RangeSelector
   skills/page.tsx                Liste des skills
   skills/[name]/page.tsx         Détail + éditeur d'un skill
   projects/page.tsx              Liste des projets
@@ -78,7 +103,10 @@ app/
   config/commands/page.tsx · [...slug]/page.tsx Liste + détail/éditeur de commandes
   config/claude-md/page.tsx      Éditeur du CLAUDE.md global
   config/mcp/page.tsx            MCP servers (lecture seule)
+  config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
   config/keybindings/page.tsx    Aperçu + éditeur des keybindings
+  config/pricing/page.tsx        Tarifs d'estimation (tableau lecture seule)
+  config/directory/page.tsx      Structure du dossier .claude (arbre pédagogique)
   api/skills/route.ts            POST { slug, raw } → écrit le SKILL.md (+ validations)
   api/config-file/route.ts       POST { target, raw } → fichiers uniques (JSON validé)
   api/md/route.ts                POST { kind, slug, raw } → agents/commandes (frontmatter validé)
@@ -87,7 +115,11 @@ components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
   ConfigEditor (éditeur générique JSON/markdown : validation live, backup au save) ·
   MdEntryList · MdEntryDetail (liste/détail partagés agents & commandes) ·
-  ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre)
+  ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre) ·
+  ModelDonut (camembert modèles) · RangeSelector (fenêtre temporelle) ·
+  SubscriptionCard (coût usage vs plan) · ProjectCostList · ToolUsageList ·
+  PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
+  ReadOnlyBadge (marqueur « lecture seule »)
 ```
 
 ## Conventions importantes
@@ -101,9 +133,13 @@ components/
   traversée de répertoire (`../`) via un slug/id d'URL. Les API `/api/skills` et
   `/api/md` refusent en plus les slugs de traversée et valident le frontmatter avant
   d'écrire ; `/api/config-file` n'accepte que des cibles whitelistées.
-  - **Exception documentée** : `lib/mcp.ts` lit `~/.claude.json`, qui est **hors de
-    CLAUDE_DIR** et contient des secrets. C'est donc un accès **lecture seule** et
-    **ciblé** (uniquement les clés `mcpServers`), qui n'expose jamais les valeurs d'`env`.
+  - **Exceptions documentées** : `lib/mcp.ts`, `lib/subscription.ts` et `lib/plugins.ts`
+    lisent `~/.claude.json`, qui est **hors de CLAUDE_DIR** et contient des secrets. Ce
+    sont donc des accès **lecture seule** et **ciblés** — `mcp.ts` ne lit que `mcpServers`
+    (valeurs d'`env` masquées), `subscription.ts` que des champs non sensibles de
+    `oauthAccount`, `plugins.ts` que `pluginUsage`. De même, `plugins.ts` lit les
+    `marketplace.json` à leur `installLocation`, qui peut pointer **hors de CLAUDE_DIR**
+    (marketplace de type `directory`) — accès lecture seule, aucune écriture.
 - L'écriture n'est jamais silencieuse : `writeSkill`/`writeMdEntry` vérifient que le
   fichier existe déjà (pas de création) et créent toujours un backup. Les créations de
   fichiers de config (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) via
