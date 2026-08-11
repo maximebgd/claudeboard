@@ -1,15 +1,8 @@
-import {
-  Blocks,
-  Store,
-  Github,
-  FolderInput,
-  CheckCircle2,
-  Ban,
-  ExternalLink,
-} from "lucide-react";
-import { getPlugins, type Marketplace, type MarketplacePluginEntry } from "@/lib/plugins";
+import { Blocks, Store, Github, FolderInput, Ban } from "lucide-react";
+import { getPlugins, type Marketplace } from "@/lib/plugins";
 import { formatDate } from "@/lib/claude";
 import Collapsible from "@/components/Collapsible";
+import PluginCatalog from "@/components/PluginCatalog";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
@@ -19,53 +12,6 @@ function Kpi({ label, value }: { label: string; value: number | string }) {
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
       <div className="text-2xl font-semibold tabular-nums">{value}</div>
       <div className="text-xs text-[var(--color-muted)]">{label}</div>
-    </div>
-  );
-}
-
-function PluginRow({ p }: { p: MarketplacePluginEntry }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-sm">{p.name}</span>
-        {p.category && (
-          <span className="rounded bg-[var(--color-code)] px-1.5 py-0.5 text-[10px] text-[var(--color-muted)]">
-            {p.category}
-          </span>
-        )}
-        {p.installed && (
-          <span className="flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-400">
-            <CheckCircle2 size={10} /> installé
-          </span>
-        )}
-        {p.blocked && (
-          <span
-            title={p.blockReason ?? undefined}
-            className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-400"
-          >
-            <Ban size={10} /> bloqué
-          </span>
-        )}
-        {p.author && (
-          <span className="text-[11px] text-[var(--color-faint)]">par {p.author}</span>
-        )}
-      </div>
-      {p.description && (
-        <p className="mt-1.5 text-xs text-[var(--color-muted)] line-clamp-3">{p.description}</p>
-      )}
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-[var(--color-faint)]">
-        {p.sourceLabel && <span className="break-all">{p.sourceLabel}</span>}
-        {p.homepage && (
-          <a
-            href={p.homepage}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 text-[var(--color-accent)] hover:underline"
-          >
-            <ExternalLink size={10} /> homepage
-          </a>
-        )}
-      </div>
     </div>
   );
 }
@@ -118,11 +64,7 @@ function MarketplaceCard({ m }: { m: Marketplace }) {
           <p className="text-xs text-[var(--color-faint)]">Aucun plugin dans ce catalogue.</p>
         ) : (
           <Collapsible label={`Catalogue (${m.plugins.length})`}>
-            <div className="flex flex-col gap-2 pt-1">
-              {m.plugins.map((p) => (
-                <PluginRow key={p.name} p={p} />
-              ))}
-            </div>
+            <PluginCatalog plugins={m.plugins} />
           </Collapsible>
         )}
       </div>
