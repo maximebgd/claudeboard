@@ -11,6 +11,7 @@ import {
   ArrowUp,
   Clock,
   History,
+  CalendarDays,
 } from "lucide-react";
 import { listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { getProjectStats } from "@/lib/analytics";
@@ -39,6 +40,17 @@ function fmtDay(ms: number): string {
 /** Heure « 20:50 ». */
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Date de création « Mer. 12 Août 2026 » (jour de semaine + mois capitalisés). */
+function fmtCreatedDate(ms: number): string {
+  const s = new Date(ms).toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return s.replace(/\p{L}+/gu, (w) => w.charAt(0).toUpperCase() + w.slice(1));
 }
 
 /** Durée précise : « 2j 05h 30min » au-delà de 24 h, sinon « h / min / s ». */
@@ -144,6 +156,10 @@ export default async function ProjectSessionsPage({
           <>
             <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
+              <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                <CalendarDays size={12} />
+                {fmtCreatedDate(project.createdAt)}
+              </span>
               <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
                 <Clock size={12} />
                 Existe depuis {formatDuration(Date.now() - project.createdAt)}
