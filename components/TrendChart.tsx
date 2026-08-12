@@ -36,6 +36,7 @@ export default function TrendChart({
   onHoverDate,
   onSelectDate,
   emptyLabel = "Aucune donnée sur cette période.",
+  fill = false,
 }: {
   points: TrendPoint[];
   series: TrendSeries[];
@@ -46,6 +47,9 @@ export default function TrendChart({
   onHoverDate?: (date: string | null) => void;
   onSelectDate?: (date: string) => void;
   emptyLabel?: ReactNode;
+  /** Si vrai, la courbe remplit la hauteur du parent (zone de tracé flexible) au
+   *  lieu d'une hauteur fixe — permet de la caler sur une autre vue (heatmap). */
+  fill?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const stacked = series.length > 1;
@@ -151,9 +155,9 @@ export default function TrendChart({
   const hoverPct = hover !== null ? (hover / w) * 100 : 0;
 
   return (
-    <div>
+    <div className={fill ? "flex h-full flex-col" : ""}>
       <div
-        className="relative h-40 w-full cursor-crosshair"
+        className={`relative w-full cursor-crosshair ${fill ? "min-h-0 flex-1" : "h-40"}`}
         onMouseMove={onMove}
         onMouseLeave={() => setHoverIndex(null)}
         onClick={() => hover !== null && onSelectDate?.(days[hover].date)}

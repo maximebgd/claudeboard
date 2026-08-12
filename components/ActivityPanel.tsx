@@ -121,12 +121,14 @@ export default function ActivityPanel({
     <div className="flex flex-wrap gap-4 lg:flex-nowrap">
       <div className="min-w-0">
         {header}
-        {/* Réserve de hauteur uniquement pour la courbe (≈ 178 px, plus haute que la
-            grille ≈ 140 px). En heatmap on laisse la hauteur naturelle gouverner, pour
-            que le panneau de détail (colonne de droite, qui s'étire pour matcher) s'aligne
-            pile sur la légende « Moins … Plus » sans dépasser. */}
-        <div className={view === "trend" ? "min-h-[178px]" : ""}>
-          {view === "heatmap" ? (
+        {/* La heatmap est **toujours montée** : c'est elle qui fixe la hauteur (et la
+            largeur) de référence de la section. En vue « courbe » elle est simplement
+            masquée (`invisible` → garde sa place) et la courbe vient se superposer dans
+            la même boîte (`absolute inset-0`), en remplissant sa hauteur (`fill`). La
+            taille du panneau ne change donc plus d'une vue à l'autre, et le panneau de
+            détail (colonne de droite) reste aligné sur la légende « Moins … Plus ». */}
+        <div className="relative">
+          <div className={view === "trend" ? "invisible" : ""} aria-hidden={view === "trend"}>
             <ActivityHeatmap
               days={days}
               windowFrom={windowFrom}
@@ -135,12 +137,9 @@ export default function ActivityPanel({
               onHover={setHover}
               onSelect={select}
             />
-          ) : (
-            // La courbe n'a pas de largeur intrinsèque (contrairement à la grille) : on
-            // la cale sur la largeur de la heatmap (53 cellules de 12 px + 52 gaps de 3 px
-            // = 792 px) pour que la colonne de gauche — et donc le panneau de détail —
-            // garde exactement la même taille d'une vue à l'autre.
-            <div className="w-[792px] max-w-full">
+          </div>
+          {view === "trend" && (
+            <div className="absolute inset-0">
               <TrendChart
                 points={trendPoints}
                 series={[{ label: "Messages", color: "var(--color-accent)" }]}
@@ -150,6 +149,7 @@ export default function ActivityPanel({
                 onHoverDate={(date) => setHover(date ? cellFor(date) : null)}
                 onSelectDate={(date) => select(cellFor(date))}
                 emptyLabel="Aucune activité sur cette période."
+                fill
               />
             </div>
           )}
