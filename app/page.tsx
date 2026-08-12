@@ -11,6 +11,7 @@ import {
   Clock,
   History,
   Brain,
+  Minus,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
@@ -24,7 +25,6 @@ import SubscriptionCard from "@/components/SubscriptionCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
-import VelocityPanel from "@/components/VelocityPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -180,12 +180,15 @@ function StatCard({
   label,
   value,
   sub,
+  trend,
   href,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   value: string | number;
   sub?: React.ReactNode;
+  /** Delta de vélocité (vs période précédente), affiché sous le `sub`. */
+  trend?: React.ReactNode;
   href?: string;
 }) {
   const inner = (
@@ -204,6 +207,7 @@ function StatCard({
       </div>
       <div className="mt-3 font-mono text-[1.7rem] font-medium leading-none tabular-nums">{value}</div>
       {sub && <div className="mt-1.5 font-mono text-[11px] text-[var(--color-faint)]">{sub}</div>}
+      {trend}
     </>
   );
 
@@ -218,6 +222,30 @@ function StatCard({
     );
   }
   return <div className={cls}>{inner}</div>;
+}
+
+/* -------------------------------- TrendDelta ------------------------------ */
+
+/**
+ * Delta de vélocité affiché sous un KPI : `↑ +23 %` (hausse verte, baisse accent,
+ * stable atténué) puis « vs du … au … » sur la ligne suivante. `pct = null` (période
+ * précédente vide) → « nouveau ».
+ */
+function TrendDelta({ pct, compareLabel }: { pct: number | null; compareLabel: string }) {
+  const up = pct !== null && pct > 0;
+  const down = pct !== null && pct < 0;
+  const color = up ? "#6bbf73" : down ? "var(--color-accent)" : "var(--color-faint)";
+  const Arrow = up ? ArrowUp : down ? ArrowDown : Minus;
+  const text = pct === null ? "nouveau" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)} %`;
+  return (
+    <div className="mt-1.5 text-[11px] leading-tight">
+      <span className="inline-flex items-center gap-0.5 font-mono font-medium tabular-nums" style={{ color }}>
+        <Arrow size={12} />
+        {text}
+      </span>
+      <div className="text-[var(--color-faint)]">vs {compareLabel}</div>
+    </div>
+  );
 }
 
 /* ------------------------------- SectionTitle ----------------------------- */
@@ -284,21 +312,23 @@ export default async function HomePage({
   const totalText = totals.thinkingChars + totals.textChars;
   const thinkingPct = totalText > 0 ? (totals.thinkingChars / totalText) * 100 : 0;
 
-  // Vélocité : comparaison des KPI de la fenêtre courante vs la période précédente
-  // (N-1). `a.trend` est `null` pour la fenêtre « Tout » → la section est masquée.
-  const compareLabel = a.trend ? rangeLabel(prevSinceMs, prevUntilMs) : "";
-  const trendItems = a.trend
-    ? [
-        { label: "Messages", value: fmtNum(totals.messages), pct: pctChange(totals.messages, a.trend.messages) },
-        {
-          label: "Tokens",
-          value: fmtNum(totals.tokensIn + totals.tokensOut),
-          pct: pctChange(totals.tokensIn + totals.tokensOut, a.trend.tokensIn + a.trend.tokensOut),
-        },
-        { label: "Coût estimé", value: fmtUSD(totals.costUSD), pct: pctChange(totals.costUSD, a.trend.costUSD) },
-        { label: "Sessions", value: full.format(totals.sessions), pct: pctChange(totals.sessions, a.trend.sessions) },
-      ]
-    : [];
+  // Vélocité : delta de chaque KPI vs la période précédente (N-1), affiché directement
+  // dans la carte KPI correspondante. `a.trend` est `null` pour la fenêtre « Tout »
+  // (pas de période de comparaison) → aucun delta n'est rendu.
+  const tr = a.trend;
+  const compareLabel = tr ? rangeLabel(prevSinceMs, prevUntilMs) : "";
+  const messagesTrend = tr && (
+    <TrendDelta pct={pctChange(totals.messages, tr.messages)} compareLabel={compareLabel} />
+  );
+  const tokensTrend = tr && (
+    <TrendDelta
+      pct={pctChange(totals.tokensIn + totals.tokensOut, tr.tokensIn + tr.tokensOut)}
+      compareLabel={compareLabel}
+    />
+  );
+  const costTrend = tr && (
+    <TrendDelta pct={pctChange(totals.costUSD, tr.costUSD)} compareLabel={compareLabel} />
+  );
 
   // Données de la heatmap : % et couleurs des modèles pré-calculés côté serveur
   // pour éviter d'importer lib/analytics (qui dépend de `fs`) dans le composant client.
@@ -384,6 +414,7 @@ export default async function HomePage({
               </span>
             </span>
           }
+          trend={messagesTrend}
         />
         <StatCard
           icon={Cpu}
@@ -402,19 +433,16 @@ export default async function HomePage({
               </span>
             </span>
           }
+          trend={tokensTrend}
         />
         <StatCard
           icon={Coins}
           label="Coût estimé"
           value={fmtUSD(totals.costUSD)}
           sub="tarifs indicatifs"
+          trend={costTrend}
         />
       </div>
-
-      {/* Vélocité : variation des KPI vs la période précédente (masquée si « Tout ») */}
-      {trendItems.length > 0 && (
-        <VelocityPanel items={trendItems} compareLabel={compareLabel} />
-      )}
 
       {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
       <SubscriptionCard
