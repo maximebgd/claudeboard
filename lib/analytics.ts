@@ -183,6 +183,8 @@ export interface Analytics {
   };
   models: ModelStat[];
   days: DayStat[];
+  /** Débuts de session par heure locale (index 0–23) sur la fenêtre. */
+  hours: number[];
   topTools: { name: string; count: number }[];
   session: {
     count: number;
@@ -225,6 +227,9 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   const projCost = new Map<string, number>();
   const durations: number[] = [];
   const msgCounts: number[] = [];
+  // Débuts de session par heure locale (0–23) : incrémenté au 1er message daté de
+  // chaque session tombant dans la fenêtre.
+  const hourBuckets = new Array<number>(24).fill(0);
 
   let totalMessages = 0;
   let userMessages = 0;
@@ -368,6 +373,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       if (msgs > 0) {
         sessionCount++;
         msgCounts.push(msgs);
+        if (first !== Infinity) hourBuckets[new Date(first).getHours()]++;
         if (first !== Infinity && last > first) durations.push(last - first);
       }
     }
@@ -429,6 +435,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     },
     models: modelsArr,
     days: daysArr,
+    hours: hourBuckets,
     topTools,
     session: {
       count: sessionCount,

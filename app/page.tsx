@@ -21,6 +21,7 @@ import RangeSelector from "@/components/RangeSelector";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
+import HourlyDistribution from "@/components/HourlyDistribution";
 
 export const dynamic = "force-dynamic";
 
@@ -357,6 +358,11 @@ export default async function HomePage({
           windowTo={windowTo}
           title={<SectionTitle>Activité · 12 derniers mois</SectionTitle>}
         />
+      </section>
+
+      {/* Distribution horaire des débuts de session */}
+      <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+        <HourlyDistribution hours={a.hours} />
       </section>
 
       {/* Modèles : camembert + tokens/coût */}
