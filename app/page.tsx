@@ -24,6 +24,7 @@ import SubscriptionCard from "@/components/SubscriptionCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
+import VelocityPanel from "@/components/VelocityPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,36 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
 }
 
 /**
+ * Fenêtre **précédente** (N-1) : même durée, calée juste avant la fenêtre courante.
+ * Renvoie `0, 0` (comparaison désactivée) pour la fenêtre « Tout » (pas de borne basse)
+ * ou si la période précédente déborderait avant l'époque.
+ */
+function previousWindow(sinceMs: number, untilMs: number): { prevSinceMs: number; prevUntilMs: number } {
+  if (sinceMs <= 0) return { prevSinceMs: 0, prevUntilMs: 0 };
+  const winEnd = untilMs > 0 ? untilMs : Date.now();
+  const len = winEnd - sinceMs;
+  const prevUntilMs = sinceMs - 1;
+  const prevSinceMs = prevUntilMs - len;
+  return prevSinceMs > 0 ? { prevSinceMs, prevUntilMs } : { prevSinceMs: 0, prevUntilMs: 0 };
+}
+
+/** Jour au format « 13 juil. » (UTC, cohérent avec les clés de jour de la heatmap). */
+function fmtDay(ms: number): string {
+  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+/** Libellé « du 13 juil. au 11 août » d'une période bornée. */
+function rangeLabel(sinceMs: number, untilMs: number): string {
+  return `du ${fmtDay(sinceMs)} au ${fmtDay(untilMs)}`;
+}
+
+/** Variation en % de `cur` vs `prev`. `null` = pas de base (période N-1 vide). */
+function pctChange(cur: number, prev: number): number | null {
+  if (prev <= 0) return cur > 0 ? null : 0;
+  return ((cur - prev) / prev) * 100;
+}
+
+/**
  * Nombre de prélèvements mensuels de l'abonnement tombant dans la fenêtre
  * `[winStart, winEnd]`. L'abo est facturé chaque mois à la date anniversaire de
  * `anchorMs` (souscription) ; on compte ces échéances, bornées à maintenant.
@@ -218,8 +249,9 @@ export default async function HomePage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const range = resolveRange(await searchParams);
+  const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
   const [a, skills, sub] = await Promise.all([
-    getAnalytics(range.sinceMs, range.untilMs),
+    getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getSubscription(),
   ]);
@@ -251,6 +283,22 @@ export default async function HomePage({
   const projectCosts = a.projectCosts.filter((p) => p.costUSD > 0);
   const totalText = totals.thinkingChars + totals.textChars;
   const thinkingPct = totalText > 0 ? (totals.thinkingChars / totalText) * 100 : 0;
+
+  // Vélocité : comparaison des KPI de la fenêtre courante vs la période précédente
+  // (N-1). `a.trend` est `null` pour la fenêtre « Tout » → la section est masquée.
+  const compareLabel = a.trend ? rangeLabel(prevSinceMs, prevUntilMs) : "";
+  const trendItems = a.trend
+    ? [
+        { label: "Messages", value: fmtNum(totals.messages), pct: pctChange(totals.messages, a.trend.messages) },
+        {
+          label: "Tokens",
+          value: fmtNum(totals.tokensIn + totals.tokensOut),
+          pct: pctChange(totals.tokensIn + totals.tokensOut, a.trend.tokensIn + a.trend.tokensOut),
+        },
+        { label: "Coût estimé", value: fmtUSD(totals.costUSD), pct: pctChange(totals.costUSD, a.trend.costUSD) },
+        { label: "Sessions", value: full.format(totals.sessions), pct: pctChange(totals.sessions, a.trend.sessions) },
+      ]
+    : [];
 
   // Données de la heatmap : % et couleurs des modèles pré-calculés côté serveur
   // pour éviter d'importer lib/analytics (qui dépend de `fs`) dans le composant client.
@@ -362,6 +410,11 @@ export default async function HomePage({
           sub="tarifs indicatifs"
         />
       </div>
+
+      {/* Vélocité : variation des KPI vs la période précédente (masquée si « Tout ») */}
+      {trendItems.length > 0 && (
+        <VelocityPanel items={trendItems} compareLabel={compareLabel} />
+      )}
 
       {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
       <SubscriptionCard

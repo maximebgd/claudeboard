@@ -183,6 +183,15 @@ export interface DayStat {
   costUSD: number;
 }
 
+/** Totaux d'une période, pour comparer N vs N-1 (vélocité / tendance). */
+export interface TrendTotals {
+  messages: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUSD: number;
+  sessions: number;
+}
+
 export interface Analytics {
   totals: {
     projects: number;
@@ -217,6 +226,12 @@ export interface Analytics {
   recentProjects: { id: string; label: string; sessionCount: number; createdAt: number; lastModified: number; costUSD: number }[];
   /** Coût estimé (USD) agrégé par projet sur la fenêtre, trié décroissant. */
   projectCosts: { id: string; label: string; costUSD: number }[];
+  /**
+   * Totaux de la période **précédente** (`[prevSinceMs, prevUntilMs]`), agrégés dans
+   * le même passage pour calculer la vélocité (N vs N-1). `null` si aucune période de
+   * comparaison n'est demandée (fenêtre « Tout » ou bornes précédentes non fournies).
+   */
+  trend: TrendTotals | null;
 }
 
 /**
@@ -228,9 +243,19 @@ export interface Analytics {
  * timestamp tombe dans la fenêtre `[sinceMs, untilMs]` (ms epoch, bornes incluses).
  * Dès qu'une borne est posée, les lignes sans timestamp sont ignorées. `0` sur une
  * borne = pas de limite de ce côté (donc `0, 0` = tout l'historique).
+ *
+ * `prevSinceMs` / `prevUntilMs` (optionnels) décrivent la période **précédente** à
+ * comparer (N-1) : ses totaux sont accumulés dans le même passage et renvoyés dans
+ * `trend`. Les deux bornes doivent être posées (> 0) pour activer la comparaison.
  */
-export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics> {
+export async function getAnalytics(
+  sinceMs = 0,
+  untilMs = 0,
+  prevSinceMs = 0,
+  prevUntilMs = 0,
+): Promise<Analytics> {
   const hasBound = sinceMs > 0 || untilMs > 0;
+  const hasPrev = prevSinceMs > 0 && prevUntilMs > 0;
   const dir = safeResolve(PROJECTS_DIR);
   let entries: Dirent[] = [];
   try {
@@ -266,6 +291,13 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   let toolUses = 0;
   let sessionCount = 0;
 
+  // Totaux de la période précédente (N-1), accumulés dans le même passage.
+  let prevMessages = 0;
+  let prevTokensIn = 0;
+  let prevTokensOut = 0;
+  let prevCost = 0;
+  let prevSessions = 0;
+
   const modelStat = (id: string): ModelStat => ensureModelStat(models, id);
   const dayStat = (d: string) => {
     let s = days.get(d);
@@ -294,6 +326,8 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       }
       let first = Infinity;
       let msgs = 0;
+      // Messages de cette session tombant dans la période précédente (N-1).
+      let prevMsgs = 0;
       // Timestamps (in-range) de la session, pour calculer le temps actif ci-dessous.
       const times: number[] = [];
       // Messages utilisateur en attente d'attribution : ils comptent comme « IN »
@@ -340,6 +374,28 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
             num(u.cache_read_input_tokens),
             num(u.cache_creation_input_tokens),
           );
+        }
+
+        // Période précédente (N-1) : accumulée en parallèle de la fenêtre courante,
+        // pour la vélocité. Se calcule avant le filtre `inRange` (les deux fenêtres
+        // sont par construction disjointes).
+        if (hasPrev && !Number.isNaN(ts) && ts >= prevSinceMs && ts <= prevUntilMs) {
+          prevMessages++;
+          prevMsgs++;
+          if (t === "assistant") {
+            const u = (m.usage ?? {}) as Record<string, unknown>;
+            const inp = num(u.input_tokens);
+            const out = num(u.output_tokens);
+            prevTokensIn += inp;
+            prevTokensOut += out;
+            prevCost += costUSD(
+              parseModel(rawModel).family,
+              inp,
+              out,
+              num(u.cache_read_input_tokens),
+              num(u.cache_creation_input_tokens),
+            );
+          }
         }
 
         // À partir d'ici : statistiques filtrées par la fenêtre sélectionnée.
@@ -400,6 +456,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         const active = activeDuration(times);
         if (active > 0) durations.push(active);
       }
+      if (prevMsgs > 0) prevSessions++;
     }
   }
 
@@ -472,6 +529,15 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     },
     recentProjects,
     projectCosts,
+    trend: hasPrev
+      ? {
+          messages: prevMessages,
+          tokensIn: prevTokensIn,
+          tokensOut: prevTokensOut,
+          costUSD: prevCost,
+          sessions: prevSessions,
+        }
+      : null,
   };
 }
 

@@ -19,6 +19,10 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
   (`?range=custom&from=…&to=…`) ; `getAnalytics(sinceMs, untilMs)` prend les deux bornes.
   La heatmap montre toujours l'historique complet (la fenêtre active y est surlignée).
+  Une section **Vélocité** (`VelocityPanel`, panneau **dépliant**) compare chaque KPI
+  (messages, tokens, coût, sessions) à la période précédente de même durée
+  (N vs N-1, `+/-% vs du … au …` avec les dates réelles de la période N-1) —
+  l'en-tête montre l'aperçu clé même replié ; masquée pour la fenêtre « Tout ».
 - **Skills** : liste, aperçu et **édition** des `~/.claude/skills/*/SKILL.md`
   (frontmatter YAML + corps markdown). Toute écriture crée d'abord un backup
   horodaté `SKILL.md.bak.<timestamp>` à côté du fichier.
@@ -73,9 +77,10 @@ lib/
   skills.ts    listSkills · getSkill · writeSkill (backup .bak avant écrasement)
   projects.ts  listProjects · listSessions · getSession · projectLabel ·
                normalisation des blocs JSONL
-  analytics.ts getAnalytics(sinceMs, untilMs) : scan unique des JSONL → totaux, jours
-               (heatmap), stats par modèle, top outils, coût par projet, durées,
-               débuts de session par heure locale (`hours`, 24 seaux) ;
+  analytics.ts getAnalytics(sinceMs, untilMs, prevSinceMs?, prevUntilMs?) : scan unique
+               des JSONL → totaux, jours (heatmap), stats par modèle, top outils, coût
+               par projet, durées, débuts de session par heure locale (`hours`, 24 seaux),
+               totaux de la période précédente (`trend`, vélocité N vs N-1) ;
                getProjectStats(id) pour un projet ; parseModel + PRICING/MODEL_LABEL/
                MODEL_COLOR exportés (réutilisés par les pages pricing & donut)
   plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
@@ -121,6 +126,7 @@ components/
   ModelDonut (camembert modèles) · RangeSelector (fenêtre temporelle) ·
   SubscriptionCard (coût usage vs plan) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
+  VelocityPanel (section dépliante de vélocité, variation des KPI N vs N-1) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   ReadOnlyBadge (marqueur « lecture seule »)
 ```
