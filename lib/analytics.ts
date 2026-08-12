@@ -383,7 +383,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
   const projects = hasBound
     ? allProjects.filter((p) => p.lastModified >= sinceMs && (untilMs === 0 || p.lastModified <= untilMs))
     : allProjects;
-  const recentProjects = projects.slice(0, 6).map((p) => ({
+  const recentProjects = projects.map((p) => ({
     id: p.id,
     label: projectLabel(p.realPath),
     sessionCount: p.sessionCount,

@@ -235,9 +235,10 @@ export default async function HomePage({
   const hasWindow = range.sinceMs > 0;
   const windowFrom = hasWindow ? dayKey(range.sinceMs) : undefined;
   const windowTo = hasWindow ? dayKey(range.untilMs > 0 ? range.untilMs : Date.now()) : undefined;
-  // Skills les plus récemment modifiés, alignés sur le nombre de projets affichés
-  // (`listSkills` renvoie trié par nom → on re-trie par date pour la colonne « récents »).
-  const recentSkills = [...skills].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, a.recentProjects.length || 6);
+  // Skills les plus récemment modifiés (`listSkills` renvoie trié par nom → on re-trie
+  // par date pour la colonne « récents »). Les deux colonnes affichent au plus 5 lignes,
+  // le reste étant accessible par scroll (voir les conteneurs `max-h-…` ci-dessous).
+  const recentSkills = [...skills].sort((x, y) => y.updatedAt - x.updatedAt);
 
   const { totals, session } = a;
   // Classement « Coût par projet » : on ne garde que les projets à coût non nul.
@@ -497,7 +498,7 @@ export default async function HomePage({
           >
             Projets récemment modifiés
           </SectionTitle>
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {a.recentProjects.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
             )}
@@ -505,7 +506,7 @@ export default async function HomePage({
               <Link
                 key={p.id}
                 href={`/projects/${encodeURIComponent(p.id)}`}
-                className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
+                className="group flex min-h-[4.75rem] items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
               >
                 <FolderGit2 size={15} className="text-[var(--color-accent)] shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -558,7 +559,7 @@ export default async function HomePage({
           >
             Skills
           </SectionTitle>
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {recentSkills.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">Aucun skill trouvé.</div>
             )}
@@ -566,7 +567,7 @@ export default async function HomePage({
               <Link
                 key={s.slug}
                 href={`/skills/${encodeURIComponent(s.slug)}`}
-                className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
+                className="group flex min-h-[4.75rem] items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
               >
                 <Sparkles size={15} className="text-[var(--color-accent)] shrink-0" />
                 <div className="min-w-0 flex-1">
