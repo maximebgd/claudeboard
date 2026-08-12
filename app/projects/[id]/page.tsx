@@ -289,7 +289,7 @@ export default async function ProjectSessionsPage({
       {stats.topTools.length > 0 && (
         <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
           <SectionTitle icon={Wrench}>Outils &amp; skills les plus utilisés</SectionTitle>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 max-h-[152px] overflow-y-auto pr-1">
             {stats.topTools.map((t) => (
               <div key={t.name} className="flex items-center gap-3">
                 <span className="w-40 shrink-0 truncate text-sm font-mono" title={t.name}>
