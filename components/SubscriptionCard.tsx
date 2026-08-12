@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Wallet } from "lucide-react";
+import { ChevronDown, Wallet } from "lucide-react";
 
 export interface SubscriptionCardProps {
   known: boolean;
@@ -88,11 +88,12 @@ export default function SubscriptionCard({
           </span>
         )}
 
-        {open ? (
-          <ChevronDown size={16} className="ml-auto shrink-0 text-[var(--color-faint)]" />
-        ) : (
-          <ChevronRight size={16} className="ml-auto shrink-0 text-[var(--color-faint)]" />
-        )}
+        <ChevronDown
+          size={16}
+          className={`ml-auto shrink-0 text-[var(--color-faint)] transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {open && (
