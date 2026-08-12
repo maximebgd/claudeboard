@@ -10,9 +10,10 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   un seul passage (`lib/analytics.ts` → `getAnalytics`) pour afficher KPI (projets,
   sessions, messages, tokens, coût estimé), heatmap d'activité sur 12 mois,
   répartition des modèles (camembert `ModelDonut`), tokens & coût par modèle, coût par
-  projet (`ProjectCostList`, recherche/tri côté client), outils/skills les plus utilisés
-  (`ToolUsageList`), stats de session (moyennes, durées, ratio thinking/texte) et projets
-  récents. Une carte d'abonnement (`SubscriptionCard`) compare le coût estimé de l'usage
+  projet (`ProjectCostList`, recherche/tri côté client), distribution horaire des débuts
+  de session (`HourlyDistribution` : 24 barres, heure **locale**, comptage brut par heure
+  — pas une moyenne), outils/skills les plus utilisés (`ToolUsageList`), stats de session
+  (moyennes, durées, ratio thinking/texte) et projets récents. Une carte d'abonnement (`SubscriptionCard`) compare le coût estimé de l'usage
   au prix du plan Claude (via `lib/subscription.ts`) pour afficher l'économie nette.
   Un sélecteur de fenêtre (`RangeSelector`) filtre les stats — `Tout` / `30 j` / `7 j`,
   un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
@@ -73,7 +74,8 @@ lib/
   projects.ts  listProjects · listSessions · getSession · projectLabel ·
                normalisation des blocs JSONL
   analytics.ts getAnalytics(sinceMs, untilMs) : scan unique des JSONL → totaux, jours
-               (heatmap), stats par modèle, top outils, coût par projet, durées ;
+               (heatmap), stats par modèle, top outils, coût par projet, durées,
+               débuts de session par heure locale (`hours`, 24 seaux) ;
                getProjectStats(id) pour un projet ; parseModel + PRICING/MODEL_LABEL/
                MODEL_COLOR exportés (réutilisés par les pages pricing & donut)
   plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
@@ -118,6 +120,7 @@ components/
   ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre) ·
   ModelDonut (camembert modèles) · RangeSelector (fenêtre temporelle) ·
   SubscriptionCard (coût usage vs plan) · ProjectCostList · ToolUsageList ·
+  HourlyDistribution (débuts de session par heure, heure locale) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   ReadOnlyBadge (marqueur « lecture seule »)
 ```
