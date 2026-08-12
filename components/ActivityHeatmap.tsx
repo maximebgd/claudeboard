@@ -138,7 +138,6 @@ export default function ActivityHeatmap({
             />
           ))}
           <span>Plus</span>
-          <span className="ml-auto text-[var(--color-faint)]">survolez ou cliquez un jour pour le détail</span>
         </div>
       </div>
     </div>

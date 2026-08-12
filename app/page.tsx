@@ -457,9 +457,9 @@ export default async function HomePage({
         netAbs={fmtUSD(Math.abs(netSavings))}
       />
 
-      {/* Activité : heatmap ou courbe (toggle) */}
+      {/* Activité : heatmap ou courbe (toggle) + streak dans l'en-tête */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <ActivityPanel days={heatDays} windowFrom={windowFrom} windowTo={windowTo} />
+        <ActivityPanel days={heatDays} streak={a.streak} windowFrom={windowFrom} windowTo={windowTo} />
       </section>
 
       {/* Distribution horaire des débuts de session */}

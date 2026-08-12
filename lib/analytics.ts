@@ -54,6 +54,71 @@ function num(v: unknown): number {
 /** Au-delà de ce seuil sans nouveau message, on considère une pause (non comptée). */
 const IDLE_GAP_MS = 30 * 60 * 1000;
 
+/** Durée d'un jour en ms — sert au calcul des séries de jours consécutifs (streak). */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Numéro de jour (UTC) depuis l'époque, pour une clé `YYYY-MM-DD`. */
+function dayNumber(dayKey: string): number {
+  return Math.floor(Date.parse(dayKey + "T00:00:00Z") / DAY_MS);
+}
+
+/**
+ * Calcule la série de jours consécutifs d'utilisation à partir de l'ensemble des jours
+ * actifs (clés `YYYY-MM-DD` UTC, comme la heatmap). `current` n'est comptée que si le
+ * dernier jour actif est aujourd'hui ou hier (UTC) — sinon la série est rompue (0).
+ */
+function computeStreak(dayKeys: string[]): StreakStat {
+  const empty: StreakStat = {
+    current: 0,
+    longest: 0,
+    longestStart: "",
+    longestEnd: "",
+    lastActiveDate: "",
+    activeToday: false,
+  };
+  if (dayKeys.length === 0) return empty;
+
+  const keys = [...dayKeys].sort(); // YYYY-MM-DD trié = ordre chronologique
+  const nums = keys.map(dayNumber);
+
+  let longest = 1;
+  let bestStart = 0;
+  let bestEnd = 0;
+  let runStart = 0;
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] === nums[i - 1] + 1) {
+      if (i - runStart + 1 > longest) {
+        longest = i - runStart + 1;
+        bestStart = runStart;
+        bestEnd = i;
+      }
+    } else {
+      runStart = i;
+    }
+  }
+
+  const todayNum = Math.floor(Date.now() / DAY_MS);
+  const lastNum = nums[nums.length - 1];
+  const activeToday = lastNum === todayNum;
+  let current = 0;
+  if (lastNum === todayNum || lastNum === todayNum - 1) {
+    current = 1;
+    for (let i = nums.length - 1; i > 0; i--) {
+      if (nums[i] === nums[i - 1] + 1) current++;
+      else break;
+    }
+  }
+
+  return {
+    current,
+    longest,
+    longestStart: keys[bestStart],
+    longestEnd: keys[bestEnd],
+    lastActiveDate: keys[keys.length - 1],
+    activeToday,
+  };
+}
+
 /**
  * Temps « actif » d'une session : somme des écarts entre messages consécutifs, en
  * ignorant tout trou d'inactivité supérieur à IDLE_GAP_MS. Évite qu'une session
@@ -183,6 +248,24 @@ export interface DayStat {
   costUSD: number;
 }
 
+/**
+ * Série de jours consécutifs d'utilisation (streak), calculée sur l'historique complet
+ * des jours actifs (indépendante de la fenêtre, comme la heatmap).
+ */
+export interface StreakStat {
+  /** Jours consécutifs jusqu'à aujourd'hui (ou hier) ; 0 si la série est rompue. */
+  current: number;
+  /** Meilleure série historique. */
+  longest: number;
+  /** Bornes de la meilleure série (`YYYY-MM-DD` UTC ; `""` si aucun jour actif). */
+  longestStart: string;
+  longestEnd: string;
+  /** Dernier jour actif (`YYYY-MM-DD` UTC). */
+  lastActiveDate: string;
+  /** `true` si le dernier jour actif est aujourd'hui (série encore « vivante »). */
+  activeToday: boolean;
+}
+
 /** Totaux d'une période, pour comparer N vs N-1 (vélocité / tendance). */
 export interface TrendTotals {
   messages: number;
@@ -214,6 +297,8 @@ export interface Analytics {
   days: DayStat[];
   /** Débuts de session par heure locale (index 0–23) sur la fenêtre. */
   hours: number[];
+  /** Série de jours consécutifs d'utilisation (historique complet, hors fenêtre). */
+  streak: StreakStat;
   topTools: { name: string; count: number }[];
   session: {
     count: number;
@@ -477,6 +562,9 @@ export async function getAnalytics(
     .map((p) => ({ id: p.id, label: projectLabel(p.realPath), costUSD: projCost.get(p.id) ?? 0 }))
     .sort((a, b) => b.costUSD - a.costUSD);
 
+  // Streak : basé sur toutes les clés de jour (historique complet, comme la heatmap).
+  const streak = computeStreak([...days.keys()]);
+
   const daysArr: DayStat[] = [...days.entries()]
     .map(([date, v]) => ({
       date,
@@ -519,6 +607,7 @@ export async function getAnalytics(
     models: modelsArr,
     days: daysArr,
     hours: hourBuckets,
+    streak,
     topTools,
     session: {
       count: sessionCount,
