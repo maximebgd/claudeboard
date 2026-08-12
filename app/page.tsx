@@ -16,7 +16,8 @@ import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/cl
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
-import ActivityHeatmap, { type HeatDay } from "@/components/ActivityHeatmap";
+import { type HeatDay } from "@/components/ActivityHeatmap";
+import ActivityPanel from "@/components/ActivityPanel";
 import ModelDonut from "@/components/ModelDonut";
 import RangeSelector from "@/components/RangeSelector";
 import SubscriptionCard from "@/components/SubscriptionCard";
@@ -375,14 +376,9 @@ export default async function HomePage({
         netAbs={fmtUSD(Math.abs(netSavings))}
       />
 
-      {/* Heatmap */}
+      {/* Activité : heatmap ou courbe (toggle) */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-        <ActivityHeatmap
-          days={heatDays}
-          windowFrom={windowFrom}
-          windowTo={windowTo}
-          title={<SectionTitle>Activité · 12 derniers mois</SectionTitle>}
-        />
+        <ActivityPanel days={heatDays} windowFrom={windowFrom} windowTo={windowTo} />
       </section>
 
       {/* Distribution horaire des débuts de session */}
