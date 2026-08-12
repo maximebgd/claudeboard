@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { FolderGit2, ChevronRight, MessagesSquare, Coins } from "lucide-react";
+import { FolderGit2, ChevronRight, MessagesSquare, Coins, Clock, History } from "lucide-react";
 import { listProjects, projectLabel } from "@/lib/projects";
 import { getAnalytics } from "@/lib/analytics";
-import { formatDate } from "@/lib/claude";
+import { formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +45,19 @@ export default async function ProjectsPage() {
               <div className="mt-0.5 text-xs text-[var(--color-muted)] font-mono truncate">
                 {p.realPath}
               </div>
-              <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
                 <span className="flex items-center gap-1">
                   <MessagesSquare size={12} />
                   {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
                 </span>
-                <span>Activité : {formatDate(p.lastModified)}</span>
+                <span className="flex items-center gap-1" title={`Créé le ${formatDate(p.createdAt)}`}>
+                  <Clock size={12} />
+                  Existe depuis {formatDuration(Date.now() - p.createdAt)}
+                </span>
+                <span className="flex items-center gap-1" title={formatDate(p.lastModified)}>
+                  <History size={12} />
+                  Modifié {formatRelative(p.lastModified)}
+                </span>
                 {(costById.get(p.id) ?? 0) > 0 && (
                   <span className="flex items-center gap-1">
                     <Coins size={12} />

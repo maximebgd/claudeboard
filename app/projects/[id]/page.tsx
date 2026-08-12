@@ -10,10 +10,12 @@ import {
   CalendarDays,
   ArrowDown,
   ArrowUp,
+  Clock,
+  History,
 } from "lucide-react";
 import { listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { getProjectStats } from "@/lib/analytics";
-import { formatDate, formatSize } from "@/lib/claude";
+import { formatDate, formatSize, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 
 export const dynamic = "force-dynamic";
@@ -131,7 +133,19 @@ export default async function ProjectSessionsPage({
           <ReadOnlyBadge />
         </div>
         {project && (
-          <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
+          <>
+            <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
+              <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                <Clock size={12} />
+                Existe depuis {formatDuration(Date.now() - project.createdAt)}
+              </span>
+              <span className="flex items-center gap-1" title={formatDate(project.lastModified)}>
+                <History size={12} />
+                Modifié {formatRelative(project.lastModified)}
+              </span>
+            </div>
+          </>
         )}
       </div>
 

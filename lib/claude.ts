@@ -36,6 +36,37 @@ export function formatDate(ms: number | string | undefined): string {
   });
 }
 
+/**
+ * Durée lisible et compacte en français (ex. « 1 an 2 mois », « 5 jours »,
+ * « 3 h »). Utilisée pour l'ancienneté d'un projet.
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 0) ms = 0;
+  const min = Math.floor(ms / 60000);
+  const hr = Math.floor(min / 60);
+  const day = Math.floor(hr / 24);
+  const year = Math.floor(day / 365);
+  const month = Math.floor((day % 365) / 30);
+  if (year >= 1) {
+    return month >= 1
+      ? `${year} an${year > 1 ? "s" : ""} ${month} mois`
+      : `${year} an${year > 1 ? "s" : ""}`;
+  }
+  if (day >= 30) return `${Math.floor(day / 30)} mois`;
+  if (day >= 1) return `${day} jour${day > 1 ? "s" : ""}`;
+  if (hr >= 1) return `${hr} h`;
+  if (min >= 1) return `${min} min`;
+  return "à l'instant";
+}
+
+/** Durée écoulée depuis un timestamp, préfixée « il y a ». */
+export function formatRelative(ms: number | undefined): string {
+  if (ms === undefined) return "—";
+  const diff = Date.now() - ms;
+  if (diff < 60000) return "à l'instant";
+  return `il y a ${formatDuration(diff)}`;
+}
+
 /** Taille de fichier lisible. */
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;

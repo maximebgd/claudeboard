@@ -192,7 +192,7 @@ export interface Analytics {
     avgDurationMs: number;
     medianDurationMs: number;
   };
-  recentProjects: { id: string; label: string; sessionCount: number; lastModified: number; costUSD: number }[];
+  recentProjects: { id: string; label: string; sessionCount: number; createdAt: number; lastModified: number; costUSD: number }[];
   /** Coût estimé (USD) agrégé par projet sur la fenêtre, trié décroissant. */
   projectCosts: { id: string; label: string; costUSD: number }[];
 }
@@ -387,6 +387,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
     id: p.id,
     label: projectLabel(p.realPath),
     sessionCount: p.sessionCount,
+    createdAt: p.createdAt,
     lastModified: p.lastModified,
     costUSD: projCost.get(p.id) ?? 0,
   }));

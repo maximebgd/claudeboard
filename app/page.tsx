@@ -9,9 +9,10 @@ import {
   ArrowDown,
   ArrowUp,
   Clock,
+  History,
   Brain,
 } from "lucide-react";
-import { CLAUDE_DIR, formatDate } from "@/lib/claude";
+import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
@@ -509,9 +510,28 @@ export default async function HomePage({
                 <FolderGit2 size={15} className="text-[var(--color-accent)] shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{p.label}</div>
-                  <div className="text-xs text-[var(--color-muted)]">
-                    {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""} · {formatDate(p.lastModified)}
-                    {p.costUSD > 0 && <> · {fmtUSD(p.costUSD)}</>}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
+                    <span className="flex items-center gap-1">
+                      <MessagesSquare size={12} />
+                      {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
+                    </span>
+                    <span
+                      className="flex items-center gap-1"
+                      title={`Créé le ${formatDate(p.createdAt)}`}
+                    >
+                      <Clock size={12} />
+                      Existe depuis {formatDuration(Date.now() - p.createdAt)}
+                    </span>
+                    <span className="flex items-center gap-1" title={formatDate(p.lastModified)}>
+                      <History size={12} />
+                      Modifié {formatRelative(p.lastModified)}
+                    </span>
+                    {p.costUSD > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Coins size={12} />
+                        {fmtUSD(p.costUSD)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <ArrowRight

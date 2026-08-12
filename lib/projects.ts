@@ -8,6 +8,7 @@ export interface ProjectMeta {
   id: string; // nom de dossier encodé (ex. -Users-maxx-Desktop-foo)
   realPath: string; // cwd réel si retrouvé, sinon décodage naïf
   sessionCount: number;
+  createdAt: number; // naissance du plus ancien fichier de session (proxy d'ancienneté)
   lastModified: number;
 }
 
@@ -95,12 +96,17 @@ export async function listProjects(): Promise<ProjectMeta[]> {
     }
     if (files.length === 0) continue;
     let lastModified = 0;
+    let createdAt = Infinity;
     for (const f of files) {
       const st = await fs.stat(safeResolve(PROJECTS_DIR, e.name, f));
       lastModified = Math.max(lastModified, st.mtimeMs);
+      // birthtime n'est pas toujours fiable (0 sur certains FS) → repli sur mtime.
+      const born = st.birthtimeMs > 0 ? st.birthtimeMs : st.mtimeMs;
+      createdAt = Math.min(createdAt, born);
     }
+    if (!Number.isFinite(createdAt)) createdAt = lastModified;
     const realPath = await findRealPath(e.name, files);
-    out.push({ id: e.name, realPath, sessionCount: files.length, lastModified });
+    out.push({ id: e.name, realPath, sessionCount: files.length, createdAt, lastModified });
   }
   return out.sort((a, b) => b.lastModified - a.lastModified);
 }
