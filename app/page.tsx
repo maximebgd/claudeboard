@@ -45,6 +45,10 @@ function fmtDuration(ms: number): string {
   const s = Math.round(ms / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    return `${d}j ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
+  }
   if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
   if (m > 0) return `${m} min`;
   return `${s} s`;
@@ -274,10 +278,14 @@ export default async function HomePage({
         <div className="min-w-0">
           <div className="eyebrow flex items-center gap-2">
             <span className="text-[var(--color-accent)]">claude board</span>
-            <span aria-hidden className="text-[var(--color-faint)]">/</span>
+            <span aria-hidden className="text-[var(--color-faint)]">
+              /
+            </span>
             <span>readout</span>
           </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Vue d&apos;ensemble</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+            Vue d&apos;ensemble
+          </h1>
           <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
             <span className="text-[var(--color-accent)]" aria-hidden>
               $
@@ -286,14 +294,24 @@ export default async function HomePage({
             <span className="cb-cursor shrink-0" aria-hidden />
           </p>
         </div>
-        <RangeSelector activeKey={range.key} month={range.month} from={range.from} to={range.to} />
+        <RangeSelector
+          activeKey={range.key}
+          month={range.month}
+          from={range.from}
+          to={range.to}
+        />
       </header>
 
       <div className="mt-6 h-px bg-gradient-to-r from-[var(--color-border)] via-[var(--color-border)] to-transparent" />
 
       {/* KPI */}
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={Sparkles} label="Skills" value={fmtNum(skills.length)} href="/skills" />
+        <StatCard
+          icon={Sparkles}
+          label="Skills"
+          value={fmtNum(skills.length)}
+          href="/skills"
+        />
         <StatCard
           icon={FolderGit2}
           label="Projets / Sessions"
@@ -336,7 +354,12 @@ export default async function HomePage({
             </span>
           }
         />
-        <StatCard icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
+        <StatCard
+          icon={Coins}
+          label="Coût estimé"
+          value={fmtUSD(totals.costUSD)}
+          sub="tarifs indicatifs"
+        />
       </div>
 
       {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
@@ -372,7 +395,9 @@ export default async function HomePage({
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
           <SectionTitle>Répartition des modèles</SectionTitle>
           {a.models.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted)]">Aucune donnée de modèle.</p>
+            <p className="text-sm text-[var(--color-muted)]">
+              Aucune donnée de modèle.
+            </p>
           ) : (
             <ModelDonut models={a.models} />
           )}
@@ -387,13 +412,19 @@ export default async function HomePage({
                   <th className="pb-2 font-normal">Modèle</th>
                   <th className="pb-2 text-right font-normal">
                     <span className="inline-flex items-center justify-end gap-0.5">
-                      <ArrowUp size={11} className="text-[var(--color-accent)]" />
+                      <ArrowUp
+                        size={11}
+                        className="text-[var(--color-accent)]"
+                      />
                       In
                     </span>
                   </th>
                   <th className="pb-2 text-right font-normal">
                     <span className="inline-flex items-center justify-end gap-0.5">
-                      <ArrowDown size={11} className="text-[var(--color-accent)]" />
+                      <ArrowDown
+                        size={11}
+                        className="text-[var(--color-accent)]"
+                      />
                       Out
                     </span>
                   </th>
@@ -403,23 +434,33 @@ export default async function HomePage({
               </thead>
               <tbody className="font-mono tabular-nums">
                 {a.models.map((m) => (
-                  <tr key={m.key} className="border-t border-[var(--color-border)]">
+                  <tr
+                    key={m.key}
+                    className="border-t border-[var(--color-border)]"
+                  >
                     <td className="py-2 font-sans">
                       <span className="inline-flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: m.color }} />
+                        <span
+                          className="h-2.5 w-2.5 rounded-sm"
+                          style={{ backgroundColor: m.color }}
+                        />
                         {m.label}
                       </span>
                     </td>
                     <td className="py-2 text-right">{fmtNum(m.tokensIn)}</td>
                     <td className="py-2 text-right">{fmtNum(m.tokensOut)}</td>
-                    <td className="py-2 text-right text-[var(--color-muted)]">{fmtNum(m.cacheRead + m.cacheWrite)}</td>
+                    <td className="py-2 text-right text-[var(--color-muted)]">
+                      {fmtNum(m.cacheRead + m.cacheWrite)}
+                    </td>
                     <td className="py-2 text-right">{fmtUSD(m.costUSD)}</td>
                   </tr>
                 ))}
                 <tr className="border-t border-[var(--color-border)] font-medium">
                   <td className="py-2 font-sans">Total</td>
                   <td className="py-2 text-right">{fmtNum(totals.tokensIn)}</td>
-                  <td className="py-2 text-right">{fmtNum(totals.tokensOut)}</td>
+                  <td className="py-2 text-right">
+                    {fmtNum(totals.tokensOut)}
+                  </td>
                   <td className="py-2 text-right text-[var(--color-muted)]">
                     {fmtNum(totals.cacheRead + totals.cacheWrite)}
                   </td>
@@ -449,20 +490,34 @@ export default async function HomePage({
           <SectionTitle icon={Clock}>Sessions</SectionTitle>
           <div className="grid grid-cols-2 gap-x-4 gap-y-5">
             <div>
-              <div className="eyebrow">Messages / session</div>
-              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{session.avgMessages.toFixed(1)}</div>
-            </div>
-            <div>
-              <div className="eyebrow">Outils appelés</div>
-              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtNum(totals.toolUses)}</div>
+              <div className="eyebrow">Durée totale</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">
+                {fmtDuration(session.totalDurationMs)}
+              </div>
             </div>
             <div>
               <div className="eyebrow">Durée moyenne</div>
-              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtDuration(session.avgDurationMs)}</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">
+                {fmtDuration(session.avgDurationMs)}
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow">Messages / session</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">
+                {session.avgMessages.toFixed(1)}
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow">Outils appelés</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">
+                {fmtNum(totals.toolUses)}
+              </div>
             </div>
             <div>
               <div className="eyebrow">Durée médiane</div>
-              <div className="mt-1 font-mono text-xl font-medium tabular-nums">{fmtDuration(session.medianDurationMs)}</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums">
+                {fmtDuration(session.medianDurationMs)}
+              </div>
             </div>
           </div>
           <div className="mt-5">
@@ -471,11 +526,19 @@ export default async function HomePage({
                 <Brain size={13} className="text-[var(--color-accent)]" />
                 Ratio thinking / texte
               </span>
-              <span className="font-mono tabular-nums">{thinkingPct.toFixed(0)}% thinking</span>
+              <span className="font-mono tabular-nums">
+                {thinkingPct.toFixed(0)}% thinking
+              </span>
             </div>
             <div className="flex h-2.5 rounded-full overflow-hidden bg-[var(--color-inset)]">
-              <div className="h-full bg-[var(--color-accent)]" style={{ width: `${thinkingPct}%` }} />
-              <div className="h-full bg-[var(--color-faint)]" style={{ width: `${100 - thinkingPct}%` }} />
+              <div
+                className="h-full bg-[var(--color-accent)]"
+                style={{ width: `${thinkingPct}%` }}
+              />
+              <div
+                className="h-full bg-[var(--color-faint)]"
+                style={{ width: `${100 - thinkingPct}%` }}
+              />
             </div>
           </div>
         </section>
@@ -500,7 +563,9 @@ export default async function HomePage({
           </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {a.recentProjects.length === 0 && (
-              <div className="p-4 text-sm text-[var(--color-muted)]">Aucun projet trouvé.</div>
+              <div className="p-4 text-sm text-[var(--color-muted)]">
+                Aucun projet trouvé.
+              </div>
             )}
             {a.recentProjects.map((p) => (
               <Link
@@ -508,7 +573,10 @@ export default async function HomePage({
                 href={`/projects/${encodeURIComponent(p.id)}`}
                 className="group flex min-h-[4.75rem] items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
               >
-                <FolderGit2 size={15} className="text-[var(--color-accent)] shrink-0" />
+                <FolderGit2
+                  size={15}
+                  className="text-[var(--color-accent)] shrink-0"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{p.label}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
@@ -523,7 +591,10 @@ export default async function HomePage({
                       <Clock size={12} />
                       Existe depuis {formatDuration(Date.now() - p.createdAt)}
                     </span>
-                    <span className="flex items-center gap-1" title={formatDate(p.lastModified)}>
+                    <span
+                      className="flex items-center gap-1"
+                      title={formatDate(p.lastModified)}
+                    >
                       <History size={12} />
                       Modifié {formatRelative(p.lastModified)}
                     </span>
@@ -561,7 +632,9 @@ export default async function HomePage({
           </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {recentSkills.length === 0 && (
-              <div className="p-4 text-sm text-[var(--color-muted)]">Aucun skill trouvé.</div>
+              <div className="p-4 text-sm text-[var(--color-muted)]">
+                Aucun skill trouvé.
+              </div>
             )}
             {recentSkills.map((s) => (
               <Link
@@ -569,11 +642,16 @@ export default async function HomePage({
                 href={`/skills/${encodeURIComponent(s.slug)}`}
                 className="group flex min-h-[4.75rem] items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
               >
-                <Sparkles size={15} className="text-[var(--color-accent)] shrink-0" />
+                <Sparkles
+                  size={15}
+                  className="text-[var(--color-accent)] shrink-0"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{s.name}</div>
                   {s.description && (
-                    <div className="text-xs text-[var(--color-muted)] truncate">{s.description}</div>
+                    <div className="text-xs text-[var(--color-muted)] truncate">
+                      {s.description}
+                    </div>
                   )}
                 </div>
                 <ArrowRight

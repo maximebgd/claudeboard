@@ -7,7 +7,6 @@ import {
   Cpu,
   Wrench,
   FolderGit2,
-  CalendarDays,
   ArrowDown,
   ArrowUp,
   Clock,
@@ -40,6 +39,21 @@ function fmtDay(ms: number): string {
 /** Heure « 20:50 ». */
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Durée précise : « 2j 05h 30min » au-delà de 24 h, sinon « h / min / s ». */
+function fmtDuration(ms: number): string {
+  if (ms <= 0) return "—";
+  const s = Math.round(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    return `${d}j ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
+  }
+  if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
+  if (m > 0) return `${m} min`;
+  return `${s} s`;
 }
 
 function Stat({
@@ -100,16 +114,10 @@ export default async function ProjectSessionsPage({
   const { totals } = stats;
   const maxTool = Math.max(1, ...stats.topTools.map((t) => t.count));
   const hasActivity = stats.firstActivity > 0;
-  const hasRange = hasActivity && stats.firstActivity !== stats.lastActivity;
-  const activityValue = hasActivity ? (
-    <span className="flex flex-col leading-tight">
-      <span>{fmtDay(stats.lastActivity)}</span>
-      <span>{fmtTime(stats.lastActivity)}</span>
-    </span>
-  ) : (
-    "—"
-  );
-  const activitySub = hasRange ? (
+  // « Activité » : temps actif total passé sur le projet (gaps > 30 min ignorés),
+  // avec en sous-titre la date du premier message (« depuis le … »).
+  const activityValue = stats.totalDurationMs > 0 ? fmtDuration(stats.totalDurationMs) : "—";
+  const activitySub = hasActivity ? (
     <span className="flex flex-col">
       <span>depuis le {fmtDay(stats.firstActivity)}</span>
       <span>{fmtTime(stats.firstActivity)}</span>
@@ -193,7 +201,7 @@ export default async function ProjectSessionsPage({
         <Stat icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
         <Stat icon={Wrench} label="Outils appelés" value={fmtNum(totals.toolUses)} />
         <Stat
-          icon={CalendarDays}
+          icon={Clock}
           label="Activité"
           value={activityValue}
           sub={activitySub}

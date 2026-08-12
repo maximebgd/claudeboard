@@ -51,6 +51,26 @@ function num(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+/** Au-delà de ce seuil sans nouveau message, on considère une pause (non comptée). */
+const IDLE_GAP_MS = 30 * 60 * 1000;
+
+/**
+ * Temps « actif » d'une session : somme des écarts entre messages consécutifs, en
+ * ignorant tout trou d'inactivité supérieur à IDLE_GAP_MS. Évite qu'une session
+ * laissée ouverte (long silence puis reprise) gonfle la durée avec son écart brut
+ * début→fin.
+ */
+function activeDuration(times: number[]): number {
+  if (times.length < 2) return 0;
+  const sorted = [...times].sort((a, b) => a - b);
+  let total = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = sorted[i] - sorted[i - 1];
+    if (gap > 0 && gap <= IDLE_GAP_MS) total += gap;
+  }
+  return total;
+}
+
 function costUSD(fam: ModelFamily, inp: number, out: number, cr: number, cw: number): number {
   const p = PRICING[fam];
   return (inp * p.in + out * p.out + cr * p.cacheRead + cw * p.cacheWrite) / 1e6;
@@ -191,6 +211,8 @@ export interface Analytics {
     avgMessages: number;
     avgDurationMs: number;
     medianDurationMs: number;
+    /** Somme du temps actif des sessions sur la fenêtre (gaps > 30 min ignorés). */
+    totalDurationMs: number;
   };
   recentProjects: { id: string; label: string; sessionCount: number; createdAt: number; lastModified: number; costUSD: number }[];
   /** Coût estimé (USD) agrégé par projet sur la fenêtre, trié décroissant. */
@@ -271,8 +293,9 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         continue;
       }
       let first = Infinity;
-      let last = -Infinity;
       let msgs = 0;
+      // Timestamps (in-range) de la session, pour calculer le temps actif ci-dessous.
+      const times: number[] = [];
       // Messages utilisateur en attente d'attribution : ils comptent comme « IN »
       // du prochain modèle qui répond (dans le même transcript).
       let pendingUsers = 0;
@@ -330,7 +353,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         msgs++;
         if (!Number.isNaN(ts)) {
           first = Math.min(first, ts);
-          last = Math.max(last, ts);
+          times.push(ts);
         }
 
         if (t === "assistant") {
@@ -374,7 +397,8 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
         sessionCount++;
         msgCounts.push(msgs);
         if (first !== Infinity) hourBuckets[new Date(first).getHours()]++;
-        if (first !== Infinity && last > first) durations.push(last - first);
+        const active = activeDuration(times);
+        if (active > 0) durations.push(active);
       }
     }
   }
@@ -408,7 +432,8 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
 
   const sortedDur = [...durations].sort((a, b) => a - b);
   const median = sortedDur.length ? sortedDur[Math.floor(sortedDur.length / 2)] : 0;
-  const avgDur = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const totalDur = durations.reduce((a, b) => a + b, 0);
+  const avgDur = durations.length ? totalDur / durations.length : 0;
   const avgMsg = msgCounts.length ? msgCounts.reduce((a, b) => a + b, 0) / msgCounts.length : 0;
 
   const modelsArr = finalizeModels(models);
@@ -443,6 +468,7 @@ export async function getAnalytics(sinceMs = 0, untilMs = 0): Promise<Analytics>
       avgMessages: avgMsg,
       avgDurationMs: avgDur,
       medianDurationMs: median,
+      totalDurationMs: totalDur,
     },
     recentProjects,
     projectCosts,
@@ -467,6 +493,8 @@ export interface ProjectStats {
   /** Bornes d'activité (ms epoch) ; `0` si aucun message daté. */
   firstActivity: number;
   lastActivity: number;
+  /** Temps actif total passé sur le projet (gaps > 30 min ignorés). */
+  totalDurationMs: number;
 }
 
 /**
@@ -496,6 +524,7 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
   let toolUses = 0;
   let firstActivity = Infinity;
   let lastActivity = -Infinity;
+  let totalDurationMs = 0;
 
   for (const file of files) {
     let raw: string;
@@ -507,6 +536,8 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
     let msgs = 0;
     // Messages utilisateur en attente : comptés comme « IN » du prochain modèle qui répond.
     let pendingUsers = 0;
+    // Timestamps de la session, pour sommer son temps actif (même logique que getAnalytics).
+    const times: number[] = [];
 
     for (const line of raw.split("\n")) {
       if (!line.trim()) continue;
@@ -523,6 +554,7 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
       if (!Number.isNaN(ts)) {
         firstActivity = Math.min(firstActivity, ts);
         lastActivity = Math.max(lastActivity, ts);
+        times.push(ts);
       }
 
       messages++;
@@ -568,7 +600,10 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
       cacheWrite += cw;
     }
 
-    if (msgs > 0) sessions++;
+    if (msgs > 0) {
+      sessions++;
+      totalDurationMs += activeDuration(times);
+    }
   }
 
   const topTools = [...tools.entries()]
@@ -593,5 +628,6 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
     topTools,
     firstActivity: firstActivity === Infinity ? 0 : firstActivity,
     lastActivity: lastActivity === -Infinity ? 0 : lastActivity,
+    totalDurationMs,
   };
 }
