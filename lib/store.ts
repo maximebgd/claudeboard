@@ -173,3 +173,19 @@ export async function setPricingOverrides(
   await writeStore({ pricingOverrides: overrides });
   return overrides;
 }
+
+/**
+ * Enregistre le choix d'abonnement. `source: "auto"` efface tout plan manuel (on
+ * repasse sur l'auto-détection). `source: "manual"` conserve le `plan` fourni tel
+ * quel — la **validation** de la valeur de plan est faite en amont (route API),
+ * le store ne fait que persister. Retourne l'état écrit.
+ */
+export async function setSubscription(input: {
+  plan: string | null;
+  source: "auto" | "manual";
+}): Promise<StoreData["subscription"]> {
+  const source = input.source === "manual" ? "manual" : "auto";
+  const plan = source === "manual" && typeof input.plan === "string" ? input.plan : null;
+  await writeStore({ subscription: { plan, source } });
+  return { plan, source };
+}

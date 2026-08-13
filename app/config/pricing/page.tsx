@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, DollarSign } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, Wallet } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -6,7 +6,9 @@ import {
   MODEL_COLOR,
   type ModelFamily,
 } from "@/lib/analytics";
+import { getEffectiveSubscription, PLANS } from "@/lib/subscription";
 import PricingEditor from "@/components/PricingEditor";
+import SubscriptionSelector from "@/components/SubscriptionSelector";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ const COLS = [
 ] as const;
 
 export default async function PricingPage() {
-  const effective = await getEffectivePricing();
+  const [effective, sub] = await Promise.all([getEffectivePricing(), getEffectiveSubscription()]);
   const families = FAMILIES.map((fam) => ({
     key: fam,
     label: MODEL_LABEL[fam],
@@ -29,6 +31,16 @@ export default async function PricingPage() {
   }));
   const defaults = Object.fromEntries(FAMILIES.map((fam) => [fam, PRICING[fam]]));
   const initial = Object.fromEntries(FAMILIES.map((fam) => [fam, effective[fam]]));
+
+  const planOptions = [
+    ...Object.entries(PLANS).map(([value, p]) => ({
+      value,
+      label: p.label,
+      price: `${p.monthlyPriceUSD} $/mois`,
+    })),
+    { value: "none", label: "Aucun", price: "—" },
+  ];
+  const subSelection = sub.source === "manual" ? sub.type : "auto";
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -49,6 +61,24 @@ export default async function PricingPage() {
           initial={initial}
         />
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Wallet size={18} className="text-[var(--color-accent)]" />
+          Abonnement
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
+          Plan Claude retenu pour estimer la rentabilité (coût d'usage vs coût de
+          l'abonnement) sur le dashboard. Détecté automatiquement depuis{" "}
+          <code className="font-mono text-[12px]">~/.claude.json</code>, ou choisi
+          manuellement ci-dessous.
+        </p>
+        <SubscriptionSelector
+          initialSelection={subSelection}
+          detected={{ label: sub.detected.label, known: sub.detected.known }}
+          planOptions={planOptions}
+        />
+      </section>
 
       <div className="mt-8 space-y-4 text-sm text-[var(--color-muted)]">
         <div>

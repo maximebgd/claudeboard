@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
-import { getSubscription } from "@/lib/subscription";
+import { getEffectiveSubscription } from "@/lib/subscription";
 import { listSkills } from "@/lib/skills";
 import { type HeatDay } from "@/components/ActivityHeatmap";
 import ActivityPanel from "@/components/ActivityPanel";
@@ -284,7 +284,7 @@ export default async function HomePage({
   const [a, skills, sub, favorites] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
-    getSubscription(),
+    getEffectiveSubscription(),
     getFavoriteSessions(),
   ]);
 

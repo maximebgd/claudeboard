@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { CLAUDE_DIR } from "./claude";
+import { readStore } from "./store";
 
 /**
  * Lecture SEULE du type d'abonnement Claude. Comme la config MCP, cette info vit
@@ -15,16 +16,28 @@ import { CLAUDE_DIR } from "./claude";
 /** `~/.claude.json` — sibling de CLAUDE_DIR (respecte un override CLAUDE_DIR). */
 const CLAUDE_JSON = path.join(path.dirname(CLAUDE_DIR), ".claude.json");
 
-export type PlanType = "pro" | "max5x" | "unknown";
+export type PlanType = "pro" | "max5x" | "max20x" | "none" | "unknown";
+
+/** Plans payants sélectionnables (avec leur prix). Sert au calcul et à l'UI. */
+export type PaidPlan = "pro" | "max5x" | "max20x";
 
 /**
  * Prix mensuel indicatif en USD par plan — comme `PRICING` dans analytics.ts,
  * c'est une estimation locale, pas une facturation réelle.
  */
-const PLAN: Record<Exclude<PlanType, "unknown">, { label: string; monthlyPriceUSD: number }> = {
+export const PLANS: Record<PaidPlan, { label: string; monthlyPriceUSD: number }> = {
   pro: { label: "Pro", monthlyPriceUSD: 20 },
   max5x: { label: "Max 5×", monthlyPriceUSD: 100 },
+  max20x: { label: "Max 20×", monthlyPriceUSD: 200 },
 };
+
+/** Valeurs de plan acceptées pour un choix **manuel** (plans payants + « aucun »). */
+export const MANUAL_PLAN_VALUES = ["pro", "max5x", "max20x", "none"] as const;
+export type ManualPlan = (typeof MANUAL_PLAN_VALUES)[number];
+
+export function isManualPlan(v: unknown): v is ManualPlan {
+  return typeof v === "string" && (MANUAL_PLAN_VALUES as readonly string[]).includes(v);
+}
 
 export interface Subscription {
   configPath: string;
@@ -42,7 +55,7 @@ export interface Subscription {
 }
 
 /** Mappe `organizationType` (Anthropic) vers un plan connu. */
-function planFromOrgType(orgType: unknown): PlanType {
+function planFromOrgType(orgType: unknown): "pro" | "max5x" | "unknown" {
   if (orgType === "claude_pro") return "pro";
   if (orgType === "claude_max") return "max5x";
   return "unknown";
@@ -85,9 +98,47 @@ export async function getSubscription(): Promise<Subscription> {
     ...base,
     known: true,
     type,
-    label: PLAN[type].label,
-    monthlyPriceUSD: PLAN[type].monthlyPriceUSD,
+    label: PLANS[type].label,
+    monthlyPriceUSD: PLANS[type].monthlyPriceUSD,
     billingType,
     since: Number.isNaN(sinceMs) ? null : sinceMs,
   };
+}
+
+export interface EffectiveSubscription extends Subscription {
+  /** Comment `type`/prix ont été décidés : détection auto ou choix manuel de l'UI. */
+  source: "auto" | "manual";
+  /** Résultat brut de l'auto-détection, conservé pour l'UI même en mode manuel. */
+  detected: { type: PlanType; label: string; known: boolean };
+}
+
+/**
+ * Abonnement **effectif** = auto-détection (`getSubscription`) éventuellement
+ * remplacée par le choix manuel enregistré dans le store claudeboard. C'est cet
+ * abonnement qui pilote le calcul de rentabilité (coût usage vs coût abonnement).
+ * En mode manuel, on garde la date de souscription/facturation auto-détectée (info
+ * indicative), mais le plan et le prix viennent du choix de l'utilisateur.
+ */
+export async function getEffectiveSubscription(): Promise<EffectiveSubscription> {
+  const auto = await getSubscription();
+  const detected = { type: auto.type, label: auto.label, known: auto.known };
+  const { subscription } = await readStore();
+
+  if (subscription.source === "manual" && isManualPlan(subscription.plan)) {
+    const plan = subscription.plan;
+    if (plan === "none") {
+      return { ...auto, known: false, type: "none", label: "Aucun", monthlyPriceUSD: 0, source: "manual", detected };
+    }
+    return {
+      ...auto,
+      known: true,
+      type: plan,
+      label: PLANS[plan].label,
+      monthlyPriceUSD: PLANS[plan].monthlyPriceUSD,
+      source: "manual",
+      detected,
+    };
+  }
+
+  return { ...auto, source: "auto", detected };
 }
