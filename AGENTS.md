@@ -8,7 +8,9 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 
 - **Dashboard / analytics** (page d'accueil) : agrège tous les transcripts JSONL en
   un seul passage (`lib/analytics.ts` → `getAnalytics`) pour afficher KPI (projets,
-  sessions, messages, tokens, coût estimé), heatmap d'activité sur 12 mois,
+  sessions, messages, tokens, coût estimé), panneau d'activité (`ActivityPanel` : bascule
+  entre heatmap façon GitHub et courbe des messages par jour, avec streak de jours
+  consécutifs et panneau de détail du jour partagé `DayDetail`),
   répartition des modèles (camembert `ModelDonut`), tokens & coût par modèle, coût par
   projet (`ProjectCostList`, recherche/tri côté client), distribution horaire des débuts
   de session (`HourlyDistribution` : 24 barres, heure **locale**, comptage brut par heure
@@ -18,11 +20,13 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   Un sélecteur de fenêtre (`RangeSelector`) filtre les stats — `Tout` / `30 j` / `7 j`,
   un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
   (`?range=custom&from=…&to=…`) ; `getAnalytics(sinceMs, untilMs)` prend les deux bornes.
-  La heatmap montre toujours l'historique complet (la fenêtre active y est surlignée).
-  Chaque carte KPI concernée (Messages, Tokens, Coût estimé) affiche un delta de
-  **vélocité** sous ses chiffres : la variation vs la période précédente de même durée
-  (N vs N-1, `+/-% vs du … au …` avec les dates réelles de la période N-1) — masqué
-  pour la fenêtre « Tout » (pas de période de comparaison).
+  Les deux vues du panneau d'activité montrent toujours l'historique complet (la fenêtre
+  active y est surlignée). Chaque carte KPI concernée (Messages, Tokens, Coût estimé)
+  affiche un delta de **vélocité** sous ses chiffres : la variation vs la période
+  précédente de même durée (N vs N-1, `+/-% vs du … au …` avec les dates réelles de la
+  période N-1) — masqué pour la fenêtre « Tout » (pas de période de comparaison). Le
+  dashboard liste aussi les **sessions épinglées** (favoris, cf. store local), chacune
+  reliée à son transcript.
 - **Skills** : liste, aperçu et **édition** des `~/.claude/skills/*/SKILL.md`
   (frontmatter YAML + corps markdown). Toute écriture crée d'abord un backup
   horodaté `SKILL.md.bak.<timestamp>` à côté du fichier.
@@ -30,7 +34,10 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   `~/.claude/projects/*/*.jsonl` (transcripts de conversations). Chaque ligne JSONL
   est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`). La page d'un
   projet affiche aussi ses statistiques agrégées (`getProjectStats` dans `lib/analytics.ts` :
-  modèles, tokens, coût estimé, top outils) au-dessus de la liste des sessions.
+  modèles, tokens, coût estimé, top outils) au-dessus de la liste des sessions. Projets et
+  sessions sont **épinglables** (`FavoriteButton` → store local) ; les projets épinglés
+  remontent en tête de liste. La page d'une session propose un `ResumeButton` qui copie la
+  commande `claude --resume <sessionId>` (l'app n'exécute rien, elle ne fait que la copier).
 - **Config Claude** (section « Config » de la Sidebar) :
   - **Settings** : édition de `settings.json` et `settings.local.json` (JSON validé
     live + backup, création de `.local` à la demande) → `lib/configFiles.ts`.
@@ -50,8 +57,12 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
     l'installation elle-même reste du ressort du CLI (aucune écriture depuis l'app).
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
     création si absent.
-  - **Tarifs d'estimation** (`/config/pricing`) : tableau **lecture seule** des tarifs
-    `PRICING` de `lib/analytics.ts` (in/out/cache), convention IN/OUT et formule de coût.
+  - **Tarifs & abonnement** (`/config/pricing`) : **édition** des tarifs d'estimation
+    (`PricingEditor` → overrides par famille de modèle dans le store local, défauts
+    `PRICING` de `lib/analytics.ts` si non surchargé), convention IN/OUT et formule de coût,
+    plus le **choix du plan d'abonnement** (`SubscriptionSelector` : auto-détection depuis
+    `~/.claude.json` ou plan manuel Pro / Max 5× / Max 20× / aucun) qui pilote l'estimation
+    d'économie de la `SubscriptionCard`.
   - **Structure du dossier** (`/config/directory`) : arbre pédagogique (`DirectoryExplorer`)
     du contenu de `.claude/` (projet) et `~/.claude` (rôle, chargement, exemple par fichier) ;
     contenu statique, reproduit d'après la doc officielle.
@@ -80,14 +91,24 @@ lib/
   analytics.ts getAnalytics(sinceMs, untilMs, prevSinceMs?, prevUntilMs?) : scan unique
                des JSONL → totaux, jours (heatmap), stats par modèle, top outils, coût
                par projet, durées, débuts de session par heure locale (`hours`, 24 seaux),
-               totaux de la période précédente (`trend`, vélocité N vs N-1) ;
-               getProjectStats(id) pour un projet ; parseModel + PRICING/MODEL_LABEL/
-               MODEL_COLOR exportés (réutilisés par les pages pricing & donut)
+               streak de jours consécutifs (`streak`), totaux de la période précédente
+               (`trend`, vélocité N vs N-1) ; getProjectStats(id) pour un projet ;
+               getEffectivePricing() = PRICING fusionné avec les overrides du store ;
+               parseModel + PRICING/MODEL_LABEL/MODEL_COLOR exportés (pages pricing & donut)
+  store.ts     état applicatif **de claudeboard** (favoris de sessions/projets, overrides
+               de tarifs, plan d'abonnement, unlockedFields) dans `data/claudeboard.json`
+               — **hors** de CLAUDE_DIR (racine du projet, gitignored, override STORE_DIR) ;
+               read/writeStore (écriture atomique, normalisation défensive), toggleFavorite,
+               toggleFavoriteProject, setPricingOverrides, setSubscription
+  favorites.ts getFavoriteSessions : résout les clés de favoris « <projectId>/<sessionId> »
+               en métadonnées de session (marque les favoris orphelins `exists: false`)
   plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
                catalogues à leur installLocation, usage dans ~/.claude.json, installs du
                plugin-catalog-cache.json) — jamais d'écriture, installation = CLI
   subscription.ts getSubscription : LECTURE SEULE du plan Claude via l'`oauthAccount` de
-               ~/.claude.json (champs non sensibles only : type d'orga, facturation, date)
+               ~/.claude.json (champs non sensibles only : type d'orga, facturation, date) ;
+               getEffectiveSubscription() applique le choix manuel du store sinon l'auto ;
+               PLANS / isManualPlan (validation des plans manuels) exportés
   configFiles.ts read/writeConfigFile : fichiers uniques (settings, settings.local,
                CLAUDE.md, keybindings) — JSON validé, backup si existant, création explicite
   mdEntries.ts list/get/writeMdEntry(kind) : agents & commandes (.md à frontmatter,
@@ -112,20 +133,25 @@ app/
   config/mcp/page.tsx            MCP servers (lecture seule)
   config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
   config/keybindings/page.tsx    Aperçu + éditeur des keybindings
-  config/pricing/page.tsx        Tarifs d'estimation (tableau lecture seule)
+  config/pricing/page.tsx        Tarifs d'estimation (éditeur) + choix d'abonnement
   config/directory/page.tsx      Structure du dossier .claude (arbre pédagogique)
   api/skills/route.ts            POST { slug, raw } → écrit le SKILL.md (+ validations)
   api/config-file/route.ts       POST { target, raw } → fichiers uniques (JSON validé)
   api/md/route.ts                POST { kind, slug, raw } → agents/commandes (frontmatter validé)
+  api/store/route.ts             POST { section, … } → état claudeboard (favoris, tarifs,
+                                 abonnement) ; dispatch par section whitelistée → lib/store.ts
   layout.tsx · globals.css · icon.svg
 components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
   ConfigEditor (éditeur générique JSON/markdown : validation live, backup au save) ·
   MdEntryList · MdEntryDetail (liste/détail partagés agents & commandes) ·
-  ActivityHeatmap (heatmap façon GitHub) · ThemeToggle (clair/sombre) ·
-  ModelDonut (camembert modèles) · RangeSelector (fenêtre temporelle) ·
-  SubscriptionCard (coût usage vs plan) · ProjectCostList · ToolUsageList ·
+  ActivityPanel (bascule heatmap/courbe + streak) · ActivityHeatmap (heatmap façon GitHub) ·
+  TrendChart (courbe des messages par jour) · DayDetail (détail d'un jour, partagé) ·
+  ThemeToggle (clair/sombre) · ModelDonut (camembert modèles) · RangeSelector (fenêtre
+  temporelle) · SubscriptionCard (coût usage vs plan) · SubscriptionSelector (choix de plan) ·
+  PricingEditor (édition des overrides de tarifs) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
+  FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   ReadOnlyBadge (marqueur « lecture seule »)
 ```
@@ -152,6 +178,12 @@ components/
   fichier existe déjà (pas de création) et créent toujours un backup. Les créations de
   fichiers de config (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) via
   `writeConfigFile` sont explicites (flux « Créer » dans `ConfigEditor`).
+- **État propre à claudeboard vs config Claude** : les données qui n'appartiennent pas à
+  Claude Code (favoris, overrides de tarifs, choix d'abonnement, `unlockedFields`) vivent
+  dans `data/claudeboard.json` — **hors** de CLAUDE_DIR et de `~/.claude`, à la racine du
+  projet (gitignored, écriture atomique via `lib/store.ts`). Ne jamais mélanger ces
+  préférences d'UI avec les fichiers de `~/.claude`. L'API `/api/store` valide et dispatche
+  par `section` whitelistée.
 - **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs
   par famille de modèle dans `lib/analytics.ts`, en USD/million de tokens), pas une
   facturation réelle. `getAnalytics` fait un seul passage sur tous les JSONL — garder
