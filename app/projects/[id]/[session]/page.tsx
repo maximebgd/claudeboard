@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/claude";
 import Markdown from "@/components/Markdown";
 import Collapsible from "@/components/Collapsible";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
+import { ResumeCommand } from "@/components/ResumeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,9 @@ export default async function SessionPage({
           {session.gitBranch && <span>branche : {session.gitBranch}</span>}
           {session.version && <span>v{session.version}</span>}
           <span>{sessionId}</span>
+        </div>
+        <div className="mt-3">
+          <ResumeCommand sessionId={sessionId} />
         </div>
       </div>
 

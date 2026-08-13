@@ -17,6 +17,7 @@ import { listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { getProjectStats } from "@/lib/analytics";
 import { formatDate, formatSize, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
+import ResumeButton from "@/components/ResumeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -320,12 +321,14 @@ export default async function ProjectSessionsPage({
             </div>
           )}
           {sessions.map((s) => (
-            <Link
+            <div
               key={s.id}
-              href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
               className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4"
             >
-              <div className="min-w-0 flex-1">
+              <Link
+                href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
+                className="min-w-0 flex-1"
+              >
                 <div className="font-medium truncate">{s.title}</div>
                 <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
                   <span className="flex items-center gap-1">
@@ -336,12 +339,19 @@ export default async function ProjectSessionsPage({
                   <span>{formatSize(s.size)}</span>
                   <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
                 </div>
-              </div>
-              <ChevronRight
-                size={18}
-                className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] shrink-0"
-              />
-            </Link>
+              </Link>
+              <ResumeButton sessionId={s.id} />
+              <Link
+                href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
+                aria-label="Ouvrir la session"
+                className="shrink-0"
+              >
+                <ChevronRight
+                  size={18}
+                  className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+                />
+              </Link>
+            </div>
           ))}
         </div>
       </div>
