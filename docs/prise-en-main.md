@@ -13,6 +13,13 @@ fichiers de votre machine.
 > ⚠️ Il n'est **pas** destiné à être déployé : pas de télémétrie, pas d'authentification,
 > il tourne uniquement en local et lit vos fichiers personnels.
 
+> 🔒 **100 % local — rien ne quitte jamais votre machine.** claudeboard ne fait **aucun
+> appel réseau** avec vos données : pas de télémétrie, pas d'analytics, pas de phone-home,
+> pas d'API externe, pas de cloud. **Absolument tout reste sur votre disque.** Il ne lit et
+> n'écrit que des fichiers locaux sous `~/.claude`, et le serveur est lié à `localhost`. Le
+> seul accès réseau est `npm install` (récupération des dépendances) — jamais vos
+> transcripts, votre config ni votre usage.
+
 ## Prérequis
 
 - **Node.js** (version récente, compatible Next.js 16) et **npm**.

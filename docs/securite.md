@@ -9,6 +9,12 @@ order: 4
 Claudeboard lit — et parfois écrit — des fichiers personnels sur votre machine. Trois
 principes encadrent ces accès.
 
+> 🔒 **100 % local — aucune donnée n'est envoyée où que ce soit.** claudeboard ne fait
+> **aucun appel réseau** avec vos données : pas de télémétrie, pas d'analytics, pas de
+> phone-home, pas d'API externe, pas de cloud. **Absolument tout reste sur votre disque.**
+> Le serveur est lié à `localhost` ; le seul accès réseau du projet est `npm install`
+> (dépendances) — jamais vos transcripts, votre config ni votre usage.
+
 ## 1. Garde anti-traversée de répertoire
 
 Tout accès fichier passe par `safeResolve(...)` (`lib/claude.ts`) pour empêcher une
@@ -48,5 +54,6 @@ Aucune de ces fonctions n'écrit quoi que ce soit.
 
 ## En résumé
 
-L'app est **locale par conception** : pas de télémétrie, pas d'auth, aucun envoi réseau
-de vos données. Voir aussi [Prise en main](./prise-en-main.md).
+L'app est **locale par conception** : pas de télémétrie, pas d'auth, **aucun envoi réseau
+de vos données — absolument tout reste sur votre machine**. Voir aussi
+[Prise en main](./prise-en-main.md).
