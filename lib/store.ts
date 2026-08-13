@@ -153,3 +153,23 @@ export function toggleFavorite(key: string): Promise<{ favorited: boolean }> {
 export function toggleFavoriteProject(id: string): Promise<{ favorited: boolean }> {
   return toggleIn("favoriteProjects", id);
 }
+
+/** Familles de modèle dont le tarif est surchargeable depuis l'UI (« autre » exclu). */
+export const OVERRIDABLE_FAMILIES = ["opus", "sonnet", "haiku", "fable"] as const;
+
+/**
+ * Remplace les overrides de tarifs. Chaque entrée est normalisée (les valeurs non
+ * numériques sont rejetées) et seules les familles surchargeables sont conservées.
+ * Écrit l'ensemble en une passe (les familles absentes retombent sur les défauts).
+ */
+export async function setPricingOverrides(
+  raw: Record<string, unknown>
+): Promise<Record<string, PricingRow>> {
+  const normalized = normalizePricing(raw);
+  const overrides: Record<string, PricingRow> = {};
+  for (const fam of OVERRIDABLE_FAMILIES) {
+    if (normalized[fam]) overrides[fam] = normalized[fam];
+  }
+  await writeStore({ pricingOverrides: overrides });
+  return overrides;
+}

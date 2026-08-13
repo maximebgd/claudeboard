@@ -1,21 +1,35 @@
 import { ArrowDown, ArrowUp, DollarSign } from "lucide-react";
-import { PRICING, MODEL_LABEL, MODEL_COLOR, type ModelFamily } from "@/lib/analytics";
+import {
+  PRICING,
+  getEffectivePricing,
+  MODEL_LABEL,
+  MODEL_COLOR,
+  type ModelFamily,
+} from "@/lib/analytics";
+import PricingEditor from "@/components/PricingEditor";
 
 export const dynamic = "force-dynamic";
 
-// Familles affichées (on masque « autre », dont tous les tarifs valent 0).
+// Familles affichées/éditables (on masque « autre », dont tous les tarifs valent 0).
 const FAMILIES: ModelFamily[] = ["opus", "sonnet", "haiku", "fable"];
 
-const COLS: { key: keyof (typeof PRICING)["opus"]; label: string; hint: string }[] = [
+const COLS = [
   { key: "in", label: "Input", hint: "tokens d'entrée frais" },
   { key: "out", label: "Output", hint: "tokens de sortie" },
   { key: "cacheWrite", label: "Écriture cache", hint: "cache_creation (TTL 1 h)" },
   { key: "cacheRead", label: "Lecture cache", hint: "cache_read" },
-];
+] as const;
 
-const usd = (n: number) => `$${n.toFixed(2)}`;
+export default async function PricingPage() {
+  const effective = await getEffectivePricing();
+  const families = FAMILIES.map((fam) => ({
+    key: fam,
+    label: MODEL_LABEL[fam],
+    color: MODEL_COLOR[fam],
+  }));
+  const defaults = Object.fromEntries(FAMILIES.map((fam) => [fam, PRICING[fam]]));
+  const initial = Object.fromEntries(FAMILIES.map((fam) => [fam, effective[fam]]));
 
-export default function PricingPage() {
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
@@ -24,49 +38,16 @@ export default function PricingPage() {
       </h1>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
         Tarifs appliqués pour estimer le coût affiché dans le dashboard. Valeurs en
-        USD par million de tokens.
+        USD par million de tokens — modifiables ci-dessous, puis « Sauvegarder ».
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-[var(--color-border)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[var(--color-code)] text-left text-xs text-[var(--color-muted)]">
-              <th className="px-4 py-2 font-medium">Famille</th>
-              {COLS.map((c) => (
-                <th key={c.key} className="px-4 py-2 font-medium text-right">
-                  {c.label}
-                  <span className="block font-normal text-[10px] text-[var(--color-faint)]">
-                    {c.hint}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {FAMILIES.map((fam) => (
-              <tr key={fam} className="border-t border-[var(--color-border)]">
-                <td className="px-4 py-2">
-                  <span className="inline-flex items-center gap-2 font-medium">
-                    <span
-                      aria-hidden
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: MODEL_COLOR[fam] }}
-                    />
-                    {MODEL_LABEL[fam]}
-                  </span>
-                </td>
-                {COLS.map((c) => (
-                  <td
-                    key={c.key}
-                    className="px-4 py-2 text-right font-mono text-[12px] tabular-nums"
-                  >
-                    {usd(PRICING[fam][c.key])}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        <PricingEditor
+          families={families}
+          cols={COLS.map((c) => ({ ...c }))}
+          defaults={defaults}
+          initial={initial}
+        />
       </div>
 
       <div className="mt-8 space-y-4 text-sm text-[var(--color-muted)]">
@@ -131,8 +112,11 @@ export default function PricingPage() {
 
         <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px]">
           ⚠️ Ce sont des <strong>tarifs indicatifs</strong> servant à une estimation
-          locale — ce n'est pas une facturation réelle. Ils sont codés en dur dans{" "}
-          <code className="font-mono text-[12px]">lib/analytics.ts</code>.
+          locale — ce n'est pas une facturation réelle. Les valeurs par défaut viennent
+          de <code className="font-mono text-[12px]">lib/analytics.ts</code> ; les
+          modifications enregistrées ici sont stockées dans{" "}
+          <code className="font-mono text-[12px]">data/claudeboard.json</code> et
+          appliquées à toutes les estimations. « Réinitialiser » restaure les défauts.
         </p>
       </div>
     </div>
