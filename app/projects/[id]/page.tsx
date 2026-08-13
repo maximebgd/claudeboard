@@ -18,6 +18,9 @@ import { getProjectStats } from "@/lib/analytics";
 import { formatDate, formatSize, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ResumeButton from "@/components/ResumeButton";
+import FavoriteButton from "@/components/FavoriteButton";
+import { readStore } from "@/lib/store";
+import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
 
@@ -118,11 +121,24 @@ export default async function ProjectSessionsPage({
 }) {
   const { id: rawId } = await params;
   const id = decodeURIComponent(rawId);
-  const [sessions, projects, stats] = await Promise.all([
+  const [sessions, projects, stats, store] = await Promise.all([
     listSessions(id),
     listProjects(),
     getProjectStats(id),
+    readStore(),
   ]);
+  const favSet = new Set(store.favorites);
+  // Les sessions épinglées remontent toujours en tête ; à l'intérieur de chaque
+  // groupe (épinglées / autres), tri par dernière activité (récent → ancien).
+  // `listSessions` renvoie déjà trié par `lastModified` desc, on ne fait que
+  // remonter le groupe épinglé sans casser cet ordre relatif.
+  const isFav = (sid: string) => favSet.has(favoriteKey(id, sid));
+  const sortedSessions = [...sessions].sort((a, b) => {
+    const fa = isFav(a.id);
+    const fb = isFav(b.id);
+    if (fa !== fb) return fa ? -1 : 1;
+    return b.lastModified - a.lastModified;
+  });
   const project = projects.find((p) => p.id === id);
   const { totals } = stats;
   const maxTool = Math.max(1, ...stats.topTools.map((t) => t.count));
@@ -320,10 +336,12 @@ export default async function ProjectSessionsPage({
               Aucune session.
             </div>
           )}
-          {sessions.map((s) => (
+          {sortedSessions.map((s) => (
             <div
               key={s.id}
-              className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4"
+              className={`group rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
+                isFav(s.id) ? "border-[var(--color-accent)]/40" : "border-[var(--color-border)]"
+              }`}
             >
               <Link
                 href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
@@ -340,6 +358,11 @@ export default async function ProjectSessionsPage({
                   <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
                 </div>
               </Link>
+              <FavoriteButton
+                favoriteKey={favoriteKey(id, s.id)}
+                initial={favSet.has(favoriteKey(id, s.id))}
+                variant="icon"
+              />
               <ResumeButton sessionId={s.id} />
               <Link
                 href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}

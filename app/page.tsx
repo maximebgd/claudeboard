@@ -12,6 +12,7 @@ import {
   History,
   Brain,
   Minus,
+  Star,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
@@ -25,6 +26,8 @@ import SubscriptionCard from "@/components/SubscriptionCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
+import FavoriteButton from "@/components/FavoriteButton";
+import { getFavoriteSessions } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
 
@@ -278,10 +281,11 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub] = await Promise.all([
+  const [a, skills, sub, favorites] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getSubscription(),
+    getFavoriteSessions(),
   ]);
 
   // Nombre de mois d'abonnement facturés sur la fenêtre : on compte les échéances
@@ -456,6 +460,47 @@ export default async function HomePage({
         netPositive={netSavings >= 0}
         netAbs={fmtUSD(Math.abs(netSavings))}
       />
+
+      {/* Sessions épinglées */}
+      {favorites.length > 0 && (
+        <section className="mt-8">
+          <SectionTitle icon={Star}>Sessions épinglées</SectionTitle>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
+            {favorites.map((f) => (
+              <div
+                key={f.key}
+                className="group flex items-center gap-3 p-4 hover:bg-[var(--color-hover)] transition-colors"
+              >
+                <Link
+                  href={`/projects/${encodeURIComponent(f.projectId)}/${encodeURIComponent(f.sessionId)}`}
+                  className="flex min-w-0 flex-1 items-center gap-3"
+                >
+                  <Star size={15} className="shrink-0 fill-[var(--color-accent)] text-[var(--color-accent)]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">{f.title}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
+                      <span className="flex items-center gap-1">
+                        <FolderGit2 size={12} />
+                        {f.projectLabel}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MessagesSquare size={12} />
+                        {f.messageCount} message{f.messageCount > 1 ? "s" : ""}
+                      </span>
+                      {f.exists ? (
+                        <span>{formatDate(f.lastModified)}</span>
+                      ) : (
+                        <span className="text-amber-400">session introuvable</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <FavoriteButton favoriteKey={f.key} initial variant="icon" refresh />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Activité : heatmap ou courbe (toggle) + streak dans l'en-tête */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">

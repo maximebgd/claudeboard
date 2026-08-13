@@ -7,6 +7,9 @@ import Markdown from "@/components/Markdown";
 import Collapsible from "@/components/Collapsible";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import { ResumeCommand } from "@/components/ResumeButton";
+import FavoriteButton from "@/components/FavoriteButton";
+import { readStore } from "@/lib/store";
+import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +55,9 @@ export default async function SessionPage({
   const sessionId = decodeURIComponent(rawSession);
   const session = await getSession(id, sessionId);
   if (!session) notFound();
+  const store = await readStore();
+  const favKey = favoriteKey(id, sessionId);
+  const favorited = store.favorites.includes(favKey);
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
@@ -66,6 +72,7 @@ export default async function SessionPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold">{session.title}</h1>
           <ReadOnlyBadge />
+          <FavoriteButton favoriteKey={favKey} initial={favorited} variant="labeled" />
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)] font-mono">
           <span>{session.events.length} messages</span>
