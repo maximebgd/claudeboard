@@ -4,6 +4,8 @@ import { listProjects, projectLabel } from "@/lib/projects";
 import { getAnalytics } from "@/lib/analytics";
 import { formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
+import FavoriteButton from "@/components/FavoriteButton";
+import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,22 @@ function fmtUSD(n: number): string {
 }
 
 export default async function ProjectsPage() {
-  const [projects, analytics] = await Promise.all([listProjects(), getAnalytics()]);
+  const [projects, analytics, store] = await Promise.all([
+    listProjects(),
+    getAnalytics(),
+    readStore(),
+  ]);
   const costById = new Map(analytics.projectCosts.map((p) => [p.id, p.costUSD]));
+  const favSet = new Set(store.favoriteProjects);
+  // Projets épinglés toujours en tête ; à l'intérieur de chaque groupe, tri par
+  // dernière modification (récent → ancien). `listProjects` renvoie déjà trié
+  // par `lastModified` desc, on ne fait que remonter le groupe épinglé.
+  const sortedProjects = [...projects].sort((a, b) => {
+    const fa = favSet.has(a.id);
+    const fb = favSet.has(b.id);
+    if (fa !== fb) return fa ? -1 : 1;
+    return b.lastModified - a.lastModified;
+  });
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="flex flex-wrap items-center gap-3">
@@ -34,13 +50,14 @@ export default async function ProjectsPage() {
             Aucun projet trouvé dans ~/.claude/projects.
           </div>
         )}
-        {projects.map((p) => (
-          <Link
+        {sortedProjects.map((p) => (
+          <div
             key={p.id}
-            href={`/projects/${encodeURIComponent(p.id)}`}
-            className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4"
+            className={`group rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
+              favSet.has(p.id) ? "border-[var(--color-accent)]/40" : "border-[var(--color-border)]"
+            }`}
           >
-            <div className="min-w-0 flex-1">
+            <Link href={`/projects/${encodeURIComponent(p.id)}`} className="min-w-0 flex-1">
               <div className="font-medium">{projectLabel(p.realPath)}</div>
               <div className="mt-0.5 text-xs text-[var(--color-muted)] font-mono truncate">
                 {p.realPath}
@@ -65,12 +82,24 @@ export default async function ProjectsPage() {
                   </span>
                 )}
               </div>
-            </div>
-            <ChevronRight
-              size={18}
-              className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)] shrink-0"
+            </Link>
+            <FavoriteButton
+              favoriteKey={p.id}
+              initial={favSet.has(p.id)}
+              variant="icon"
+              section="projects"
             />
-          </Link>
+            <Link
+              href={`/projects/${encodeURIComponent(p.id)}`}
+              aria-label="Ouvrir le projet"
+              className="shrink-0"
+            >
+              <ChevronRight
+                size={18}
+                className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+              />
+            </Link>
+          </div>
         ))}
       </div>
     </div>

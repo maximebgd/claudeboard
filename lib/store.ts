@@ -26,6 +26,8 @@ export interface StoreData {
   version: number;
   /** Sessions épinglées, clés « <projectId>/<sessionId> ». */
   favorites: string[];
+  /** Projets épinglés, par `id` de projet (nom de dossier de ~/.claude/projects). */
+  favoriteProjects: string[];
   /** Champs normalement en lecture seule dont la création est autorisée depuis l'UI. */
   unlockedFields: {
     createSkills: boolean;
@@ -42,6 +44,7 @@ function defaults(): StoreData {
   return {
     version: STORE_VERSION,
     favorites: [],
+    favoriteProjects: [],
     unlockedFields: { createSkills: false, createAgents: false, createCommands: false },
     pricingOverrides: {},
     subscription: { plan: null, source: "auto" },
@@ -78,6 +81,9 @@ function normalize(raw: unknown): StoreData {
 
   if (Array.isArray(o.favorites)) {
     d.favorites = o.favorites.filter((x): x is string => typeof x === "string");
+  }
+  if (Array.isArray(o.favoriteProjects)) {
+    d.favoriteProjects = o.favoriteProjects.filter((x): x is string => typeof x === "string");
   }
   if (o.unlockedFields && typeof o.unlockedFields === "object") {
     const u = o.unlockedFields as Record<string, unknown>;
@@ -124,14 +130,26 @@ export async function writeStore(patch: Partial<StoreData>): Promise<StoreData> 
   return next;
 }
 
-/** Bascule l'épinglage d'une session. Retourne l'état résultant de cette clé. */
-export async function toggleFavorite(key: string): Promise<{ favorites: string[]; favorited: boolean }> {
+/** Bascule la présence d'une clé dans un champ tableau du store (favoris). */
+async function toggleIn(
+  field: "favorites" | "favoriteProjects",
+  key: string
+): Promise<{ favorited: boolean }> {
   const store = await readStore();
-  const set = new Set(store.favorites);
+  const set = new Set(store[field]);
   const favorited = !set.has(key);
   if (favorited) set.add(key);
   else set.delete(key);
-  const favorites = [...set];
-  await writeStore({ favorites });
-  return { favorites, favorited };
+  await writeStore({ [field]: [...set] });
+  return { favorited };
+}
+
+/** Bascule l'épinglage d'une session (clé « <projectId>/<sessionId> »). */
+export function toggleFavorite(key: string): Promise<{ favorited: boolean }> {
+  return toggleIn("favorites", key);
+}
+
+/** Bascule l'épinglage d'un projet (par `id` de projet). */
+export function toggleFavoriteProject(id: string): Promise<{ favorited: boolean }> {
+  return toggleIn("favoriteProjects", id);
 }

@@ -17,11 +17,14 @@ export default function FavoriteButton({
   initial,
   variant = "icon",
   refresh = false,
+  section = "favorites",
 }: {
   favoriteKey: string;
   initial: boolean;
   variant?: "icon" | "labeled";
   refresh?: boolean;
+  /** Cible d'épinglage : sessions (`favorites`) ou projets (`projects`). */
+  section?: "favorites" | "projects";
 }) {
   const router = useRouter();
   const [on, setOn] = useState(initial);
@@ -39,7 +42,7 @@ export default function FavoriteButton({
       const res = await fetch("/api/store", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "favorites", op: "toggle", key: favoriteKey }),
+        body: JSON.stringify({ section, op: "toggle", key: favoriteKey }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec");
@@ -58,7 +61,8 @@ export default function FavoriteButton({
       className={on ? "fill-[var(--color-accent)] text-[var(--color-accent)]" : ""}
     />
   );
-  const title = on ? "Retirer des favoris" : "Épingler cette session";
+  const target = section === "projects" ? "ce projet" : "cette session";
+  const title = on ? "Retirer des favoris" : `Épingler ${target}`;
 
   if (variant === "labeled") {
     return (

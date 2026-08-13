@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { toggleFavorite } from "@/lib/store";
+import { toggleFavorite, toggleFavoriteProject } from "@/lib/store";
 
 /**
  * Écrit l'état applicatif de claudeboard (data/claudeboard.json). Dispatch par
- * `section` (whitelist). Pour l'instant : favoris (épinglage de sessions). Les
- * sections pricing/subscription/unlockedFields s'ajouteront ici au fil des features.
+ * `section` (whitelist) : épinglage de sessions (`favorites`) et de projets
+ * (`projects`). Les sections pricing/subscription/unlockedFields s'ajouteront
+ * ici au fil des features.
  */
 export async function POST(req: Request) {
   let body: { section?: unknown; op?: unknown; key?: unknown };
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
   const { section, op, key } = body;
 
-  if (section === "favorites") {
+  if (section === "favorites" || section === "projects") {
     if (op !== "toggle") {
       return NextResponse.json({ error: "op inconnue" }, { status: 400 });
     }
@@ -24,7 +25,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "clé manquante" }, { status: 400 });
     }
     try {
-      const { favorited } = await toggleFavorite(key);
+      const { favorited } =
+        section === "projects" ? await toggleFavoriteProject(key) : await toggleFavorite(key);
       return NextResponse.json({ ok: true, favorited });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Échec de l'écriture";
