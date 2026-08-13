@@ -55,6 +55,10 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   - **Structure du dossier** (`/config/directory`) : arbre pédagogique (`DirectoryExplorer`)
     du contenu de `.claude/` (projet) et `~/.claude` (rôle, chargement, exemple par fichier) ;
     contenu statique, reproduit d'après la doc officielle.
+- **Documentation** (`/docs`) : rend les fichiers `.md` du dossier `docs/` (source unique,
+  lisible aussi sur GitHub) avec un sommaire latéral (`DocsNav`) et le rendu markdown
+  partagé (`Markdown`). Pour ajouter une page : créer `docs/<slug>.md` avec un frontmatter
+  `title` / `description` / `order` (`lib/docs.ts` → `listDocs`/`getDoc`).
 - **Thème** : bascule clair/sombre (`ThemeToggle` dans la Sidebar), persistée dans
   `localStorage` et appliquée avant le premier rendu par un script inline dans
   `layout.tsx` (pas de flash).
@@ -96,6 +100,8 @@ lib/
   mcp.ts       getMcpServers : LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR), MCP
                globaux + par projet, statut via mcp-needs-auth-cache.json, env masqué
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
+  docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (dans le repo, hors CLAUDE_DIR)
+               pour la page /docs ; garde-fou de slug dédié (pas safeResolve)
 app/
   page.tsx                       Dashboard analytics (KPI, heatmap, modèles, coût par
                                  projet, outils, sessions, abonnement) + RangeSelector
@@ -114,6 +120,7 @@ app/
   config/keybindings/page.tsx    Aperçu + éditeur des keybindings
   config/pricing/page.tsx        Tarifs d'estimation (tableau lecture seule)
   config/directory/page.tsx      Structure du dossier .claude (arbre pédagogique)
+  docs/layout.tsx · page.tsx · [slug]/page.tsx   Documentation (rend les `.md` de docs/)
   api/skills/route.ts            POST { slug, raw } → écrit le SKILL.md (+ validations)
   api/config-file/route.ts       POST { target, raw } → fichiers uniques (JSON validé)
   api/md/route.ts                POST { kind, slug, raw } → agents/commandes (frontmatter validé)
@@ -127,7 +134,7 @@ components/
   SubscriptionCard (coût usage vs plan) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
-  ReadOnlyBadge (marqueur « lecture seule »)
+  DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
 ```
 
 ## Conventions importantes
