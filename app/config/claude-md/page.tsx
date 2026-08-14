@@ -1,7 +1,10 @@
 import { FileText } from "lucide-react";
 import { readConfigFile } from "@/lib/configFiles";
 import { formatDate } from "@/lib/claude";
+import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
+import ResetButton from "@/components/ResetButton";
+import DeleteButton from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +16,12 @@ Ces instructions s'appliquent à toutes tes sessions Claude Code.
 
 export default async function ClaudeMdPage() {
   const file = await readConfigFile("claudeMd");
+  // Fichier présent → permission « modify » ; absent → « create ».
+  const [canWrite, canReset, canDelete] = await Promise.all([
+    isAllowed("claudeMd", file.exists ? "modify" : "create"),
+    isAllowed("claudeMd", "reset"),
+    isAllowed("claudeMd", "delete"),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -38,7 +47,31 @@ export default async function ClaudeMdPage() {
           label="CLAUDE.md"
           exists={file.exists}
           emptyTemplate={TEMPLATE}
+          canWrite={canWrite}
+          lockedLabel={file.exists ? "Modification du CLAUDE.md verrouillée." : "Création du CLAUDE.md verrouillée."}
         />
+        {file.exists && (canReset || canDelete) && (
+          <div className="mt-4 flex flex-wrap gap-3">
+            {canReset && (
+              <ResetButton
+                endpoint="/api/config-file"
+                body={{ target: "claudeMd" }}
+                title="Réinitialiser le CLAUDE.md global ?"
+                description="Le fichier est ramené à un modèle vide. Un backup horodaté (.bak) est créé au préalable."
+              />
+            )}
+            {canDelete && (
+              <DeleteButton
+                endpoint="/api/config-file"
+                body={{ target: "claudeMd" }}
+                label="Supprimer"
+                title="Supprimer le CLAUDE.md global ?"
+                description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+                confirmLabel="Supprimer"
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

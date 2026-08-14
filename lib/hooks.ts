@@ -1,4 +1,4 @@
-import { readConfigFile } from "./configFiles";
+import { readConfigFile, writeConfigFile } from "./configFiles";
 
 /**
  * Lecture normalisée des hooks configurés dans settings.json et
@@ -125,4 +125,42 @@ export async function getHooks(): Promise<HooksResult> {
       { file: "settings.local.json", path: local.path, hasHooks: !!local.data?.hooks },
     ],
   };
+}
+
+/**
+ * Renvoie le bloc `hooks` de settings.json (fichier utilisateur) sous forme de
+ * JSON indenté, prêt à éditer. `{}` si aucun hook n'est défini.
+ */
+export async function getHooksRaw(): Promise<string> {
+  const user = await readConfigFile("settings");
+  const hooks = user.data?.hooks;
+  const obj = hooks && typeof hooks === "object" ? hooks : {};
+  return JSON.stringify(obj, null, 2) + "\n";
+}
+
+/**
+ * Écrit le bloc `hooks` dans settings.json (utilisateur) : parse `raw` (qui doit
+ * être un objet JSON), le fusionne dans le settings existant, puis réécrit tout le
+ * fichier via writeConfigFile (validation + backup). Édite **uniquement**
+ * settings.json — pas settings.local.json. Retourne le chemin du backup ou null.
+ */
+export async function writeHooks(raw: string): Promise<string | null> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new SyntaxError("JSON invalide");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Le bloc hooks doit être un objet JSON (event → matchers).");
+  }
+  const user = await readConfigFile("settings");
+  // Si settings.json existe mais est du JSON cassé (`data` null), on refuse : écrire
+  // écraserait tout le fichier avec juste { hooks }. À corriger d'abord côté Settings.
+  if (user.exists && user.data === null) {
+    throw new Error("settings.json contient du JSON invalide — corrige-le d'abord dans Settings Claude.");
+  }
+  const data = user.data ?? {};
+  const next = { ...data, hooks: parsed };
+  return writeConfigFile("settings", JSON.stringify(next, null, 2) + "\n");
 }

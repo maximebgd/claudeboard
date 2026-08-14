@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
-import { toggleFavorite, toggleFavoriteProject, setPricingOverrides, setSubscription } from "@/lib/store";
+import {
+  toggleFavorite,
+  toggleFavoriteProject,
+  setPricingOverrides,
+  setSubscription,
+  setPermissions,
+} from "@/lib/store";
 import { isManualPlan } from "@/lib/subscription";
 
 /**
  * Écrit l'état applicatif de claudeboard (data/claudeboard.json). Dispatch par
  * `section` (whitelist) : épinglage de sessions (`favorites`) et de projets
- * (`projects`), overrides de tarifs (`pricing`), abonnement (`subscription`). La
- * section unlockedFields s'ajoutera ici au fil des features.
+ * (`projects`), overrides de tarifs (`pricing`), abonnement (`subscription`),
+ * autorisations d'écriture (`permissions`).
  */
 export async function POST(req: Request) {
   let body: {
@@ -16,6 +22,7 @@ export async function POST(req: Request) {
     overrides?: unknown;
     source?: unknown;
     plan?: unknown;
+    permissions?: unknown;
   };
   try {
     body = await req.json();
@@ -24,6 +31,23 @@ export async function POST(req: Request) {
   }
 
   const { section, op, key } = body;
+
+  if (section === "permissions") {
+    if (op !== "save") {
+      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+    }
+    const { permissions } = body;
+    if (!permissions || typeof permissions !== "object") {
+      return NextResponse.json({ error: "permissions manquantes" }, { status: 400 });
+    }
+    try {
+      const saved = await setPermissions(permissions);
+      return NextResponse.json({ ok: true, permissions: saved });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
 
   if (section === "subscription") {
     if (op !== "save") {

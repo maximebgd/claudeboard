@@ -19,7 +19,8 @@ import { formatDate, formatSize, formatDuration, formatRelative } from "@/lib/cl
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ResumeButton from "@/components/ResumeButton";
 import FavoriteButton from "@/components/FavoriteButton";
-import { readStore } from "@/lib/store";
+import DeleteButton from "@/components/DeleteButton";
+import { readStore, isAllowed } from "@/lib/store";
 import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
@@ -121,11 +122,12 @@ export default async function ProjectSessionsPage({
 }) {
   const { id: rawId } = await params;
   const id = decodeURIComponent(rawId);
-  const [sessions, projects, stats, store] = await Promise.all([
+  const [sessions, projects, stats, store, canDelete] = await Promise.all([
     listSessions(id),
     listProjects(),
     getProjectStats(id),
     readStore(),
+    isAllowed("projects", "delete"),
   ]);
   const favSet = new Set(store.favorites);
   // Les sessions épinglées remontent toujours en tête ; à l'intérieur de chaque
@@ -385,6 +387,25 @@ export default async function ProjectSessionsPage({
           ))}
         </div>
       </div>
+
+      {canDelete && (
+        <div className="mt-10 border-t border-[var(--color-border)] pt-6">
+          <DeleteButton
+            endpoint="/api/projects"
+            body={{ scope: "project", projectId: id }}
+            label="Supprimer le projet"
+            title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
+            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main.`}
+            confirmLabel="Supprimer le projet"
+            redirectTo="/projects"
+            detail={
+              <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
+                projects/{id}
+              </div>
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, RotateCcw, Check, AlertCircle } from "lucide-react";
+import { Save, RotateCcw, Eraser, Check, AlertCircle } from "lucide-react";
 
 export interface PricingRow {
   in: number;
@@ -87,6 +87,11 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
   function fillDefaults() {
     setStatus(null);
     setValues(defaultForm);
+  }
+
+  function revert() {
+    setStatus(null);
+    setValues(saved);
   }
 
   async function save() {
@@ -204,11 +209,20 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
           {busy ? "Enregistrement…" : "Sauvegarder"}
         </button>
         <button
-          onClick={fillDefaults}
-          disabled={busy}
+          onClick={revert}
+          disabled={busy || !dirty}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-fg)] disabled:opacity-40"
         >
           <RotateCcw size={15} />
+          Annuler
+        </button>
+        <button
+          onClick={fillDefaults}
+          disabled={busy}
+          title="Remettre tous les tarifs à leurs valeurs par défaut"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:opacity-40"
+        >
+          <Eraser size={15} />
           Réinitialiser
         </button>
         {status && (

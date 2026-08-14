@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import type { MdEntry, MdKind } from "@/lib/mdEntries";
 import { formatDate } from "@/lib/claude";
 import ConfigEditor from "@/components/ConfigEditor";
+import DeleteButton from "@/components/DeleteButton";
 
 /** Détail + éditeur partagé pour une entrée agents/commandes. */
 export default function MdEntryDetail({
@@ -10,12 +11,19 @@ export default function MdEntryDetail({
   entry,
   backHref,
   backLabel,
+  canWrite = true,
+  canDelete = false,
 }: {
   kind: MdKind;
   entry: MdEntry;
   backHref: string;
   backLabel: string;
+  /** false → édition verrouillée (permission agents/commands.modify désactivée). */
+  canWrite?: boolean;
+  /** true → affiche la suppression (permission agents/commands.delete accordée). */
+  canDelete?: boolean;
 }) {
+  const what = kind === "agents" ? "agents" : "commandes";
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <Link
@@ -47,6 +55,26 @@ export default function MdEntryDetail({
         mode="markdown"
         label={entry.path.split("/").slice(-2).join("/")}
         exists
+        canWrite={canWrite}
+        lockedLabel={`Modification des ${what} verrouillée.`}
+        rightActions={
+          canDelete && (
+            <DeleteButton
+              endpoint="/api/md"
+              body={{ kind, slug: entry.slug }}
+              label={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"}`}
+              title={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"} « ${entry.name} » ?`}
+              description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              confirmLabel="Supprimer"
+              redirectTo={backHref}
+              detail={
+                <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)]">
+                  {kind}/<span className="text-[var(--color-fg)]">{entry.slug}</span>.md
+                </div>
+              }
+            />
+          )
+        }
       />
     </div>
   );

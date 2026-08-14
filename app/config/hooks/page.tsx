@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Webhook, Terminal } from "lucide-react";
-import { getHooks } from "@/lib/hooks";
+import { getHooks, getHooksRaw } from "@/lib/hooks";
+import { isAllowed } from "@/lib/store";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
+import ConfigEditor from "@/components/ConfigEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,11 @@ const EVENT_DESC: Record<string, string> = {
 };
 
 export default async function HooksPage() {
-  const { events, totalHooks, sources } = await getHooks();
+  const [{ events, totalHooks, sources }, canWrite, hooksRaw] = await Promise.all([
+    getHooks(),
+    isAllowed("hooks", "modify"),
+    getHooksRaw(),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -28,16 +34,14 @@ export default async function HooksPage() {
           <Webhook size={22} className="text-[var(--color-accent)]" />
           Hooks
         </h1>
-        <ReadOnlyBadge />
+        {!canWrite && <ReadOnlyBadge />}
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
         {totalHooks} hook{totalHooks > 1 ? "s" : ""} sur {events.length} event
         {events.length > 1 ? "s" : ""}, lus depuis settings.json + settings.local.json.
-        Vue en lecture seule — modifie-les dans{" "}
-        <Link href="/config/settings" className="text-[var(--color-accent)] underline">
-          Settings
-        </Link>
-        .
+        {canWrite
+          ? " Édite le bloc hooks de settings.json ci-dessous."
+          : " Vue en lecture seule."}
       </p>
       <div className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
         {sources.map((s) => (
@@ -109,6 +113,27 @@ export default async function HooksPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {canWrite && (
+        <section className="mt-10">
+          <h2 className="text-lg font-medium">Éditer les hooks</h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
+            Objet <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5 font-mono text-[12px]">hooks</code>{" "}
+            de <code className="font-mono text-[12px]">settings.json</code> (event → matchers).
+            Ajouter, modifier ou supprimer un hook se fait ici. Un backup horodaté est créé à
+            chaque écriture. Les hooks de{" "}
+            <code className="font-mono text-[12px]">settings.local.json</code> ne sont pas touchés.
+          </p>
+          <ConfigEditor
+            endpoint="/api/hooks"
+            payload={{}}
+            initialRaw={hooksRaw}
+            mode="json"
+            label="hooks (settings.json)"
+            exists
+          />
+        </section>
       )}
     </div>
   );

@@ -1,8 +1,32 @@
 import fs from "fs/promises";
+import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
+import { moveToTrash } from "./trash";
 
 const SKILLS_DIR = "skills";
+
+/** Slug de dossier de skill valide : minuscules, chiffres, tirets. */
+export function isValidSkillSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]*$/.test(slug);
+}
+
+/** Contenu de départ d'un nouveau SKILL.md (frontmatter + squelette). */
+export function skillTemplate(slug: string): string {
+  return `---
+name: ${slug}
+description: Décris ici quand et pourquoi utiliser ce skill (une phrase claire).
+---
+
+# ${slug}
+
+Explique ce que fait ce skill et comment l'utiliser.
+
+## Étapes
+
+1. …
+`;
+}
 
 export interface SkillMeta {
   slug: string; // nom du dossier
@@ -79,4 +103,31 @@ export async function writeSkill(slug: string, raw: string): Promise<string> {
   await fs.copyFile(skillPath, backupPath);
   await fs.writeFile(skillPath, raw, "utf8");
   return backupPath;
+}
+
+/**
+ * Crée un nouveau skill (`skills/<slug>/SKILL.md`). Refuse si le dossier existe
+ * déjà (pas d'écrasement). Retourne le slug créé.
+ */
+export async function createSkill(slug: string, raw?: string): Promise<string> {
+  const dir = safeResolve(SKILLS_DIR, slug);
+  try {
+    await fs.access(dir);
+    throw new Error("Un skill porte déjà ce nom.");
+  } catch (e) {
+    if (e instanceof Error && e.message === "Un skill porte déjà ce nom.") throw e;
+    // ENOENT attendu : le dossier n'existe pas, on peut créer.
+  }
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, "SKILL.md"), raw ?? skillTemplate(slug), "utf8");
+  return slug;
+}
+
+/**
+ * Supprime un skill en déplaçant tout son dossier dans la corbeille (réversible).
+ * Retourne le chemin de corbeille.
+ */
+export async function deleteSkill(slug: string): Promise<string> {
+  const dir = safeResolve(SKILLS_DIR, slug);
+  return moveToTrash(dir);
 }

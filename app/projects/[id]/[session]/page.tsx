@@ -8,7 +8,8 @@ import Collapsible from "@/components/Collapsible";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import { ResumeCommand } from "@/components/ResumeButton";
 import FavoriteButton from "@/components/FavoriteButton";
-import { readStore } from "@/lib/store";
+import DeleteButton from "@/components/DeleteButton";
+import { readStore, isAllowed } from "@/lib/store";
 import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
@@ -53,9 +54,12 @@ export default async function SessionPage({
   const { id: rawId, session: rawSession } = await params;
   const id = decodeURIComponent(rawId);
   const sessionId = decodeURIComponent(rawSession);
-  const session = await getSession(id, sessionId);
+  const [session, store, canDelete] = await Promise.all([
+    getSession(id, sessionId),
+    readStore(),
+    isAllowed("projects", "delete"),
+  ]);
   if (!session) notFound();
-  const store = await readStore();
   const favKey = favoriteKey(id, sessionId);
   const favorited = store.favorites.includes(favKey);
 
@@ -80,8 +84,24 @@ export default async function SessionPage({
           {session.version && <span>v{session.version}</span>}
           <span>{sessionId}</span>
         </div>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <ResumeCommand sessionId={sessionId} />
+          {canDelete && (
+            <DeleteButton
+              endpoint="/api/projects"
+              body={{ scope: "session", projectId: id, sessionId }}
+              label="Supprimer la session"
+              title="Supprimer cette session ?"
+              description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              confirmLabel="Supprimer"
+              redirectTo={`/projects/${encodeURIComponent(id)}`}
+              detail={
+                <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
+                  {sessionId}.jsonl
+                </div>
+              }
+            />
+          )}
         </div>
       </div>
 
