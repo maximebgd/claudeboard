@@ -1,14 +1,16 @@
 import { FolderTree } from "lucide-react";
 import DirectoryExplorer from "@/components/DirectoryExplorer";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Structure du dossier · Claudeboard",
 };
 
 export default function DirectoryPage() {
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
-      <h1 className="text-2xl font-semibold flex items-center gap-2">
+    <div>
+      <h1 className="flex items-center gap-2 text-2xl font-semibold">
         <FolderTree size={22} className="text-[var(--color-accent)]" />
         Structure du dossier
       </h1>

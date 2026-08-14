@@ -15,7 +15,6 @@ import {
   Blocks,
   Keyboard,
   SlidersHorizontal,
-  FolderTree,
   BookOpen,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
@@ -40,7 +39,6 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
   {
     label: "Config",
     items: [
-      { href: "/config/preferences", label: "Préférences", icon: SlidersHorizontal },
       { href: "/config/settings", label: "Settings Claude", icon: Settings },
       { href: "/config/hooks", label: "Hooks", icon: Webhook },
       { href: "/config/claude-md", label: "CLAUDE.md", icon: FileText },
@@ -104,16 +102,16 @@ export default function Sidebar() {
         <ThemeToggle />
         <div className="flex items-center gap-1">
           <Link
-            href="/config/directory"
-            aria-label="Structure du dossier"
-            title="Structure du dossier"
+            href="/config/preferences"
+            aria-label="Préférences"
+            title="Préférences"
             className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
-              pathname.startsWith("/config/directory")
+              pathname.startsWith("/config/preferences")
                 ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
             }`}
           >
-            <FolderTree size={16} />
+            <SlidersHorizontal size={16} />
           </Link>
           <Link
             href="/docs"

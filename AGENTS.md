@@ -80,9 +80,9 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
     création si absent, **réinitialisation** et **suppression** (gated par
     `keybindings.{create,modify,delete,reset}`).
-  - **Structure du dossier** (`/config/directory`) : arbre pédagogique (`DirectoryExplorer`)
-    du contenu de `.claude/` (projet) et `~/.claude` (rôle, chargement, exemple par fichier) ;
-    contenu statique, reproduit d'après la doc officielle.
+  - **Structure du dossier** (`/docs/structure`, rattachée à la section Documentation) :
+    arbre pédagogique (`DirectoryExplorer`) du contenu de `.claude/` (projet) et `~/.claude`
+    (rôle, chargement, exemple par fichier) ; contenu statique, reproduit d'après la doc officielle.
 - **Documentation** (`/docs`) : rend les fichiers `.md` du dossier `docs/` (source unique,
   lisible aussi sur GitHub) avec un sommaire latéral (`DocsNav`) et le rendu markdown
   partagé (`Markdown`). Pour ajouter une page : créer `docs/<slug>.md` avec un frontmatter
@@ -167,8 +167,8 @@ app/
   config/mcp/page.tsx            MCP servers (lecture seule)
   config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
   config/keybindings/page.tsx    Aperçu + éditeur des keybindings (+ reset/suppression)
-  config/directory/page.tsx      Structure du dossier .claude (arbre pédagogique)
   docs/layout.tsx · page.tsx · [slug]/page.tsx   Documentation (rend les `.md` de docs/)
+  docs/structure/page.tsx        Structure du dossier .claude (arbre pédagogique)
   api/skills/route.ts            POST { op, slug, raw } → SKILL.md : write/create/delete (gated)
   api/config-file/route.ts       POST { op, target, raw } → fichiers uniques : write/reset/delete (gated)
   api/md/route.ts                POST { op, kind, slug, raw } → agents/commandes : write/create/delete (gated)
