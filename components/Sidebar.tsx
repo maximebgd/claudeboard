@@ -39,11 +39,11 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
   {
     label: "Config",
     items: [
-      { href: "/config/settings", label: "Settings Claude", icon: Settings },
-      { href: "/config/hooks", label: "Hooks", icon: Webhook },
       { href: "/config/claude-md", label: "CLAUDE.md", icon: FileText },
       { href: "/config/agents", label: "Agents", icon: Bot },
       { href: "/config/commands", label: "Commandes", icon: SquareSlash },
+      { href: "/config/settings", label: "Settings Claude", icon: Settings },
+      { href: "/config/hooks", label: "Hooks", icon: Webhook },
       { href: "/config/mcp", label: "MCP servers", icon: Plug },
       { href: "/config/plugins", label: "Plugins & Marketplaces", icon: Blocks },
       { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
