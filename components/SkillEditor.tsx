@@ -5,14 +5,19 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
+import PermissionNotice from "./PermissionNotice";
 
 interface Props {
   slug: string;
   initialRaw: string;
   content: string; // corps markdown (pour l'aperçu en lecture)
+  /** false → édition verrouillée (permission skills.modify désactivée). */
+  canWrite?: boolean;
+  /** Éléments à afficher à droite dans la barre d'actions. */
+  rightActions?: React.ReactNode;
 }
 
-export default function SkillEditor({ slug, initialRaw, content }: Props) {
+export default function SkillEditor({ slug, initialRaw, content, canWrite = true, rightActions }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialRaw);
@@ -50,44 +55,51 @@ export default function SkillEditor({ slug, initialRaw, content }: Props) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        {!editing ? (
-          <button
-            onClick={() => {
-              setDraft(savedRaw);
-              setEditing(true);
-            }}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
-          >
-            <Pencil size={14} /> Éditer
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={() => setConfirmOpen(true)}
-              disabled={!dirty}
-              className="flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90 disabled:opacity-40"
-            >
-              <Save size={14} /> Enregistrer
-            </button>
+      {!canWrite && (
+        <PermissionNotice>Modification des skills verrouillée.</PermissionNotice>
+      )}
+
+      <div className="mb-4 flex items-center gap-2 justify-between">
+        <div className="flex items-center gap-2">
+          {!canWrite ? null : !editing ? (
             <button
               onClick={() => {
                 setDraft(savedRaw);
-                setEditing(false);
-                setError(null);
+                setEditing(true);
               }}
               className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
             >
-              <X size={14} /> Annuler
+              <Pencil size={14} /> Éditer
             </button>
-            {dirty && <span className="text-xs text-amber-400">Modifications non enregistrées</span>}
-          </>
-        )}
-        {flash && (
-          <span className="flex items-center gap-1 text-xs text-emerald-400">
-            <Check size={14} /> Enregistré (backup créé)
-          </span>
-        )}
+          ) : (
+            <>
+              <button
+                onClick={() => setConfirmOpen(true)}
+                disabled={!dirty}
+                className="flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90 disabled:opacity-40"
+              >
+                <Save size={14} /> Enregistrer
+              </button>
+              <button
+                onClick={() => {
+                  setDraft(savedRaw);
+                  setEditing(false);
+                  setError(null);
+                }}
+                className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
+              >
+                <X size={14} /> Annuler
+              </button>
+              {dirty && <span className="text-xs text-amber-400">Modifications non enregistrées</span>}
+            </>
+          )}
+          {flash && (
+            <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <Check size={14} /> Enregistré (backup créé)
+            </span>
+          )}
+        </div>
+        {rightActions && <div className="flex items-center gap-2">{rightActions}</div>}
       </div>
 
       {error && (

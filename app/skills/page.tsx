@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Sparkles, ChevronRight } from "lucide-react";
 import { listSkills } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
+import { isAllowed } from "@/lib/store";
+import CreateEntryButton from "@/components/CreateEntryButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
-  const skills = await listSkills();
+  const [skills, canCreate] = await Promise.all([listSkills(), isAllowed("skills", "create")]);
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="eyebrow flex items-center gap-2">
@@ -18,6 +20,18 @@ export default async function SkillsPage() {
         <span className="text-[var(--color-accent)]" aria-hidden>$</span>
         ~/.claude/skills
       </p>
+
+      {canCreate && (
+        <div className="mt-6">
+          <CreateEntryButton
+            endpoint="/api/skills"
+            redirectBase="/skills"
+            label="Nouveau skill"
+            placeholder="mon-skill"
+            hint="Minuscules, chiffres et tirets. Un SKILL.md pré-rempli sera créé."
+          />
+        </div>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {skills.length === 0 && (

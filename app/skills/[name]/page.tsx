@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSkill } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
+import { isAllowed } from "@/lib/store";
 import SkillEditor from "@/components/SkillEditor";
+import DeleteButton from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,11 @@ export default async function SkillDetailPage({
 }) {
   const { name } = await params;
   const slug = decodeURIComponent(name);
-  const skill = await getSkill(slug);
+  const [skill, canWrite, canDelete] = await Promise.all([
+    getSkill(slug),
+    isAllowed("skills", "modify"),
+    isAllowed("skills", "delete"),
+  ]);
   if (!skill) notFound();
 
   return (
@@ -41,7 +47,30 @@ export default async function SkillDetailPage({
         </p>
       </div>
 
-      <SkillEditor slug={skill.slug} initialRaw={skill.raw} content={skill.content} />
+      <SkillEditor
+        slug={skill.slug}
+        initialRaw={skill.raw}
+        content={skill.content}
+        canWrite={canWrite}
+        rightActions={
+          canDelete && (
+            <DeleteButton
+              endpoint="/api/skills"
+              body={{ slug: skill.slug }}
+              label="Supprimer le skill"
+              title={`Supprimer le skill « ${skill.name} » ?`}
+              description="Le dossier du skill est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              confirmLabel="Supprimer"
+              redirectTo="/skills"
+              detail={
+                <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)]">
+                  skills/<span className="text-[var(--color-fg)]">{skill.slug}</span>/
+                </div>
+              }
+            />
+          )
+        }
+      />
     </div>
   );
 }

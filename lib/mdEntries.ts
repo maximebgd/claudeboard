@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
+import { moveToTrash } from "./trash";
 
 /**
  * Modèle générique pour les dossiers d'entrées markdown à frontmatter de
@@ -95,6 +96,31 @@ function relFromSlug(slug: string): string {
   return `${slug}.md`;
 }
 
+/** Slug valide : segments minuscules/chiffres/tirets, éventuellement imbriqués. */
+export function isValidMdSlug(slug: string): boolean {
+  return slug.split("/").every((seg) => /^[a-z0-9][a-z0-9-]*$/.test(seg));
+}
+
+/** Contenu de départ d'une nouvelle entrée markdown (frontmatter adapté au kind). */
+export function mdTemplate(kind: MdKind, slug: string): string {
+  const name = slug.split("/").pop() || slug;
+  if (kind === "agents") {
+    return `---
+name: ${name}
+description: Décris quand déléguer une tâche à cet agent.
+---
+
+Instructions système de l'agent : son rôle, ses limites, sa méthode.
+`;
+  }
+  return `---
+description: Décris ce que fait cette commande.
+---
+
+Corps de la commande \`/${slug}\`. Utilise \`$ARGUMENTS\` pour les arguments passés.
+`;
+}
+
 export async function getMdEntry(kind: MdKind, slug: string): Promise<MdEntry | null> {
   const baseDir = DIRS[kind];
   const filePath = safeResolve(baseDir, relFromSlug(slug));
@@ -131,4 +157,30 @@ export async function writeMdEntry(kind: MdKind, slug: string, raw: string): Pro
   await fs.copyFile(filePath, backupPath);
   await fs.writeFile(filePath, raw, "utf8");
   return backupPath;
+}
+
+/**
+ * Crée une nouvelle entrée markdown (`<kind>/<slug>.md`, sous-dossiers créés au
+ * besoin pour les namespaces). Refuse si le fichier existe déjà. Retourne le slug.
+ */
+export async function createMdEntry(kind: MdKind, slug: string, raw?: string): Promise<string> {
+  const baseDir = DIRS[kind];
+  const filePath = safeResolve(baseDir, relFromSlug(slug));
+  try {
+    await fs.access(filePath);
+    throw new Error("Une entrée porte déjà ce nom.");
+  } catch (e) {
+    if (e instanceof Error && e.message === "Une entrée porte déjà ce nom.") throw e;
+    // ENOENT attendu : on peut créer.
+  }
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, raw ?? mdTemplate(kind, slug), "utf8");
+  return slug;
+}
+
+/** Supprime une entrée markdown en la déplaçant dans la corbeille (réversible). */
+export async function deleteMdEntry(kind: MdKind, slug: string): Promise<string> {
+  const baseDir = DIRS[kind];
+  const filePath = safeResolve(baseDir, relFromSlug(slug));
+  return moveToTrash(filePath);
 }

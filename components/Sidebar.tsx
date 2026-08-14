@@ -14,7 +14,7 @@ import {
   Plug,
   Blocks,
   Keyboard,
-  DollarSign,
+  SlidersHorizontal,
   FolderTree,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
@@ -27,7 +27,7 @@ type NavItem = {
 };
 
 // Groupe principal (haut, sans titre) puis la section Config regroupant les
-// réglages et références (Tarifs d'estimation en tête, avant les fichiers ~/.claude).
+// réglages et références (Préférences claudeboard en tête, avant les fichiers ~/.claude).
 const SECTIONS: { label?: string; items: NavItem[] }[] = [
   {
     items: [
@@ -39,7 +39,8 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
   {
     label: "Config",
     items: [
-      { href: "/config/settings", label: "Settings", icon: Settings },
+      { href: "/config/preferences", label: "Préférences", icon: SlidersHorizontal },
+      { href: "/config/settings", label: "Settings Claude", icon: Settings },
       { href: "/config/hooks", label: "Hooks", icon: Webhook },
       { href: "/config/claude-md", label: "CLAUDE.md", icon: FileText },
       { href: "/config/agents", label: "Agents", icon: Bot },
@@ -47,7 +48,6 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
       { href: "/config/mcp", label: "MCP servers", icon: Plug },
       { href: "/config/plugins", label: "Plugins & Marketplaces", icon: Blocks },
       { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
-      { href: "/config/pricing", label: "Tarifs d'estimation", icon: DollarSign },
       { href: "/config/directory", label: "Structure du dossier", icon: FolderTree },
     ],
   },

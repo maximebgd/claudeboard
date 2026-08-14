@@ -18,6 +18,10 @@ import { getProjectStats } from "@/lib/analytics";
 import { formatDate, formatSize, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ResumeButton from "@/components/ResumeButton";
+import FavoriteButton from "@/components/FavoriteButton";
+import DeleteButton from "@/components/DeleteButton";
+import { readStore, isAllowed } from "@/lib/store";
+import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
 
@@ -118,11 +122,25 @@ export default async function ProjectSessionsPage({
 }) {
   const { id: rawId } = await params;
   const id = decodeURIComponent(rawId);
-  const [sessions, projects, stats] = await Promise.all([
+  const [sessions, projects, stats, store, canDelete] = await Promise.all([
     listSessions(id),
     listProjects(),
     getProjectStats(id),
+    readStore(),
+    isAllowed("projects", "delete"),
   ]);
+  const favSet = new Set(store.favorites);
+  // Les sessions épinglées remontent toujours en tête ; à l'intérieur de chaque
+  // groupe (épinglées / autres), tri par dernière activité (récent → ancien).
+  // `listSessions` renvoie déjà trié par `lastModified` desc, on ne fait que
+  // remonter le groupe épinglé sans casser cet ordre relatif.
+  const isFav = (sid: string) => favSet.has(favoriteKey(id, sid));
+  const sortedSessions = [...sessions].sort((a, b) => {
+    const fa = isFav(a.id);
+    const fb = isFav(b.id);
+    if (fa !== fb) return fa ? -1 : 1;
+    return b.lastModified - a.lastModified;
+  });
   const project = projects.find((p) => p.id === id);
   const { totals } = stats;
   const maxTool = Math.max(1, ...stats.topTools.map((t) => t.count));
@@ -320,17 +338,27 @@ export default async function ProjectSessionsPage({
               Aucune session.
             </div>
           )}
-          {sessions.map((s) => (
+          {sortedSessions.map((s) => (
             <div
               key={s.id}
-              className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4"
+              className={`group rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
+                isFav(s.id) ? "border-[var(--color-accent)]/40" : "border-[var(--color-border)]"
+              }`}
             >
-              <Link
-                href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
-                className="min-w-0 flex-1"
-              >
-                <div className="font-medium truncate">{s.title}</div>
-                <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
+                    className="min-w-0"
+                  >
+                    <span className="block font-medium truncate">{s.title}</span>
+                  </Link>
+                  <ResumeButton sessionId={s.id} />
+                </div>
+                <Link
+                  href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
+                  className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]"
+                >
                   <span className="flex items-center gap-1">
                     <MessagesSquare size={12} />
                     {s.messageCount} messages
@@ -338,9 +366,13 @@ export default async function ProjectSessionsPage({
                   <span>{formatDate(s.lastModified)}</span>
                   <span>{formatSize(s.size)}</span>
                   <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
-                </div>
-              </Link>
-              <ResumeButton sessionId={s.id} />
+                </Link>
+              </div>
+              <FavoriteButton
+                favoriteKey={favoriteKey(id, s.id)}
+                initial={favSet.has(favoriteKey(id, s.id))}
+                variant="icon"
+              />
               <Link
                 href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
                 aria-label="Ouvrir la session"
@@ -355,6 +387,25 @@ export default async function ProjectSessionsPage({
           ))}
         </div>
       </div>
+
+      {canDelete && (
+        <div className="mt-10 border-t border-[var(--color-border)] pt-6">
+          <DeleteButton
+            endpoint="/api/projects"
+            body={{ scope: "project", projectId: id }}
+            label="Supprimer le projet"
+            title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
+            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main.`}
+            confirmLabel="Supprimer le projet"
+            redirectTo="/projects"
+            detail={
+              <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
+                projects/{id}
+              </div>
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }

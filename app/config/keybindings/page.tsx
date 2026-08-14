@@ -2,7 +2,10 @@ import { Keyboard } from "lucide-react";
 import { readConfigFile } from "@/lib/configFiles";
 import { parseKeybindings } from "@/lib/keybindings";
 import { formatDate } from "@/lib/claude";
+import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
+import ResetButton from "@/components/ResetButton";
+import DeleteButton from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,11 @@ const TEMPLATE = `{
 export default async function KeybindingsPage() {
   const file = await readConfigFile("keybindings");
   const bindings = parseKeybindings(file.data);
+  const [canWrite, canReset, canDelete] = await Promise.all([
+    isAllowed("keybindings", file.exists ? "modify" : "create"),
+    isAllowed("keybindings", "reset"),
+    isAllowed("keybindings", "delete"),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -70,7 +78,31 @@ export default async function KeybindingsPage() {
           label="keybindings.json"
           exists={file.exists}
           emptyTemplate={TEMPLATE}
+          canWrite={canWrite}
+          lockedLabel={file.exists ? "Modification des keybindings verrouillée." : "Création des keybindings verrouillée."}
         />
+        {file.exists && (canReset || canDelete) && (
+          <div className="mt-4 flex flex-wrap gap-3">
+            {canReset && (
+              <ResetButton
+                endpoint="/api/config-file"
+                body={{ target: "keybindings" }}
+                title="Réinitialiser keybindings.json ?"
+                description="Le fichier est ramené à une liste de keybindings vide. Un backup horodaté (.bak) est créé au préalable."
+              />
+            )}
+            {canDelete && (
+              <DeleteButton
+                endpoint="/api/config-file"
+                body={{ target: "keybindings" }}
+                label="Supprimer"
+                title="Supprimer keybindings.json ?"
+                description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+                confirmLabel="Supprimer"
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

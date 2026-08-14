@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { safeResolve } from "./claude";
+import { moveToTrash } from "./trash";
 
 /**
  * Fichiers de configuration « uniques » de ~/.claude (par opposition aux
@@ -89,4 +90,28 @@ export async function writeConfigFile(target: ConfigTarget, raw: string): Promis
   }
   await fs.writeFile(filePath, raw, "utf8");
   return backupPath;
+}
+
+/** Contenu « par défaut » restauré par une réinitialisation, selon la cible. */
+const RESET_TEMPLATE: Record<ConfigTarget, string> = {
+  settings: `{\n\n}\n`,
+  settingsLocal: `{\n\n}\n`,
+  keybindings: `{\n  "keybindings": []\n}\n`,
+  claudeMd: `# Instructions globales\n\n`,
+};
+
+/**
+ * Réinitialise une cible à son contenu par défaut (backup préalable si le fichier
+ * existait). Retourne le chemin du backup, ou null si le fichier n'existait pas.
+ */
+export function resetConfigFile(target: ConfigTarget): Promise<string | null> {
+  return writeConfigFile(target, RESET_TEMPLATE[target]);
+}
+
+/**
+ * Supprime une cible de config en la déplaçant dans la corbeille (réversible).
+ * Retourne le chemin de corbeille. Lève si le fichier n'existe pas.
+ */
+export function deleteConfigFile(target: ConfigTarget): Promise<string> {
+  return moveToTrash(safeResolve(TARGETS[target].file));
 }

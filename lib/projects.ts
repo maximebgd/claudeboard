@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { safeResolve } from "./claude";
+import { moveToTrash } from "./trash";
 
 const PROJECTS_DIR = "projects";
 
@@ -227,4 +228,16 @@ export async function getSession(projectId: string, sessionId: string): Promise<
 export function projectLabel(realPath: string): string {
   const base = path.basename(realPath);
   return base || realPath;
+}
+
+/** Supprime un projet entier (déplace son dossier dans la corbeille, réversible). */
+export async function deleteProject(projectId: string): Promise<string> {
+  const dir = safeResolve(PROJECTS_DIR, projectId);
+  return moveToTrash(dir);
+}
+
+/** Supprime une session (déplace son `.jsonl` dans la corbeille, réversible). */
+export async function deleteSession(projectId: string, sessionId: string): Promise<string> {
+  const fp = safeResolve(PROJECTS_DIR, projectId, `${sessionId}.jsonl`);
+  return moveToTrash(fp);
 }

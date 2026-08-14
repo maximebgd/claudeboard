@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import type { Dirent } from "fs";
 import { safeResolve } from "./claude";
 import { listProjects, projectLabel } from "./projects";
+import { readStore, type PricingRow } from "./store";
 
 const PROJECTS_DIR = "projects";
 
@@ -25,18 +26,37 @@ export const MODEL_COLOR: Record<ModelFamily, string> = {
 
 const MODEL_ORDER: ModelFamily[] = ["opus", "sonnet", "haiku", "fable", "autre"];
 
+/** Table de tarifs (USD / M tokens) indexée par famille de modèle. */
+export type Pricing = Record<ModelFamily, PricingRow>;
+
 /**
- * Tarifs indicatifs en USD par million de tokens (input / output / écriture cache /
- * lecture cache). La lecture cache utilise 0,1× input. Sert uniquement à une
- * estimation locale du coût.
+ * Tarifs indicatifs **par défaut** en USD par million de tokens (input / output /
+ * écriture cache / lecture cache). La lecture cache utilise 0,1× input. Sert
+ * uniquement à une estimation locale du coût. Ces valeurs peuvent être surchargées
+ * depuis la page « Tarifs d'estimation » (store `pricingOverrides`) ; utiliser
+ * `getEffectivePricing()` pour obtenir les tarifs réellement appliqués.
  */
-export const PRICING: Record<ModelFamily, { in: number; out: number; cacheWrite: number; cacheRead: number }> = {
+export const PRICING: Pricing = {
   opus: { in: 5, out: 25, cacheWrite: 10, cacheRead: 0.5 },
   sonnet: { in: 3, out: 15, cacheWrite: 6, cacheRead: 0.3 },
   haiku: { in: 1, out: 5, cacheWrite: 2, cacheRead: 0.1 },
   fable: { in: 10, out: 50, cacheWrite: 20, cacheRead: 1.0 },
   autre: { in: 0, out: 0, cacheWrite: 0, cacheRead: 0 },
 };
+
+/**
+ * Tarifs effectifs = défauts `PRICING` fusionnés, famille par famille, avec les
+ * éventuels overrides enregistrés dans le store claudeboard (édités depuis la page
+ * « Tarifs d'estimation »). C'est cette table qui doit servir aux calculs de coût.
+ */
+export async function getEffectivePricing(): Promise<Pricing> {
+  const { pricingOverrides } = await readStore();
+  const out = {} as Pricing;
+  for (const fam of MODEL_ORDER) {
+    out[fam] = pricingOverrides[fam] ?? PRICING[fam];
+  }
+  return out;
+}
 
 function modelFamily(model: string): ModelFamily {
   const m = model.toLowerCase();
@@ -136,8 +156,8 @@ function activeDuration(times: number[]): number {
   return total;
 }
 
-function costUSD(fam: ModelFamily, inp: number, out: number, cr: number, cw: number): number {
-  const p = PRICING[fam];
+function costUSD(pricing: Pricing, fam: ModelFamily, inp: number, out: number, cr: number, cw: number): number {
+  const p = pricing[fam];
   return (inp * p.in + out * p.out + cr * p.cacheRead + cw * p.cacheWrite) / 1e6;
 }
 
@@ -341,6 +361,7 @@ export async function getAnalytics(
 ): Promise<Analytics> {
   const hasBound = sinceMs > 0 || untilMs > 0;
   const hasPrev = prevSinceMs > 0 && prevUntilMs > 0;
+  const pricing = await getEffectivePricing();
   const dir = safeResolve(PROJECTS_DIR);
   let entries: Dirent[] = [];
   try {
@@ -453,6 +474,7 @@ export async function getAnalytics(
           // calculé ici avant le filtre de fenêtre.
           const u = (m.usage ?? {}) as Record<string, unknown>;
           ds.costUSD += costUSD(
+            pricing,
             parseModel(rawModel).family,
             num(u.input_tokens),
             num(u.output_tokens),
@@ -474,6 +496,7 @@ export async function getAnalytics(
             prevTokensIn += inp;
             prevTokensOut += out;
             prevCost += costUSD(
+              pricing,
               parseModel(rawModel).family,
               inp,
               out,
@@ -523,7 +546,7 @@ export async function getAnalytics(
           st.tokensOut += out;
           st.cacheRead += cr;
           st.cacheWrite += cw;
-          const c = costUSD(st.family, inp, out, cr, cw);
+          const c = costUSD(pricing, st.family, inp, out, cr, cw);
           st.costUSD += c;
           totalCost += c;
           projCost.set(e.name, (projCost.get(e.name) ?? 0) + c);
@@ -657,6 +680,7 @@ export interface ProjectStats {
  * FS comme `getAnalytics`) et agrège modèles, tokens, coût estimé et top outils.
  */
 export async function getProjectStats(projectId: string): Promise<ProjectStats> {
+  const pricing = await getEffectivePricing();
   const models = new Map<string, ModelStat>();
   const tools = new Map<string, number>();
 
@@ -746,7 +770,7 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
       st.tokensOut += out;
       st.cacheRead += cr;
       st.cacheWrite += cw;
-      const c = costUSD(st.family, inp, out, cr, cw);
+      const c = costUSD(pricing, st.family, inp, out, cr, cw);
       st.costUSD += c;
       totalCost += c;
       tokensIn += inp;

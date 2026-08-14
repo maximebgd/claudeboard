@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check, WandSparkles, Plus } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
+import PermissionNotice from "./PermissionNotice";
 
 interface Props {
   /** Endpoint POST qui reçoit `{ ...payload, raw }`. */
@@ -19,6 +20,12 @@ interface Props {
   exists?: boolean;
   /** Placeholder pour un fichier absent (contenu de départ proposé). */
   emptyTemplate?: string;
+  /** false → écriture verrouillée (permission désactivée). */
+  canWrite?: boolean;
+  /** Message du bandeau lecture seule (si `canWrite` est false). */
+  lockedLabel?: string;
+  /** Éléments à afficher à droite dans la barre d'actions. */
+  rightActions?: React.ReactNode;
 }
 
 /** Retire un frontmatter YAML en tête pour l'aperçu markdown live. */
@@ -38,9 +45,13 @@ export default function ConfigEditor({
   label,
   exists = true,
   emptyTemplate = "",
+  canWrite = true,
+  lockedLabel,
+  rightActions,
 }: Props) {
   const router = useRouter();
-  const [editing, setEditing] = useState(!exists);
+  // Un fichier absent démarre en édition — sauf si l'écriture est verrouillée.
+  const [editing, setEditing] = useState(!exists && canWrite);
   const [draft, setDraft] = useState(exists ? initialRaw : emptyTemplate);
   const [savedRaw, setSavedRaw] = useState(initialRaw);
   const [fileExists, setFileExists] = useState(exists);
@@ -98,8 +109,15 @@ export default function ConfigEditor({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {!editing ? (
+      {!canWrite && (
+        <PermissionNotice>
+          {lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")}
+        </PermissionNotice>
+      )}
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+        {!canWrite ? null : !editing ? (
           <button
             onClick={() => {
               setDraft(savedRaw);
@@ -153,6 +171,8 @@ export default function ConfigEditor({
             <Check size={14} /> Enregistré {fileExists ? "(backup créé)" : ""}
           </span>
         )}
+        </div>
+        {rightActions && <div className="flex items-center gap-2">{rightActions}</div>}
       </div>
 
       {error && (
