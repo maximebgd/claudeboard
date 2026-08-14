@@ -16,6 +16,7 @@ import {
   Keyboard,
   SlidersHorizontal,
   FolderTree,
+  BookOpen,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -48,7 +49,6 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
       { href: "/config/mcp", label: "MCP servers", icon: Plug },
       { href: "/config/plugins", label: "Plugins & Marketplaces", icon: Blocks },
       { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
-      { href: "/config/directory", label: "Structure du dossier", icon: FolderTree },
     ],
   },
 ];
@@ -100,8 +100,34 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="mt-auto p-3">
+      <div className="mt-auto flex items-center justify-between p-3">
         <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <Link
+            href="/config/directory"
+            aria-label="Structure du dossier"
+            title="Structure du dossier"
+            className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+              pathname.startsWith("/config/directory")
+                ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+            }`}
+          >
+            <FolderTree size={16} />
+          </Link>
+          <Link
+            href="/docs"
+            aria-label="Documentation"
+            title="Documentation"
+            className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+              pathname.startsWith("/docs")
+                ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+            }`}
+          >
+            <BookOpen size={16} />
+          </Link>
+        </div>
       </div>
     </aside>
   );
