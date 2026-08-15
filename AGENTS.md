@@ -16,7 +16,11 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   de session (`HourlyDistribution` : 24 barres, heure **locale**, comptage brut par heure
   — pas une moyenne), outils/skills les plus utilisés (`ToolUsageList`), stats de session
   (moyennes, durées, ratio thinking/texte) et projets récents. Une carte d'abonnement (`SubscriptionCard`) compare le coût estimé de l'usage
-  au prix du plan Claude (via `lib/subscription.ts`) pour afficher l'économie nette.
+  au prix du plan Claude (via `lib/subscription.ts`) pour afficher l'économie nette
+  (les détails du plan se révèlent au survol de la carte). La carte KPI « Coût estimé »
+  est un `CostStatCard` **cliquable** qui bascule entre le coût d'usage estimé et
+  l'économie nette réalisée grâce à l'abonnement ; la valeur affichée **par défaut** suit
+  la préférence `costCardMode` du store (cf. Préférences).
   Un sélecteur de fenêtre (`RangeSelector`) filtre les stats — `Tout` / `30 j` / `7 j`,
   un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
   (`?range=custom&from=…&to=…`) ; `getAnalytics(sinceMs, untilMs)` prend les deux bornes.
@@ -55,6 +59,9 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
     - **Abonnement** (`SubscriptionSelector` : auto-détection depuis `~/.claude.json` ou plan
       manuel Pro / Max 5× / Max 20× / aucun) qui pilote l'estimation d'économie de la
       `SubscriptionCard`.
+    - **Affichage** (`CostModeSelector` → préférence `costCardMode` du store) : choisit la
+      valeur affichée **par défaut** par la carte KPI « Coût estimé » du dashboard — coût
+      d'usage ou économie d'abonnement (la carte reste cliquable pour basculer).
   - **Settings Claude** : édition de `settings.json` et `settings.local.json` (JSON validé
     live + backup, création de `.local` à la demande) → `lib/configFiles.ts`. Édition gated
     par `settings.modify` ; **réinitialisation** (`ResetButton`) par `settings.reset`.
@@ -117,10 +124,11 @@ lib/
                getEffectivePricing() = PRICING fusionné avec les overrides du store ;
                parseModel + PRICING/MODEL_LABEL/MODEL_COLOR exportés (pages pricing & donut)
   store.ts     état applicatif **de claudeboard** (favoris de sessions/projets, overrides
-               de tarifs, plan d'abonnement, **permissions**) dans `data/claudeboard.json`
-               — **hors** de CLAUDE_DIR (racine du projet, gitignored, override STORE_DIR) ;
-               read/writeStore (écriture atomique, normalisation défensive), toggleFavorite,
-               toggleFavoriteProject, setPricingOverrides, setSubscription ; `PERMISSION_SCHEMA`
+               de tarifs, plan d'abonnement, **permissions**, préférences d'affichage) dans
+               `data/claudeboard.json` — **hors** de CLAUDE_DIR (racine du projet, gitignored,
+               override STORE_DIR) ; read/writeStore (écriture atomique, normalisation défensive),
+               toggleFavorite, toggleFavoriteProject, setPricingOverrides, setSubscription,
+               getPreferences/setPreferences (`costCardMode`) ; `PERMISSION_SCHEMA`
                (ressource → actions), `getPermissions`/`setPermissions` (patch partiel) et
                `isAllowed(resource, action)` (garde serveur), migration de l'ancien `unlockedFields`
   trash.ts     moveToTrash : suppression **réversible** (déplace fichier/dossier vers
@@ -175,7 +183,7 @@ app/
   api/projects/route.ts          POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
   api/hooks/route.ts             POST { raw } → écrit le bloc hooks de settings.json (gated)
   api/store/route.ts             POST { section, … } → état claudeboard (favoris, tarifs,
-                                 abonnement, permissions) ; dispatch par section whitelistée → lib/store.ts
+                                 abonnement, permissions, preferences) ; dispatch par section whitelistée → lib/store.ts
   layout.tsx · globals.css · icon.svg
 components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
@@ -187,7 +195,9 @@ components/
   ActivityPanel (bascule heatmap/courbe + streak) · ActivityHeatmap (heatmap façon GitHub) ·
   TrendChart (courbe des messages par jour) · DayDetail (détail d'un jour, partagé) ·
   ThemeToggle (clair/sombre) · ModelDonut (camembert modèles) · RangeSelector (fenêtre
-  temporelle) · SubscriptionCard (coût usage vs plan) · SubscriptionSelector (choix de plan) ·
+  temporelle) · SubscriptionCard (coût usage vs plan, détails au survol) · SubscriptionSelector (choix de plan) ·
+  CostStatCard (carte KPI « Coût estimé » cliquable : coût d'usage ⇆ économie abo.) ·
+  CostModeSelector (préférence d'affichage par défaut de cette carte) ·
   PricingEditor (édition des overrides de tarifs) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
   FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
@@ -226,7 +236,8 @@ components/
   masqué, bannière `PermissionNotice`). Ajouter une nouvelle action d'écriture ⇒ l'ajouter
   au schéma **et** la garder derrière `isAllowed`. Défaut : tout `false`.
 - **État propre à claudeboard vs config Claude** : les données qui n'appartiennent pas à
-  Claude Code (favoris, overrides de tarifs, choix d'abonnement, `permissions`) vivent
+  Claude Code (favoris, overrides de tarifs, choix d'abonnement, `permissions`, préférences
+  d'affichage) vivent
   dans `data/claudeboard.json` — **hors** de CLAUDE_DIR et de `~/.claude`, à la racine du
   projet (gitignored, écriture atomique via `lib/store.ts`). Ne jamais mélanger ces
   préférences d'UI avec les fichiers de `~/.claude`. L'API `/api/store` valide et dispatche
