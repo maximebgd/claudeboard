@@ -6,11 +6,11 @@ import { Search } from "lucide-react";
 
 /**
  * Bouton d'action flottant (bas à droite de l'écran) ouvrant la recherche
- * full-text. Masqué lorsqu'on est déjà sur la page `/search`.
+ * full-text. Visible **uniquement** sur `/projects` et ses sous-pages.
  */
 export default function SearchFab() {
   const pathname = usePathname();
-  if (pathname.startsWith("/search")) return null;
+  if (!pathname.startsWith("/projects")) return null;
   return (
     <Link
       href="/search"
