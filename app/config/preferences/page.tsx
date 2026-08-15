@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Calculator, Clock, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -159,9 +159,12 @@ export default async function PreferencesPage() {
         <CostModeSelector initial={preferences.costCardMode} />
       </section>
 
-      <div className="mt-10 space-y-4 text-sm text-[var(--color-muted)]">
-        <div>
-          <div className="eyebrow pb-1">Convention IN / OUT</div>
+      <section className="mt-12 text-sm text-[var(--color-muted)]">
+        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
+          <ArrowUpDown size={18} className="text-[var(--color-accent)]" />
+          Convention IN / OUT
+        </h2>
+        <div className="mt-4">
           <p>Partout dans le dashboard, l'affichage suit ce sens&nbsp;:</p>
           <ul className="mt-2 space-y-1">
             <li className="inline-flex items-center gap-2">
@@ -180,9 +183,14 @@ export default async function PreferencesPage() {
             </li>
           </ul>
         </div>
+      </section>
 
-        <div>
-          <div className="eyebrow pb-1">Comment le coût est calculé</div>
+      <section className="mt-12 text-sm text-[var(--color-muted)]">
+        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
+          <Calculator size={18} className="text-[var(--color-accent)]" />
+          Comment le coût est calculé
+        </h2>
+        <div className="mt-4">
           <p>
             Pour chaque réponse de l'assistant, on lit son bloc{" "}
             <code className="rounded bg-[var(--color-code)] px-1 py-0.5 font-mono text-[12px]">
@@ -204,9 +212,14 @@ export default async function PreferencesPage() {
             → Opus). Les modèles inconnus ou synthétiques sont facturés à 0.
           </p>
         </div>
+      </section>
 
-        <div>
-          <div className="eyebrow pb-1">Écriture cache : TTL 1 h</div>
+      <section className="mt-12 text-sm text-[var(--color-muted)]">
+        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
+          <Clock size={18} className="text-[var(--color-accent)]" />
+          Écriture cache : TTL 1 h
+        </h2>
+        <div className="mt-4">
           <p>
             Le prix d'écriture cache utilise le tarif TTL 1 h (celui employé par Claude Code).
             Les tokens{" "}
@@ -217,7 +230,7 @@ export default async function PreferencesPage() {
           </p>
         </div>
 
-        <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px]">
+        <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px]">
           ⚠️ Ce sont des <strong>tarifs indicatifs</strong> servant à une estimation locale — ce
           n'est pas une facturation réelle. Les valeurs par défaut viennent de{" "}
           <code className="font-mono text-[12px]">lib/analytics.ts</code> ; les modifications
@@ -225,7 +238,7 @@ export default async function PreferencesPage() {
           <code className="font-mono text-[12px]">data/claudeboard.json</code> et appliquées à
           toutes les estimations. « Réinitialiser » restaure les défauts.
         </p>
-      </div>
+      </section>
     </div>
   );
 }
