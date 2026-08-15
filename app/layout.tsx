@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import SearchFab from "@/components/SearchFab";
 import { getEffectiveSubscription } from "@/lib/subscription";
 
 // Lecture du système de fichiers (abonnement) au moment de la requête.
@@ -43,6 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Sidebar subscription={{ label: subscription.label, known: subscription.known }} />
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
+        <SearchFab />
       </body>
     </html>
   );
