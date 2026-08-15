@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, DollarSign, Wallet, SlidersHorizontal, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -7,9 +7,10 @@ import {
   type ModelFamily,
 } from "@/lib/analytics";
 import { getEffectiveSubscription, PLANS } from "@/lib/subscription";
-import { getPermissions, PERMISSION_SCHEMA, type PermissionResource } from "@/lib/store";
+import { getPermissions, getPreferences, PERMISSION_SCHEMA, type PermissionResource } from "@/lib/store";
 import PricingEditor from "@/components/PricingEditor";
 import SubscriptionSelector from "@/components/SubscriptionSelector";
+import CostModeSelector from "@/components/CostModeSelector";
 import PermissionsMatrix, {
   type ResourceMeta,
   type ActionMeta,
@@ -49,10 +50,11 @@ const RESOURCE_META: Record<PermissionResource, { label: string; description: st
 };
 
 export default async function PreferencesPage() {
-  const [effective, sub, permissions] = await Promise.all([
+  const [effective, sub, permissions, preferences] = await Promise.all([
     getEffectivePricing(),
     getEffectiveSubscription(),
     getPermissions(),
+    getPreferences(),
   ]);
 
   const families = FAMILIES.map((fam) => ({
@@ -143,6 +145,18 @@ export default async function PreferencesPage() {
           detected={{ label: sub.detected.label, known: sub.detected.known }}
           planOptions={planOptions}
         />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <LayoutDashboard size={18} className="text-[var(--color-accent)]" />
+          Affichage du dashboard
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
+          Valeur affichée <strong>en premier</strong> par la carte « Coût estimé » du dashboard :
+          le coût d'usage estimé, ou l'économie réalisée grâce à l'abonnement.
+        </p>
+        <CostModeSelector initial={preferences.costCardMode} />
       </section>
 
       <div className="mt-10 space-y-4 text-sm text-[var(--color-muted)]">

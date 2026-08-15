@@ -12,6 +12,8 @@ export interface CostStatCardProps {
   netPositive: boolean;
   /** true si un abonnement connu existe (sinon pas de bascule possible). */
   known: boolean;
+  /** Affiche l'économie d'abord (préférence utilisateur) au lieu du coût d'usage. */
+  initialSavings?: boolean;
   /** Sous-titre affiché en mode « coût d'usage ». */
   usageSub?: React.ReactNode;
   /** Delta de vélocité (rendu tel quel sous la valeur). */
@@ -31,11 +33,12 @@ export default function CostStatCard({
   savingsValue,
   netPositive,
   known,
+  initialSavings = false,
   usageSub,
   trend,
   tooltip,
 }: CostStatCardProps) {
-  const [showSavings, setShowSavings] = useState(false);
+  const [showSavings, setShowSavings] = useState(initialSavings);
   const savings = showSavings && known;
 
   const Icon = savings ? Wallet : Coins;

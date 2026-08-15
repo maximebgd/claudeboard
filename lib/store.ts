@@ -57,6 +57,15 @@ export type Permissions = {
   };
 };
 
+/** Valeur affichée en premier par la carte KPI « Coût estimé » du dashboard. */
+export type CostCardMode = "usage" | "savings";
+
+/** Préférences d'affichage de claudeboard (réglages d'UI, pas de la config Claude). */
+export interface Preferences {
+  /** `usage` = coût d'usage d'abord ; `savings` = économie d'abonnement d'abord. */
+  costCardMode: CostCardMode;
+}
+
 export interface StoreData {
   version: number;
   /** Sessions épinglées, clés « <projectId>/<sessionId> ». */
@@ -69,6 +78,8 @@ export interface StoreData {
   pricingOverrides: Record<string, PricingRow>;
   /** Plan d'abonnement retenu pour adapter l'estimation. */
   subscription: { plan: string | null; source: "auto" | "manual" };
+  /** Préférences d'affichage propres à claudeboard. */
+  preferences: Preferences;
 }
 
 /** Construit une carte de permissions toutes à la même valeur (défaut : `false`). */
@@ -90,6 +101,7 @@ function defaults(): StoreData {
     permissions: buildPermissions(false),
     pricingOverrides: {},
     subscription: { plan: null, source: "auto" },
+    preferences: { costCardMode: "usage" },
   };
 }
 
@@ -166,6 +178,10 @@ function normalize(raw: unknown): StoreData {
       plan: typeof s.plan === "string" ? s.plan : null,
       source: s.source === "manual" ? "manual" : "auto",
     };
+  }
+  if (o.preferences && typeof o.preferences === "object") {
+    const p = o.preferences as Record<string, unknown>;
+    d.preferences = { costCardMode: p.costCardMode === "savings" ? "savings" : "usage" };
   }
   return d;
 }
@@ -252,6 +268,25 @@ export async function setSubscription(input: {
   const plan = source === "manual" && typeof input.plan === "string" ? input.plan : null;
   await writeStore({ subscription: { plan, source } });
   return { plan, source };
+}
+
+/** Lit les préférences d'affichage courantes (défauts inclus si store absent). */
+export async function getPreferences(): Promise<Preferences> {
+  return (await readStore()).preferences;
+}
+
+/**
+ * Applique un patch partiel de préférences d'affichage et persiste. Les valeurs
+ * invalides sont ignorées (on conserve l'existant). Retourne les préférences résultantes.
+ */
+export async function setPreferences(patch: { costCardMode?: unknown }): Promise<Preferences> {
+  const current = await readStore();
+  const next: Preferences = { ...current.preferences };
+  if (patch.costCardMode === "usage" || patch.costCardMode === "savings") {
+    next.costCardMode = patch.costCardMode;
+  }
+  await writeStore({ preferences: next });
+  return next;
 }
 
 /** Lit la carte des permissions courantes (défauts inclus si store absent). */

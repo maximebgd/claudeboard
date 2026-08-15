@@ -18,6 +18,7 @@ import {
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getEffectiveSubscription } from "@/lib/subscription";
+import { getPreferences } from "@/lib/store";
 import { listSkills } from "@/lib/skills";
 import { type HeatDay } from "@/components/ActivityHeatmap";
 import ActivityPanel from "@/components/ActivityPanel";
@@ -284,11 +285,12 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub, favorites] = await Promise.all([
+  const [a, skills, sub, favorites, preferences] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getEffectiveSubscription(),
     getFavoriteSessions(),
+    getPreferences(),
   ]);
 
   // Nombre de mois d'abonnement facturés sur la fenêtre : on compte les échéances
@@ -507,6 +509,7 @@ export default async function HomePage({
           savingsValue={fmtUSD(Math.abs(netSavings))}
           netPositive={netPositive}
           known={sub.known}
+          initialSavings={preferences.costCardMode === "savings"}
           usageSub="tarifs indicatifs"
           trend={costTrend}
           tooltip={subTooltip}

@@ -5,6 +5,7 @@ import {
   setPricingOverrides,
   setSubscription,
   setPermissions,
+  setPreferences,
 } from "@/lib/store";
 import { isManualPlan } from "@/lib/subscription";
 
@@ -12,7 +13,7 @@ import { isManualPlan } from "@/lib/subscription";
  * Écrit l'état applicatif de claudeboard (data/claudeboard.json). Dispatch par
  * `section` (whitelist) : épinglage de sessions (`favorites`) et de projets
  * (`projects`), overrides de tarifs (`pricing`), abonnement (`subscription`),
- * autorisations d'écriture (`permissions`).
+ * autorisations d'écriture (`permissions`), préférences d'affichage (`preferences`).
  */
 export async function POST(req: Request) {
   let body: {
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
     source?: unknown;
     plan?: unknown;
     permissions?: unknown;
+    costCardMode?: unknown;
   };
   try {
     body = await req.json();
@@ -43,6 +45,23 @@ export async function POST(req: Request) {
     try {
       const saved = await setPermissions(permissions);
       return NextResponse.json({ ok: true, permissions: saved });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
+  if (section === "preferences") {
+    if (op !== "save") {
+      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+    }
+    const { costCardMode } = body;
+    if (costCardMode !== "usage" && costCardMode !== "savings") {
+      return NextResponse.json({ error: "costCardMode invalide" }, { status: 400 });
+    }
+    try {
+      const saved = await setPreferences({ costCardMode });
+      return NextResponse.json({ ok: true, preferences: saved });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Échec de l'écriture";
       return NextResponse.json({ error: msg }, { status: 500 });
