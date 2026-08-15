@@ -164,32 +164,51 @@ export default async function ProjectSessionsPage({
         <ArrowLeft size={15} /> Projets
       </Link>
 
-      <div className="mt-4 mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">
-            {project ? projectLabel(project.realPath) : id}
-          </h1>
-          <ReadOnlyBadge />
+      <div className="mt-4 mb-6 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold">
+              {project ? projectLabel(project.realPath) : id}
+            </h1>
+            <ReadOnlyBadge />
+          </div>
+          {project && (
+            <>
+              <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
+                <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                  <CalendarDays size={12} />
+                  {fmtCreatedDate(project.createdAt)}
+                </span>
+                <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                  <Clock size={12} />
+                  Existe depuis {formatDuration(Date.now() - project.createdAt)}
+                </span>
+                <span className="flex items-center gap-1" title={formatDate(project.lastModified)}>
+                  <History size={12} />
+                  Modifié {formatRelative(project.lastModified)}
+                </span>
+              </div>
+            </>
+          )}
         </div>
-        {project && (
-          <>
-            <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
-              <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
-                <CalendarDays size={12} />
-                {fmtCreatedDate(project.createdAt)}
-              </span>
-              <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
-                <Clock size={12} />
-                Existe depuis {formatDuration(Date.now() - project.createdAt)}
-              </span>
-              <span className="flex items-center gap-1" title={formatDate(project.lastModified)}>
-                <History size={12} />
-                Modifié {formatRelative(project.lastModified)}
-              </span>
-            </div>
-          </>
-        )}
+        <div className="shrink-0">
+          <DeleteButton
+            endpoint="/api/projects"
+            body={{ scope: "project", projectId: id }}
+            label="Supprimer le projet"
+            title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
+            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main.`}
+            confirmLabel="Supprimer le projet"
+            redirectTo="/projects"
+            locked={!canDelete}
+            detail={
+              <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
+                projects/{id}
+              </div>
+            }
+          />
+        </div>
       </div>
 
       {/* KPI du projet */}
@@ -382,25 +401,6 @@ export default async function ProjectSessionsPage({
           ))}
         </div>
       </div>
-
-      {canDelete && (
-        <div className="mt-10 border-t border-[var(--color-border)] pt-6">
-          <DeleteButton
-            endpoint="/api/projects"
-            body={{ scope: "project", projectId: id }}
-            label="Supprimer le projet"
-            title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
-            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main.`}
-            confirmLabel="Supprimer le projet"
-            redirectTo="/projects"
-            detail={
-              <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
-                projects/{id}
-              </div>
-            }
-          />
-        </div>
-      )}
     </div>
   );
 }
