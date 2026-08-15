@@ -12,7 +12,6 @@ export default function SearchPage() {
           <Search size={22} className="text-[var(--color-accent)]" />
           Recherche
         </h1>
-        <ReadOnlyBadge />
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
         Recherche full-text à travers tous les transcripts (prompts &amp; réponses) —
