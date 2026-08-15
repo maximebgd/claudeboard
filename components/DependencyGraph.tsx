@@ -269,6 +269,20 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
             </marker>
           </defs>
 
+          {/* Fond capteur : cliquer dans le vide désélectionne, survoler le vide
+              (y compris en venant d'un nœud) réinitialise le survol. Placé en
+              premier → derrière tout le reste. */}
+          <rect
+            x={0}
+            y={0}
+            width={W}
+            height={totalH}
+            fill="transparent"
+            pointerEvents="all"
+            onMouseEnter={() => setHovered(null)}
+            onClick={() => setSelected(null)}
+          />
+
           {/* Passe 1 : liens */}
           {edges.map((e, i) => {
             const a = layout.get(e.from);
@@ -301,13 +315,14 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
                 strokeWidth={highlighted ? 1.8 : 1}
                 strokeOpacity={dim ? 0.3 : highlighted ? 0.95 : 0.45}
                 markerEnd={`url(#${dim ? "arrow-dim" : highlighted ? `arrow-${src.type}` : "arrow-dim"})`}
+                pointerEvents="none"
               />
             );
           })}
 
           {/* Séparateur + titre de la bande des nœuds isolés */}
           {orphans.length > 0 && (
-            <g>
+            <g pointerEvents="none">
               <line
                 x1={PAD}
                 y1={orphanTop + 16}
