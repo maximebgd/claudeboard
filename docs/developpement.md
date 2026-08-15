@@ -36,6 +36,11 @@ conflit avec un `npm run dev` déjà lancé.
 - **Sécurité** : passez par `safeResolve` pour tout accès dans `CLAUDE_DIR`, validez les
   entrées d'URL, et gardez les écritures explicites avec backup (voir
   [Sécurité](./securite.md)).
+- **Permissions** : toute nouvelle action d'écriture doit être ajoutée à
+  `PERMISSION_SCHEMA` (`lib/store.ts`) **et** gardée côté serveur derrière
+  `isAllowed(resource, action)`. Ne mélangez pas l'état propre à claudeboard
+  (`data/claudeboard.json`) avec les fichiers de `~/.claude`.
+- **Suppressions** : jamais destructives — passez par `moveToTrash` (`lib/trash.ts`).
 - **Analytics** : gardez l'agrégation dans le passage unique de `getAnalytics` plutôt que
   de multiplier les scans du FS.
 

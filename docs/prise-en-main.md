@@ -47,6 +47,10 @@ Puis ouvrez l'URL affichée dans le terminal. Le dashboard lit `~/.claude` à ch
 requête (les pages qui touchent au système de fichiers sont en `force-dynamic`), donc
 vos dernières sessions apparaissent sans rebuild.
 
+> 🔓 **L'app démarre en lecture seule.** Toute écriture dans `~/.claude` (édition,
+> création, suppression) est **désactivée par défaut** : ouvrez explicitement ce que vous
+> autorisez depuis **Préférences → Autorisations d'écriture**. Voir [Sécurité](./securite.md).
+
 ## Pointer vers un autre dossier `.claude`
 
 Par défaut, l'app lit `~/.claude`. Pour cibler un répertoire non standard (ou un jeu de
