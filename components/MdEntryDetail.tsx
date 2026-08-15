@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { MdEntry, MdKind } from "@/lib/mdEntries";
 import { formatDate } from "@/lib/claude";
+import { getLockedWritesLabel } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
 import DeleteButton from "@/components/DeleteButton";
 
 /** Détail + éditeur partagé pour une entrée agents/commandes. */
-export default function MdEntryDetail({
+export default async function MdEntryDetail({
   kind,
   entry,
   backHref,
@@ -24,6 +25,7 @@ export default function MdEntryDetail({
   canDelete?: boolean;
 }) {
   const what = kind === "agents" ? "agents" : "commandes";
+  const lockedNotice = await getLockedWritesLabel(kind, `des ${what}`);
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <Link
@@ -56,7 +58,7 @@ export default function MdEntryDetail({
         label={entry.path.split("/").slice(-2).join("/")}
         exists
         canWrite={canWrite}
-        lockedLabel={`Modification des ${what} verrouillée.`}
+        lockedNotice={lockedNotice}
         rightActions={
           canDelete && (
             <DeleteButton

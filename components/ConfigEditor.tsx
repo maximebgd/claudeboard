@@ -24,6 +24,13 @@ interface Props {
   canWrite?: boolean;
   /** Message du bandeau lecture seule (si `canWrite` est false). */
   lockedLabel?: string;
+  /**
+   * Bandeau « verrouillé » piloté par l'appelant : si défini (même à `null`), il
+   * prend le pas sur la logique `canWrite`/`lockedLabel` (une chaîne s'affiche,
+   * `null` masque le bandeau). Sert aux libellés dynamiques listant les actions
+   * encore interdites indépendamment du droit de modification courant.
+   */
+  lockedNotice?: string | null;
   /** Éléments à afficher à droite dans la barre d'actions. */
   rightActions?: React.ReactNode;
 }
@@ -47,6 +54,7 @@ export default function ConfigEditor({
   emptyTemplate = "",
   canWrite = true,
   lockedLabel,
+  lockedNotice,
   rightActions,
 }: Props) {
   const router = useRouter();
@@ -109,9 +117,15 @@ export default function ConfigEditor({
 
   return (
     <div>
-      {!canWrite && (
+      {(lockedNotice !== undefined
+        ? lockedNotice
+        : !canWrite
+          ? lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")
+          : null) && (
         <PermissionNotice>
-          {lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")}
+          {lockedNotice !== undefined
+            ? lockedNotice
+            : lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")}
         </PermissionNotice>
       )}
 

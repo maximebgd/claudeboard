@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSkill } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
-import { isAllowed } from "@/lib/store";
+import { isAllowed, getLockedWritesLabel } from "@/lib/store";
 import SkillEditor from "@/components/SkillEditor";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -16,10 +16,11 @@ export default async function SkillDetailPage({
 }) {
   const { name } = await params;
   const slug = decodeURIComponent(name);
-  const [skill, canWrite, canDelete] = await Promise.all([
+  const [skill, canWrite, canDelete, lockedLabel] = await Promise.all([
     getSkill(slug),
     isAllowed("skills", "modify"),
     isAllowed("skills", "delete"),
+    getLockedWritesLabel("skills", "des skills"),
   ]);
   if (!skill) notFound();
 
@@ -52,6 +53,7 @@ export default async function SkillDetailPage({
         initialRaw={skill.raw}
         content={skill.content}
         canWrite={canWrite}
+        lockedLabel={lockedLabel}
         rightActions={
           canDelete && (
             <DeleteButton

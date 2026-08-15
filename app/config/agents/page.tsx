@@ -5,6 +5,7 @@ import { CLAUDE_DIR } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import MdEntryList from "@/components/MdEntryList";
 import CreateEntryButton from "@/components/CreateEntryButton";
+import PermissionNotice from "@/components/PermissionNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,8 @@ export default async function AgentsPage() {
         {path.join(CLAUDE_DIR, "agents")}
       </p>
 
-      {canCreate && (
-        <div className="mt-6">
+      <div className="mt-6">
+        {canCreate ? (
           <CreateEntryButton
             endpoint="/api/md"
             extraBody={{ kind: "agents" }}
@@ -36,8 +37,10 @@ export default async function AgentsPage() {
             placeholder="mon-agent"
             hint="Minuscules, chiffres, tirets. Un .md pré-rempli sera créé."
           />
-        </div>
-      )}
+        ) : (
+          <PermissionNotice>Création des agents verrouillée.</PermissionNotice>
+        )}
+      </div>
 
       <div className="mt-6">
         <MdEntryList

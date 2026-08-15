@@ -13,11 +13,13 @@ interface Props {
   content: string; // corps markdown (pour l'aperçu en lecture)
   /** false → édition verrouillée (permission skills.modify désactivée). */
   canWrite?: boolean;
+  /** Bandeau « verrouillé » (liste dynamique des actions interdites) ; null = tout autorisé. */
+  lockedLabel?: string | null;
   /** Éléments à afficher à droite dans la barre d'actions. */
   rightActions?: React.ReactNode;
 }
 
-export default function SkillEditor({ slug, initialRaw, content, canWrite = true, rightActions }: Props) {
+export default function SkillEditor({ slug, initialRaw, content, canWrite = true, lockedLabel, rightActions }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialRaw);
@@ -55,9 +57,7 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
 
   return (
     <div>
-      {!canWrite && (
-        <PermissionNotice>Modification des skills verrouillée.</PermissionNotice>
-      )}
+      {lockedLabel && <PermissionNotice>{lockedLabel}</PermissionNotice>}
 
       <div className="mb-4 flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
