@@ -71,7 +71,7 @@ export default function FavoriteButton({
         onClick={toggle}
         disabled={busy}
         title={title}
-        className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors disabled:opacity-60 ${
+        className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors disabled:cursor-default disabled:opacity-60 ${
           on
             ? "border-[var(--color-accent)] text-[var(--color-accent)]"
             : "border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
@@ -90,7 +90,7 @@ export default function FavoriteButton({
       disabled={busy}
       title={title}
       aria-pressed={on}
-      className={`flex shrink-0 items-center justify-center rounded-lg border p-1.5 transition-colors disabled:opacity-60 ${
+      className={`flex shrink-0 cursor-pointer items-center justify-center rounded-lg border p-1.5 transition-colors disabled:cursor-default disabled:opacity-60 ${
         on
           ? "border-[var(--color-accent)] text-[var(--color-accent)]"
           : "border-[var(--color-border)] text-[var(--color-faint)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
