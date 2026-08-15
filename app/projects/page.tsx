@@ -53,11 +53,16 @@ export default async function ProjectsPage() {
         {sortedProjects.map((p) => (
           <div
             key={p.id}
-            className={`group rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
+            className={`group relative rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
               favSet.has(p.id) ? "border-[var(--color-accent)]/40" : "border-[var(--color-border)]"
             }`}
           >
-            <Link href={`/projects/${encodeURIComponent(p.id)}`} className="min-w-0 flex-1">
+            <Link
+              href={`/projects/${encodeURIComponent(p.id)}`}
+              aria-label={`Ouvrir le projet ${projectLabel(p.realPath)}`}
+              className="absolute inset-0 rounded-xl"
+            />
+            <div className="min-w-0 flex-1">
               <div className="font-medium">{projectLabel(p.realPath)}</div>
               <div className="mt-0.5 text-xs text-[var(--color-muted)] font-mono truncate">
                 {p.realPath}
@@ -82,23 +87,19 @@ export default async function ProjectsPage() {
                   </span>
                 )}
               </div>
-            </Link>
-            <FavoriteButton
-              favoriteKey={p.id}
-              initial={favSet.has(p.id)}
-              variant="icon"
-              section="projects"
-            />
-            <Link
-              href={`/projects/${encodeURIComponent(p.id)}`}
-              aria-label="Ouvrir le projet"
-              className="shrink-0"
-            >
-              <ChevronRight
-                size={18}
-                className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+            </div>
+            <div className="relative z-10">
+              <FavoriteButton
+                favoriteKey={p.id}
+                initial={favSet.has(p.id)}
+                variant="icon"
+                section="projects"
               />
-            </Link>
+            </div>
+            <ChevronRight
+              size={18}
+              className="shrink-0 text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+            />
           </div>
         ))}
       </div>

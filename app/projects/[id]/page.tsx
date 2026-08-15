@@ -341,24 +341,23 @@ export default async function ProjectSessionsPage({
           {sortedSessions.map((s) => (
             <div
               key={s.id}
-              className={`group rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
+              className={`group relative rounded-xl border bg-[var(--color-panel)] p-5 hover:border-[var(--color-accent)]/50 transition-colors flex items-center gap-4 ${
                 isFav(s.id) ? "border-[var(--color-accent)]/40" : "border-[var(--color-border)]"
               }`}
             >
+              <Link
+                href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
+                aria-label={`Ouvrir la session ${s.title}`}
+                className="absolute inset-0 rounded-xl"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <Link
-                    href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
-                    className="min-w-0"
-                  >
-                    <span className="block font-medium truncate">{s.title}</span>
-                  </Link>
-                  <ResumeButton sessionId={s.id} />
+                  <span className="min-w-0 block font-medium truncate">{s.title}</span>
+                  <div className="relative z-10">
+                    <ResumeButton sessionId={s.id} />
+                  </div>
                 </div>
-                <Link
-                  href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
-                  className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]"
-                >
+                <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
                   <span className="flex items-center gap-1">
                     <MessagesSquare size={12} />
                     {s.messageCount} messages
@@ -366,23 +365,19 @@ export default async function ProjectSessionsPage({
                   <span>{formatDate(s.lastModified)}</span>
                   <span>{formatSize(s.size)}</span>
                   <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
-                </Link>
+                </div>
               </div>
-              <FavoriteButton
-                favoriteKey={favoriteKey(id, s.id)}
-                initial={favSet.has(favoriteKey(id, s.id))}
-                variant="icon"
-              />
-              <Link
-                href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
-                aria-label="Ouvrir la session"
-                className="shrink-0"
-              >
-                <ChevronRight
-                  size={18}
-                  className="text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+              <div className="relative z-10">
+                <FavoriteButton
+                  favoriteKey={favoriteKey(id, s.id)}
+                  initial={favSet.has(favoriteKey(id, s.id))}
+                  variant="icon"
                 />
-              </Link>
+              </div>
+              <ChevronRight
+                size={18}
+                className="shrink-0 text-[var(--color-faint)] group-hover:text-[var(--color-fg)]"
+              />
             </div>
           ))}
         </div>
