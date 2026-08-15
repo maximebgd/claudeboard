@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import { getEffectiveSubscription } from "@/lib/subscription";
+
+// Lecture du système de fichiers (abonnement) au moment de la requête.
+export const dynamic = "force-dynamic";
 
 /* Space Grotesk : voix UI/titres — géométrique, technique, un peu de caractère.
    JetBrains Mono : voix « instrument » — tous les chiffres, chemins, eyebrows. */
@@ -22,7 +26,8 @@ export const metadata: Metadata = {
     "Dashboard local pour visualiser et éditer votre configuration Claude Code qui est dans ~/.claude",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const subscription = await getEffectiveSubscription();
   return (
     <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
@@ -35,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
-          <Sidebar />
+          <Sidebar subscription={{ label: subscription.label, known: subscription.known }} />
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </body>

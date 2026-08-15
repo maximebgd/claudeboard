@@ -16,6 +16,7 @@ import {
   Keyboard,
   SlidersHorizontal,
   BookOpen,
+  Wallet,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -51,19 +52,38 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  subscription,
+}: {
+  subscription: { label: string; known: boolean };
+}) {
   const pathname = usePathname();
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col">
-      <div className="px-5 py-5 border-b border-[var(--color-border)]">
+      <div className="py-5 pl-5 pr-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] font-mono text-sm font-bold text-[var(--color-accent)]">
             ›_
           </div>
           <div>
-            <div className="text-sm font-semibold leading-tight tracking-tight">Claude Board</div>
-            <div className="font-mono text-[11px] leading-tight text-[var(--color-muted)]">~/.claude</div>
+            <div className="text-sm font-semibold leading-tight tracking-tight">
+              Claude Board
+            </div>
+            <div className="font-mono text-[11px] leading-tight text-[var(--color-muted)]">
+              ~/.claude
+            </div>
           </div>
+          <span
+            title="Abonnement Claude"
+            className={`ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium ${
+              subscription.known
+                ? "border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                : "border-[var(--color-border)] text-[var(--color-muted)]"
+            }`}
+          >
+            {/* <Wallet size={12} /> */}
+            {subscription.label}
+          </span>
         </div>
       </div>
       <nav className="p-3 flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
@@ -73,7 +93,9 @@ export default function Sidebar() {
               <div className="eyebrow px-3 pb-1 pt-5">{section.label}</div>
             )}
             {section.items.map(({ href, label, icon: Icon, exact }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
+              const active = exact
+                ? pathname === href
+                : pathname.startsWith(href);
               return (
                 <Link
                   key={href}
