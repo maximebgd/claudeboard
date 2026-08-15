@@ -73,6 +73,14 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
     liste/aperçu/édition/**création**/**suppression** sur le modèle des skills
     (`lib/mdEntries.ts` ; les sous-dossiers de commands = namespaces). Gated par
     `agents|commands.{create,modify,delete}`.
+  - **Graphe de dépendances** (`/config/graph`) : visualise **qui référence qui**
+    entre skills, agents et commandes. `lib/graph.ts` (`getDependencyGraph`) charge le
+    contenu de chaque entrée et détecte les références textuelles (appel `/commande`,
+    mention `@agent`, nom d'un skill en backticks ou cité si l'identifiant est distinctif) ;
+    le rendu est un layout **force-dirigé** client (`DependencyGraph`, Fruchterman-Reingold
+    déterministe en `useMemo`) avec survol/sélection, panneau des références entrantes/
+    sortantes et KPI (entrées par type, liens, isolées). **Lecture seule** (aucune écriture,
+    hors du modèle de permissions).
   - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création si absent,
     **réinitialisation** et **suppression** (gated par `claudeMd.{create,modify,delete,reset}`).
   - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux +
@@ -150,6 +158,9 @@ lib/
   mdEntries.ts list/get/writeMdEntry(kind) : agents & commandes (.md à frontmatter,
                slugs imbriqués = namespaces) ; même modèle que skills + createMdEntry ·
                deleteMdEntry · mdTemplate · isValidMdSlug
+  graph.ts     getDependencyGraph : LECTURE SEULE — charge skills/agents/commandes et
+               détecte les références textuelles croisées (slash / @agent / code /
+               mention distinctive) → nœuds + liens dirigés + compteurs (pour /config/graph)
   hooks.ts     getHooks : normalise les hooks des deux settings, groupés par event ;
                getHooksRaw/writeHooks : lecture/écriture du bloc hooks de settings.json
   mcp.ts       getMcpServers : LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR), MCP
@@ -171,6 +182,7 @@ app/
   config/hooks/page.tsx          Visualiseur de hooks + éditeur du bloc hooks (si autorisé)
   config/agents/page.tsx · [...slug]/page.tsx   Liste (+ création) + détail/éditeur/suppression d'agents
   config/commands/page.tsx · [...slug]/page.tsx Liste (+ création) + détail/éditeur/suppression de commandes
+  config/graph/page.tsx          Graphe de dépendances skills/agents/commandes (lecture seule)
   config/claude-md/page.tsx      Éditeur du CLAUDE.md global (+ reset/suppression)
   config/mcp/page.tsx            MCP servers (lecture seule)
   config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
@@ -202,6 +214,7 @@ components/
   PricingEditor (édition des overrides de tarifs) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
   FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
+  DependencyGraph (graphe force-dirigé skills/agents/commandes, survol + panneau de références) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
 ```
