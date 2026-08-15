@@ -5,14 +5,19 @@ import Link from "next/link";
 import { Sparkles, Bot, SquareSlash, ArrowRight, ExternalLink } from "lucide-react";
 
 /**
- * Visualisation du graphe de dépendances (skills / agents / commandes) : layout
- * force-dirigé (Fruchterman-Reingold) calculé une fois en `useMemo` — le résultat
- * est déterministe (positions initiales sur un cercle, pas d'aléatoire) donc
- * stable entre SSR et client. Survol/clic d'un nœud met en évidence ses voisins ;
- * un panneau latéral liste les références entrantes/sortantes du nœud sélectionné.
+ * Visualisation du graphe de dépendances (skills / agents / commandes).
  *
- * Types redéfinis localement pour garder le composant indépendant de `lib/graph`
- * (qui dépend de `fs`).
+ * - Les nœuds **connectés** (au moins un lien) sont placés par un layout
+ *   force-dirigé (Fruchterman-Reingold) déterministe calculé en `useMemo` — donc
+ *   stable entre SSR et client. Ils occupent toute la zone principale.
+ * - Les nœuds **isolés** (aucun lien) sont sortis de la simulation et rangés en
+ *   grille régulière dans une bande dédiée en bas, pour ne pas encombrer le
+ *   graphe ni se chevaucher.
+ *
+ * Le rendu se fait en passes séparées (liens → cercles → labels) pour que les
+ * étiquettes ne soient jamais masquées par un cercle voisin ; le nœud survolé/
+ * sélectionné passe au premier plan. Types redéfinis localement pour garder le
+ * composant indépendant de `lib/graph` (qui dépend de `fs`).
  */
 
 type NodeType = "skill" | "agent" | "command";
@@ -55,34 +60,51 @@ const FORM_LABEL: Record<RefForm, string> = {
   mention: "mention",
 };
 
-const W = 820;
-const H = 560;
-const PAD = 60;
+const W = 900;
+const MAIN_H = 540; // zone du graphe force-dirigé
+const PAD = 72;
+const ORPHAN_CELL = 176; // largeur d'une cellule de la grille des isolés
+const ORPHAN_ROW_H = 66;
 
 function radiusOf(n: GNode): number {
-  return Math.min(22, 9 + n.degree * 1.6);
+  return Math.min(20, 9 + n.degree * 1.4);
 }
 
-/** Layout force-dirigé déterministe. Renvoie une position {x,y} par id de nœud. */
-function computeLayout(nodes: GNode[], edges: GEdge[]): Map<string, { x: number; y: number }> {
+function truncate(s: string, n = 22): string {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+type Pos = { x: number; y: number };
+
+/** Layout force-dirigé déterministe sur les nœuds connectés. */
+function computeLayout(nodes: GNode[], edges: GEdge[]): Map<string, Pos> {
   const N = nodes.length;
-  const pos = nodes.map((_, i) => {
-    const a = (i / Math.max(1, N)) * Math.PI * 2;
+  const out = new Map<string, Pos>();
+  if (N === 0) return out;
+  if (N === 1) {
+    out.set(nodes[0].id, { x: W / 2, y: MAIN_H / 2 });
+    return out;
+  }
+
+  const pos: Pos[] = nodes.map((_, i) => {
+    const a = (i / N) * Math.PI * 2;
     // léger décalage déterministe pour casser les symétries parfaites
-    return { x: W / 2 + Math.cos(a) * 200 + (i % 4) * 3, y: H / 2 + Math.sin(a) * 160 + (i % 3) * 3 };
+    return { x: W / 2 + Math.cos(a) * 230 + (i % 4) * 3, y: MAIN_H / 2 + Math.sin(a) * 180 + (i % 3) * 3 };
   });
   const idx = new Map(nodes.map((n, i) => [n.id, i]));
   const links = edges
     .map((e) => [idx.get(e.from), idx.get(e.to)] as const)
     .filter(([a, b]) => a !== undefined && b !== undefined) as [number, number][];
 
-  const area = (W - 2 * PAD) * (H - 2 * PAD);
-  const k = 0.75 * Math.sqrt(area / Math.max(1, N));
+  const availW = W - 2 * PAD;
+  const availH = MAIN_H - 2 * PAD;
+  // constante généreuse → longueur d'arête « idéale » plus grande, donc plus d'air
+  const k = 1.2 * Math.sqrt((availW * availH) / N);
   const cx = W / 2;
-  const cy = H / 2;
-  let temp = W / 8;
+  const cy = MAIN_H / 2;
+  let temp = W / 6;
 
-  for (let iter = 0; iter < 500; iter++) {
+  for (let iter = 0; iter < 600; iter++) {
     const disp = pos.map(() => ({ x: 0, y: 0 }));
     // répulsion (toutes paires)
     for (let i = 0; i < N; i++) {
@@ -117,10 +139,10 @@ function computeLayout(nodes: GNode[], edges: GEdge[]): Map<string, { x: number;
       disp[b].x += ux * f;
       disp[b].y += uy * f;
     }
-    // gravité douce vers le centre (garde les composantes disjointes groupées)
+    // gravité douce vers le centre (garde le graphe groupé et centré)
     for (let i = 0; i < N; i++) {
-      disp[i].x += (cx - pos[i].x) * 0.012;
-      disp[i].y += (cy - pos[i].y) * 0.012;
+      disp[i].x += (cx - pos[i].x) * 0.01;
+      disp[i].y += (cy - pos[i].y) * 0.01;
     }
     // déplacement limité par la température, puis clamp dans le cadre
     for (let i = 0; i < N; i++) {
@@ -130,24 +152,48 @@ function computeLayout(nodes: GNode[], edges: GEdge[]): Map<string, { x: number;
         pos[i].y += (disp[i].y / d) * Math.min(d, temp);
       }
       pos[i].x = Math.max(PAD, Math.min(W - PAD, pos[i].x));
-      pos[i].y = Math.max(PAD, Math.min(H - PAD, pos[i].y));
+      pos[i].y = Math.max(PAD, Math.min(MAIN_H - PAD, pos[i].y));
     }
-    temp *= 0.955;
+    temp *= 0.95;
   }
 
-  return new Map(nodes.map((n, i) => [n.id, pos[i]]));
+  nodes.forEach((n, i) => out.set(n.id, pos[i]));
+  return out;
 }
 
 export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edges: GEdge[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const layout = useMemo(() => computeLayout(nodes, edges), [nodes, edges]);
+  const connected = useMemo(() => nodes.filter((n) => n.degree > 0), [nodes]);
+  const orphans = useMemo(() => nodes.filter((n) => n.degree === 0), [nodes]);
+
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+
+  // positions : force-dirigé pour les connectés, grille pour les isolés
+  const { layout, totalH, orphanTop } = useMemo(() => {
+    const map = computeLayout(connected, edges);
+    let stripH = 0;
+    let contentTop = MAIN_H;
+    if (orphans.length > 0) {
+      const cols = Math.max(1, Math.min(orphans.length, Math.floor((W - 2 * PAD) / ORPHAN_CELL)));
+      const rows = Math.ceil(orphans.length / cols);
+      contentTop = MAIN_H + 44; // ligne de séparation + titre « Sans lien »
+      orphans.forEach((n, i) => {
+        const row = Math.floor(i / cols);
+        const itemsInRow = row < rows - 1 ? cols : orphans.length - cols * (rows - 1);
+        const colInRow = i - row * cols;
+        const rowWidth = itemsInRow * ORPHAN_CELL;
+        const startX = (W - rowWidth) / 2 + ORPHAN_CELL / 2;
+        map.set(n.id, { x: startX + colInRow * ORPHAN_CELL, y: contentTop + row * ORPHAN_ROW_H });
+      });
+      stripH = 44 + rows * ORPHAN_ROW_H;
+    }
+    return { layout: map, totalH: MAIN_H + stripH, orphanTop: MAIN_H };
+  }, [connected, orphans, edges]);
 
   const active = hovered ?? selected;
 
-  // voisins directs du nœud actif (pour la mise en évidence)
   const neighbors = useMemo(() => {
     if (!active) return new Set<string>();
     const s = new Set<string>();
@@ -158,7 +204,6 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
     return s;
   }, [active, edges]);
 
-  // références du nœud sélectionné (panneau latéral)
   const detail = useMemo(() => {
     if (!selected) return null;
     const node = nodeById.get(selected);
@@ -183,12 +228,16 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
   }
 
   const isDim = (id: string) => active !== null && id !== active && !neighbors.has(id);
+  // nœud actif dessiné en dernier (premier plan)
+  const drawOrder = [...nodes].sort(
+    (a, b) => (a.id === active ? 1 : 0) - (b.id === active ? 1 : 0),
+  );
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden">
         <svg
-          viewBox={`0 0 ${W} ${H}`}
+          viewBox={`0 0 ${W} ${totalH}`}
           className="w-full h-auto select-none"
           onMouseLeave={() => setHovered(null)}
         >
@@ -220,7 +269,7 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
             </marker>
           </defs>
 
-          {/* Liens */}
+          {/* Passe 1 : liens */}
           {edges.map((e, i) => {
             const a = layout.get(e.from);
             const b = layout.get(e.to);
@@ -233,15 +282,14 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
             const uy = dy / d;
             const rB = radiusOf(nodeById.get(e.to)!);
             const rA = radiusOf(src);
-            // point de départ/arrivée décalés du rayon des nœuds
             const sx = a.x + ux * (rA + 2);
             const sy = a.y + uy * (rA + 2);
             const ex = b.x - ux * (rB + 6);
             const ey = b.y - uy * (rB + 6);
             // courbure perpendiculaire (signe stable) pour séparer les liens réciproques
             const sign = e.from < e.to ? 1 : -1;
-            const mx = (sx + ex) / 2 + -uy * 22 * sign;
-            const my = (sy + ey) / 2 + ux * 22 * sign;
+            const mx = (sx + ex) / 2 + -uy * 24 * sign;
+            const my = (sy + ey) / 2 + ux * 24 * sign;
             const highlighted = active !== null && (e.from === active || e.to === active);
             const dim = active !== null && !highlighted;
             return (
@@ -251,14 +299,37 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
                 fill="none"
                 stroke={dim ? "var(--color-border)" : highlighted ? TYPE_COLOR[src.type] : "var(--color-faint)"}
                 strokeWidth={highlighted ? 1.8 : 1}
-                strokeOpacity={dim ? 0.35 : highlighted ? 0.9 : 0.5}
+                strokeOpacity={dim ? 0.3 : highlighted ? 0.95 : 0.45}
                 markerEnd={`url(#${dim ? "arrow-dim" : highlighted ? `arrow-${src.type}` : "arrow-dim"})`}
               />
             );
           })}
 
-          {/* Nœuds */}
-          {nodes.map((n) => {
+          {/* Séparateur + titre de la bande des nœuds isolés */}
+          {orphans.length > 0 && (
+            <g>
+              <line
+                x1={PAD}
+                y1={orphanTop + 16}
+                x2={W - PAD}
+                y2={orphanTop + 16}
+                stroke="var(--color-border)"
+                strokeDasharray="4 4"
+              />
+              <text
+                x={PAD}
+                y={orphanTop + 36}
+                fontSize="11"
+                fill="var(--color-faint)"
+                letterSpacing="0.08em"
+              >
+                SANS LIEN ({orphans.length})
+              </text>
+            </g>
+          )}
+
+          {/* Passe 2 : cercles */}
+          {drawOrder.map((n) => {
             const p = layout.get(n.id);
             if (!p) return null;
             const r = radiusOf(n);
@@ -266,29 +337,58 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
             const isActive = n.id === active;
             const isSel = n.id === selected;
             return (
+              <circle
+                key={n.id}
+                cx={p.x}
+                cy={p.y}
+                r={r}
+                fill={TYPE_COLOR[n.type]}
+                fillOpacity={dim ? 0.3 : isActive ? 1 : 0.85}
+                stroke={isSel ? "var(--color-fg)" : "var(--color-panel)"}
+                strokeWidth={isSel ? 2.5 : 2}
+                className="cursor-pointer"
+                style={{ transition: "fill-opacity 120ms" }}
+                onMouseEnter={() => setHovered(n.id)}
+                onClick={() => setSelected((s) => (s === n.id ? null : n.id))}
+              />
+            );
+          })}
+
+          {/* Passe 3 : labels (toujours au-dessus des cercles) */}
+          {drawOrder.map((n) => {
+            const p = layout.get(n.id);
+            if (!p) return null;
+            const r = radiusOf(n);
+            const dim = isDim(n.id);
+            const isActive = n.id === active;
+            const label = truncate(n.name);
+            const plateW = label.length * 6.3 + 10;
+            return (
               <g
                 key={n.id}
                 transform={`translate(${p.x},${p.y})`}
                 className="cursor-pointer"
-                style={{ opacity: dim ? 0.28 : 1, transition: "opacity 120ms" }}
+                style={{ opacity: dim ? 0.35 : 1, transition: "opacity 120ms" }}
                 onMouseEnter={() => setHovered(n.id)}
                 onClick={() => setSelected((s) => (s === n.id ? null : n.id))}
               >
-                <circle
-                  r={r}
-                  fill={TYPE_COLOR[n.type]}
-                  fillOpacity={isActive ? 1 : 0.85}
-                  stroke={isSel ? "var(--color-fg)" : "var(--color-panel)"}
-                  strokeWidth={isSel ? 2.5 : 2}
+                <rect
+                  x={-plateW / 2}
+                  y={r + 3}
+                  width={plateW}
+                  height={16}
+                  rx={4}
+                  fill="var(--color-panel)"
+                  opacity={isActive ? 0.95 : 0.72}
                 />
                 <text
-                  y={r + 13}
+                  y={r + 14}
                   textAnchor="middle"
                   fontSize="11"
                   fill={isActive ? "var(--color-fg)" : "var(--color-muted)"}
                   fontWeight={isActive ? 600 : 400}
                 >
-                  {n.name.length > 20 ? n.name.slice(0, 19) + "…" : n.name}
+                  {label}
                 </text>
               </g>
             );
