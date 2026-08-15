@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, FileText, FileCode, ChevronDown } from "lucide-react";
+import { Upload, FileText, FileCode, ChevronDown } from "lucide-react";
 
 interface Props {
   scope: "session" | "project";
@@ -41,10 +41,10 @@ export default function ExportButton({ scope, projectId, sessionId, label = "Exp
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Exporter en Markdown ou HTML"
-        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
       >
-        <Download size={13} /> {label}
-        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        <Upload size={14} /> {label}
+        <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] shadow-lg">

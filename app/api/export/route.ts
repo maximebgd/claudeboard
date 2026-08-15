@@ -1,4 +1,5 @@
 import { getSession, listSessions, listProjects, projectLabel } from "@/lib/projects";
+import { getProjectStats } from "@/lib/analytics";
 import {
   sessionToMarkdown,
   sessionToHtml,
@@ -62,7 +63,10 @@ export async function GET(req: Request) {
     }
 
     if (scope === "project") {
-      const metas = await listSessions(projectId);
+      const [metas, stats] = await Promise.all([
+        listSessions(projectId),
+        getProjectStats(projectId),
+      ]);
       const sessions = [];
       for (const s of metas) {
         const full = await getSession(projectId, s.id);
@@ -73,8 +77,8 @@ export async function GET(req: Request) {
       }
       const out =
         format === "html"
-          ? await projectToHtml(realPath, label, sessions)
-          : projectToMarkdown(realPath, label, sessions);
+          ? await projectToHtml(realPath, label, sessions, stats, metas)
+          : projectToMarkdown(realPath, label, sessions, stats, metas);
       const filename = exportFilename(label, format);
       return new Response(out, {
         headers: {
