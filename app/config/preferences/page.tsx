@@ -40,11 +40,11 @@ const ACTION_COLUMNS: ActionMeta[] = [
 const RESOURCE_META: Record<PermissionResource, { label: string; description: string }> = {
   skills: { label: "Skills", description: "Créer, modifier ou supprimer les SKILL.md" },
   projects: { label: "Projets & Sessions", description: "Supprimer un projet ou une session" },
-  settings: { label: "Settings Claude", description: "Modifier ou réinitialiser settings.json" },
-  hooks: { label: "Hooks", description: "Éditer le bloc hooks de settings.json (créer/supprimer/modifier)" },
   claudeMd: { label: "CLAUDE.md", description: "Créer, modifier, supprimer ou réinitialiser le CLAUDE.md global" },
   agents: { label: "Agents", description: "Créer, modifier ou supprimer des agents" },
   commands: { label: "Commandes", description: "Créer, modifier ou supprimer des commandes" },
+  settings: { label: "Settings Claude", description: "Modifier ou réinitialiser settings.json" },
+  hooks: { label: "Hooks", description: "Éditer le bloc hooks de settings.json (créer/supprimer/modifier)" },
   keybindings: { label: "Keybindings", description: "Créer, modifier, supprimer ou réinitialiser keybindings.json" },
 };
 

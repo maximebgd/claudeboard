@@ -31,16 +31,19 @@ export interface PricingRow {
  *
  * Ce schéma pilote à la fois les défauts, la normalisation défensive et l'UI.
  */
+// L'ordre des ressources suit celui de la Sidebar (groupe principal puis section
+// Config) : Skills, Projets, puis CLAUDE.md, Agents, Commandes, Settings, Hooks,
+// Keybindings. Il pilote aussi l'ordre d'affichage de la matrice de Préférences.
 export const PERMISSION_SCHEMA = {
   skills: ["create", "modify", "delete"],
   projects: ["delete"], // projets & sessions
+  claudeMd: ["create", "modify", "delete", "reset"],
+  agents: ["create", "modify", "delete"],
+  commands: ["create", "modify", "delete"],
   settings: ["modify", "reset"], // Settings Claude (settings.json)
   // Les hooks vivent DANS settings.json : créer/supprimer/éditer un hook = éditer
   // ce bloc JSON. Une seule permission d'édition (pas de create/delete distincts).
   hooks: ["modify"],
-  claudeMd: ["create", "modify", "delete", "reset"],
-  agents: ["create", "modify", "delete"],
-  commands: ["create", "modify", "delete"],
   keybindings: ["create", "modify", "delete", "reset"],
 } as const;
 
