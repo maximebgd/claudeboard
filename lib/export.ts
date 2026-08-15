@@ -212,8 +212,11 @@ export function projectToMarkdown(
     `> Export claudeboard · ${fmtDate(new Date().toISOString())}`,
     "",
     `- **Projet** : ${projectPath}`,
-    `- **Sessions** : ${sessions.length}`,
-    `- **Messages** : ${totalMessages}`,
+    // Sessions/Messages sont déjà dans les KPI → on ne les répète dans l'en-tête
+    // que si les statistiques ne sont pas incluses.
+    ...(includeStats
+      ? []
+      : [`- **Sessions** : ${sessions.length}`, `- **Messages** : ${totalMessages}`]),
     "",
   ].join("\n");
 
@@ -521,11 +524,12 @@ export async function projectToHtml(
 ): Promise<string> {
   const metaById = new Map(metas.map((m) => [m.id, m]));
   const totalMessages = sessions.reduce((n, s) => n + s.events.length, 0);
-  const meta: [string, string][] = [
-    ["Projet :", esc(projectPath)],
-    ["Sessions :", String(sessions.length)],
-    ["Messages :", String(totalMessages)],
-  ];
+  // Sessions/Messages sont déjà dans les KPI → on ne les répète dans l'en-tête que
+  // si les statistiques ne sont pas incluses (sinon doublon au-dessus des KPI).
+  const meta: [string, string][] = [["Projet :", esc(projectPath)]];
+  if (!includeStats) {
+    meta.push(["Sessions :", String(sessions.length)], ["Messages :", String(totalMessages)]);
+  }
 
   // Liste de sessions : cartes cliquables qui « ouvrent » leur sous-page (#session-n).
   const sessionCards = sessions
