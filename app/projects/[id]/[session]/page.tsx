@@ -9,6 +9,7 @@ import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import { ResumeCommand } from "@/components/ResumeButton";
 import FavoriteButton from "@/components/FavoriteButton";
 import DeleteButton from "@/components/DeleteButton";
+import ExportButton from "@/components/ExportButton";
 import { readStore, isAllowed } from "@/lib/store";
 import { favoriteKey } from "@/lib/favorites";
 
@@ -86,6 +87,7 @@ export default async function SessionPage({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <ResumeCommand sessionId={sessionId} />
+          <ExportButton scope="session" projectId={id} sessionId={sessionId} />
           <DeleteButton
             endpoint="/api/projects"
             body={{ scope: "session", projectId: id, sessionId }}

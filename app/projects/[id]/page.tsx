@@ -20,6 +20,7 @@ import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ResumeButton from "@/components/ResumeButton";
 import FavoriteButton from "@/components/FavoriteButton";
 import DeleteButton from "@/components/DeleteButton";
+import ExportButton from "@/components/ExportButton";
 import { readStore, isAllowed } from "@/lib/store";
 import { favoriteKey } from "@/lib/favorites";
 
@@ -192,7 +193,8 @@ export default async function ProjectSessionsPage({
             </>
           )}
         </div>
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
+          <ExportButton scope="project" projectId={id} label="Exporter le projet" />
           <DeleteButton
             endpoint="/api/projects"
             body={{ scope: "project", projectId: id }}

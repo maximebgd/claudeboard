@@ -45,6 +45,10 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   sessions sont **épinglables** (`FavoriteButton` → store local) ; les projets épinglés
   remontent en tête de liste. La page d'une session propose un `ResumeButton` qui copie la
   commande `claude --resume <sessionId>` (l'app n'exécute rien, elle ne fait que la copier).
+  Chaque page (session ou projet) propose aussi un `ExportButton` (menu Markdown/HTML) qui
+  télécharge le transcript en **Markdown** ou **HTML autonome** propre (partage/archive) via
+  `GET /api/export` → `lib/export.ts`. **Lecture seule** : rien n'est écrit dans `~/.claude`,
+  donc hors du modèle de permissions.
   La **suppression** d'un projet ou d'une session (déplacement en corbeille, via
   `/api/projects`) est possible si la permission `projects.delete` est activée.
 - **Config Claude** (section « Config » de la Sidebar) :
@@ -161,6 +165,16 @@ lib/
   graph.ts     getDependencyGraph : LECTURE SEULE — charge skills/agents/commandes et
                détecte les références textuelles croisées (slash / @agent / code /
                mention distinctive) → nœuds + liens dirigés + compteurs (pour /config/graph)
+  export.ts    sessionToMarkdown/Html · projectToMarkdown/Html · exportFilename : rendu
+               **lecture seule** d'une session ou d'un projet entier en Markdown ou HTML
+               autonome (CSS embarqué) pour partage/archive ; le HTML convertit les blocs
+               texte via react-markdown (import dynamique de react-dom/server, interdit en
+               statique par Next). L'export **projet** reprend le rendu du site : KPI
+               (sessions, tokens in/out, coût, outils, activité via getProjectStats),
+               tableau des modèles, top outils, et une liste de sessions cliquable — le HTML
+               est un mini-site autonome (sous-pages masquées + routeur hash JS : chaque
+               carte de session « ouvre » sa sous-page, lien retour vers l'overview). Servi
+               en téléchargement par /api/export — aucune écriture
   hooks.ts     getHooks : normalise les hooks des deux settings, groupés par event ;
                getHooksRaw/writeHooks : lecture/écriture du bloc hooks de settings.json
   mcp.ts       getMcpServers : LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR), MCP
@@ -193,6 +207,9 @@ app/
   api/config-file/route.ts       POST { op, target, raw } → fichiers uniques : write/reset/delete (gated)
   api/md/route.ts                POST { op, kind, slug, raw } → agents/commandes : write/create/delete (gated)
   api/projects/route.ts          POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
+  api/export/route.ts            GET ?scope&projectId&sessionId?&format=md|html&stats=0? → export
+                                 Markdown/HTML en téléchargement (lecture seule, hors permissions ;
+                                 `stats=0` = projet sans le bloc de statistiques)
   api/hooks/route.ts             POST { raw } → écrit le bloc hooks de settings.json (gated)
   api/store/route.ts             POST { section, … } → état claudeboard (favoris, tarifs,
                                  abonnement, permissions, preferences) ; dispatch par section whitelistée → lib/store.ts
@@ -214,6 +231,7 @@ components/
   PricingEditor (édition des overrides de tarifs) · ProjectCostList · ToolUsageList ·
   HourlyDistribution (débuts de session par heure, heure locale) ·
   FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
+  ExportButton (menu de téléchargement Markdown/HTML d'une session ou d'un projet) ·
   DependencyGraph (graphe force-dirigé skills/agents/commandes, survol + panneau de références) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
