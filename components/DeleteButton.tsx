@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import { LOCKED_HINT } from "./lockedHint";
 
 interface Props {
   /** Endpoint POST recevant `body` (avec `op: "delete"`). */
@@ -17,6 +18,8 @@ interface Props {
   label?: string;
   /** Redirection après succès ; sinon on rafraîchit la page en place. */
   redirectTo?: string;
+  /** true → bouton grisé et inopérant (permission `delete` désactivée). */
+  locked?: boolean;
 }
 
 /**
@@ -33,6 +36,7 @@ export default function DeleteButton({
   confirmLabel = "Supprimer",
   label = "Supprimer",
   redirectTo,
+  locked = false,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -63,10 +67,15 @@ export default function DeleteButton({
     <>
       <button
         onClick={() => {
+          if (locked) return;
           setError(null);
           setOpen(true);
         }}
-        className="flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10"
+        aria-disabled={locked || undefined}
+        title={locked ? LOCKED_HINT : undefined}
+        className={`flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-400 ${
+          locked ? "cursor-not-allowed opacity-40" : "hover:bg-red-500/10"
+        }`}
       >
         <Trash2 size={14} /> {label}
       </button>

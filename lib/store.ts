@@ -331,34 +331,3 @@ export async function isAllowed(
   return row?.[action] === true;
 }
 
-/** Libellé français de chaque action d'écriture (pour les bandeaux « verrouillé »). */
-const ACTION_LABELS: Record<PermissionAction, string> = {
-  create: "création",
-  modify: "modification",
-  delete: "suppression",
-  reset: "réinitialisation",
-};
-
-/**
- * Construit dynamiquement le libellé du bandeau « verrouillé » d'une ressource :
- * énumère les seules actions d'écriture encore interdites (ex. « La modification et
- * suppression des skills verrouillée. »). Renvoie `null` si tout est déjà autorisé.
- * `noun` est le groupe nominal accordé (« des skills », « des agents », …).
- */
-export async function getLockedWritesLabel(
-  resource: PermissionResource,
-  noun: string
-): Promise<string | null> {
-  const perms = await getPermissions();
-  const row = perms[resource] as Record<string, boolean>;
-  const locked = (PERMISSION_SCHEMA[resource] as readonly PermissionAction[]).filter(
-    (a) => row[a] !== true
-  );
-  if (locked.length === 0) return null;
-  const words = locked.map((a) => ACTION_LABELS[a]);
-  const list =
-    words.length === 1
-      ? words[0]
-      : `${words.slice(0, -1).join(", ")} et ${words[words.length - 1]}`;
-  return `La ${list} ${noun} verrouillée.`;
-}

@@ -76,9 +76,8 @@ export default async function SettingsPage() {
               exists={file.exists}
               emptyTemplate={empty}
               canWrite={canWrite}
-              lockedLabel="Modification des settings Claude verrouillée."
             />
-            {canReset && file.exists && (
+            {file.exists && (
               <div className="mt-4">
                 <ResetButton
                   endpoint="/api/config-file"
@@ -86,6 +85,7 @@ export default async function SettingsPage() {
                   label="Réinitialiser"
                   title={`Réinitialiser ${title} ?`}
                   description="Le fichier est ramené à un objet JSON vide. Un backup horodaté (.bak) est créé au préalable."
+                  locked={!canReset}
                   detail={
                     <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
                       {title}

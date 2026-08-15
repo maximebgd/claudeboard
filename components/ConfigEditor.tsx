@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check, WandSparkles, Plus } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
-import PermissionNotice from "./PermissionNotice";
+import { LOCKED_HINT } from "./lockedHint";
 
 interface Props {
   /** Endpoint POST qui reçoit `{ ...payload, raw }`. */
@@ -20,17 +20,8 @@ interface Props {
   exists?: boolean;
   /** Placeholder pour un fichier absent (contenu de départ proposé). */
   emptyTemplate?: string;
-  /** false → écriture verrouillée (permission désactivée). */
+  /** false → bouton « Éditer »/« Créer » grisé et inopérant (permission désactivée). */
   canWrite?: boolean;
-  /** Message du bandeau lecture seule (si `canWrite` est false). */
-  lockedLabel?: string;
-  /**
-   * Bandeau « verrouillé » piloté par l'appelant : si défini (même à `null`), il
-   * prend le pas sur la logique `canWrite`/`lockedLabel` (une chaîne s'affiche,
-   * `null` masque le bandeau). Sert aux libellés dynamiques listant les actions
-   * encore interdites indépendamment du droit de modification courant.
-   */
-  lockedNotice?: string | null;
   /** Éléments à afficher à droite dans la barre d'actions. */
   rightActions?: React.ReactNode;
 }
@@ -53,8 +44,6 @@ export default function ConfigEditor({
   exists = true,
   emptyTemplate = "",
   canWrite = true,
-  lockedLabel,
-  lockedNotice,
   rightActions,
 }: Props) {
   const router = useRouter();
@@ -117,29 +106,29 @@ export default function ConfigEditor({
 
   return (
     <div>
-      {(lockedNotice !== undefined
-        ? lockedNotice
-        : !canWrite
-          ? lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")
-          : null) && (
-        <PermissionNotice>
-          {lockedNotice !== undefined
-            ? lockedNotice
-            : lockedLabel ?? (exists ? "Modification verrouillée." : "Création verrouillée.")}
-        </PermissionNotice>
-      )}
-
       <div className="mb-4 flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap items-center gap-2">
-        {!canWrite ? null : !editing ? (
+        {!editing ? (
           <button
             onClick={() => {
+              if (!canWrite) return;
               setDraft(savedRaw);
               setEditing(true);
             }}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
+            aria-disabled={!canWrite || undefined}
+            title={!canWrite ? LOCKED_HINT : undefined}
+            className={
+              fileExists
+                ? `flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm ${
+                    canWrite ? "hover:bg-[var(--color-hover)]" : "cursor-not-allowed opacity-40"
+                  }`
+                : `flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black ${
+                    canWrite ? "hover:opacity-90" : "cursor-not-allowed opacity-40"
+                  }`
+            }
           >
-            <Pencil size={14} /> Éditer
+            {fileExists ? <Pencil size={14} /> : <Plus size={14} />}
+            {fileExists ? "Éditer" : "Créer le fichier"}
           </button>
         ) : (
           <>

@@ -79,28 +79,25 @@ export default async function KeybindingsPage() {
           exists={file.exists}
           emptyTemplate={TEMPLATE}
           canWrite={canWrite}
-          lockedLabel={file.exists ? "Modification des keybindings verrouillée." : "Création des keybindings verrouillée."}
         />
-        {file.exists && (canReset || canDelete) && (
+        {file.exists && (
           <div className="mt-4 flex flex-wrap gap-3">
-            {canReset && (
-              <ResetButton
-                endpoint="/api/config-file"
-                body={{ target: "keybindings" }}
-                title="Réinitialiser keybindings.json ?"
-                description="Le fichier est ramené à une liste de keybindings vide. Un backup horodaté (.bak) est créé au préalable."
-              />
-            )}
-            {canDelete && (
-              <DeleteButton
-                endpoint="/api/config-file"
-                body={{ target: "keybindings" }}
-                label="Supprimer"
-                title="Supprimer keybindings.json ?"
-                description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
-                confirmLabel="Supprimer"
-              />
-            )}
+            <ResetButton
+              endpoint="/api/config-file"
+              body={{ target: "keybindings" }}
+              title="Réinitialiser keybindings.json ?"
+              description="Le fichier est ramené à une liste de keybindings vide. Un backup horodaté (.bak) est créé au préalable."
+              locked={!canReset}
+            />
+            <DeleteButton
+              endpoint="/api/config-file"
+              body={{ target: "keybindings" }}
+              label="Supprimer"
+              title="Supprimer keybindings.json ?"
+              description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              confirmLabel="Supprimer"
+              locked={!canDelete}
+            />
           </div>
         )}
       </div>

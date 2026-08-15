@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import { LOCKED_HINT } from "./lockedHint";
 
 interface Props {
   /** Endpoint POST recevant `body` (avec `op: "reset"`). */
@@ -13,6 +14,8 @@ interface Props {
   description?: string;
   detail?: React.ReactNode;
   label?: string;
+  /** true → bouton grisé et inopérant (permission `reset` désactivée). */
+  locked?: boolean;
 }
 
 /**
@@ -26,6 +29,7 @@ export default function ResetButton({
   description,
   detail,
   label = "Réinitialiser",
+  locked = false,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,10 +60,17 @@ export default function ResetButton({
     <>
       <button
         onClick={() => {
+          if (locked) return;
           setError(null);
           setOpen(true);
         }}
-        className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+        aria-disabled={locked || undefined}
+        title={locked ? LOCKED_HINT : undefined}
+        className={`flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] ${
+          locked
+            ? "cursor-not-allowed opacity-40"
+            : "hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+        }`}
       >
         <RotateCcw size={14} /> {label}
       </button>

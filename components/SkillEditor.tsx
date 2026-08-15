@@ -5,21 +5,19 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
-import PermissionNotice from "./PermissionNotice";
+import { LOCKED_HINT } from "./lockedHint";
 
 interface Props {
   slug: string;
   initialRaw: string;
   content: string; // corps markdown (pour l'aperçu en lecture)
-  /** false → édition verrouillée (permission skills.modify désactivée). */
+  /** false → bouton « Éditer » grisé et inopérant (permission skills.modify désactivée). */
   canWrite?: boolean;
-  /** Bandeau « verrouillé » (liste dynamique des actions interdites) ; null = tout autorisé. */
-  lockedLabel?: string | null;
   /** Éléments à afficher à droite dans la barre d'actions. */
   rightActions?: React.ReactNode;
 }
 
-export default function SkillEditor({ slug, initialRaw, content, canWrite = true, lockedLabel, rightActions }: Props) {
+export default function SkillEditor({ slug, initialRaw, content, canWrite = true, rightActions }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialRaw);
@@ -57,17 +55,20 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
 
   return (
     <div>
-      {lockedLabel && <PermissionNotice>{lockedLabel}</PermissionNotice>}
-
       <div className="mb-4 flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
-          {!canWrite ? null : !editing ? (
+          {!editing ? (
             <button
               onClick={() => {
+                if (!canWrite) return;
                 setDraft(savedRaw);
                 setEditing(true);
               }}
-              className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
+              aria-disabled={!canWrite || undefined}
+              title={!canWrite ? LOCKED_HINT : undefined}
+              className={`flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm ${
+                canWrite ? "hover:bg-[var(--color-hover)]" : "cursor-not-allowed opacity-40"
+              }`}
             >
               <Pencil size={14} /> Éditer
             </button>

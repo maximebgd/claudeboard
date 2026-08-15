@@ -48,28 +48,25 @@ export default async function ClaudeMdPage() {
           exists={file.exists}
           emptyTemplate={TEMPLATE}
           canWrite={canWrite}
-          lockedLabel={file.exists ? "Modification du CLAUDE.md verrouillée." : "Création du CLAUDE.md verrouillée."}
         />
-        {file.exists && (canReset || canDelete) && (
+        {file.exists && (
           <div className="mt-4 flex flex-wrap gap-3">
-            {canReset && (
-              <ResetButton
-                endpoint="/api/config-file"
-                body={{ target: "claudeMd" }}
-                title="Réinitialiser le CLAUDE.md global ?"
-                description="Le fichier est ramené à un modèle vide. Un backup horodaté (.bak) est créé au préalable."
-              />
-            )}
-            {canDelete && (
-              <DeleteButton
-                endpoint="/api/config-file"
-                body={{ target: "claudeMd" }}
-                label="Supprimer"
-                title="Supprimer le CLAUDE.md global ?"
-                description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
-                confirmLabel="Supprimer"
-              />
-            )}
+            <ResetButton
+              endpoint="/api/config-file"
+              body={{ target: "claudeMd" }}
+              title="Réinitialiser le CLAUDE.md global ?"
+              description="Le fichier est ramené à un modèle vide. Un backup horodaté (.bak) est créé au préalable."
+              locked={!canReset}
+            />
+            <DeleteButton
+              endpoint="/api/config-file"
+              body={{ target: "claudeMd" }}
+              label="Supprimer"
+              title="Supprimer le CLAUDE.md global ?"
+              description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              confirmLabel="Supprimer"
+              locked={!canDelete}
+            />
           </div>
         )}
       </div>

@@ -4,7 +4,6 @@ import { listSkills } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import CreateEntryButton from "@/components/CreateEntryButton";
-import PermissionNotice from "@/components/PermissionNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -23,17 +22,14 @@ export default async function SkillsPage() {
       </p>
 
       <div className="mt-6">
-        {canCreate ? (
-          <CreateEntryButton
-            endpoint="/api/skills"
-            redirectBase="/skills"
-            label="Nouveau skill"
-            placeholder="mon-skill"
-            hint="Minuscules, chiffres et tirets. Un SKILL.md pré-rempli sera créé."
-          />
-        ) : (
-          <PermissionNotice>Création des skills verrouillée.</PermissionNotice>
-        )}
+        <CreateEntryButton
+          endpoint="/api/skills"
+          redirectBase="/skills"
+          label="Nouveau skill"
+          placeholder="mon-skill"
+          hint="Minuscules, chiffres et tirets. Un SKILL.md pré-rempli sera créé."
+          locked={!canCreate}
+        />
       </div>
 
       <div className="mt-6 flex flex-col gap-3">

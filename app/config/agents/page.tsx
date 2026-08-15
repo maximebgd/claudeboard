@@ -5,7 +5,6 @@ import { CLAUDE_DIR } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import MdEntryList from "@/components/MdEntryList";
 import CreateEntryButton from "@/components/CreateEntryButton";
-import PermissionNotice from "@/components/PermissionNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -28,18 +27,15 @@ export default async function AgentsPage() {
       </p>
 
       <div className="mt-6">
-        {canCreate ? (
-          <CreateEntryButton
-            endpoint="/api/md"
-            extraBody={{ kind: "agents" }}
-            redirectBase="/config/agents"
-            label="Nouvel agent"
-            placeholder="mon-agent"
-            hint="Minuscules, chiffres, tirets. Un .md pré-rempli sera créé."
-          />
-        ) : (
-          <PermissionNotice>Création des agents verrouillée.</PermissionNotice>
-        )}
+        <CreateEntryButton
+          endpoint="/api/md"
+          extraBody={{ kind: "agents" }}
+          redirectBase="/config/agents"
+          label="Nouvel agent"
+          placeholder="mon-agent"
+          hint="Minuscules, chiffres, tirets. Un .md pré-rempli sera créé."
+          locked={!canCreate}
+        />
       </div>
 
       <div className="mt-6">

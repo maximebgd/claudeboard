@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
+import { LOCKED_HINT } from "./lockedHint";
 
 interface Props {
   /** Endpoint POST recevant `{ op: "create", ...extraBody, slug }`. */
@@ -15,6 +16,8 @@ interface Props {
   placeholder?: string;
   /** Aide affichée sous le champ (ex. règles de nommage). */
   hint?: string;
+  /** true → bouton grisé et inopérant (permission `create` désactivée). */
+  locked?: boolean;
 }
 
 /**
@@ -28,6 +31,7 @@ export default function CreateEntryButton({
   label,
   placeholder = "nom-de-l-entree",
   hint,
+  locked = false,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -59,10 +63,15 @@ export default function CreateEntryButton({
     return (
       <button
         onClick={() => {
+          if (locked) return;
           setError(null);
           setOpen(true);
         }}
-        className="flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90"
+        aria-disabled={locked || undefined}
+        title={locked ? LOCKED_HINT : undefined}
+        className={`flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black ${
+          locked ? "cursor-not-allowed opacity-40" : "hover:opacity-90"
+        }`}
       >
         <Plus size={15} /> {label}
       </button>

@@ -86,22 +86,21 @@ export default async function SessionPage({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <ResumeCommand sessionId={sessionId} />
-          {canDelete && (
-            <DeleteButton
-              endpoint="/api/projects"
-              body={{ scope: "session", projectId: id, sessionId }}
-              label="Supprimer la session"
-              title="Supprimer cette session ?"
-              description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
-              confirmLabel="Supprimer"
-              redirectTo={`/projects/${encodeURIComponent(id)}`}
-              detail={
-                <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
-                  {sessionId}.jsonl
-                </div>
-              }
-            />
-          )}
+          <DeleteButton
+            endpoint="/api/projects"
+            body={{ scope: "session", projectId: id, sessionId }}
+            label="Supprimer la session"
+            title="Supprimer cette session ?"
+            description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+            confirmLabel="Supprimer"
+            redirectTo={`/projects/${encodeURIComponent(id)}`}
+            locked={!canDelete}
+            detail={
+              <div className="rounded-lg bg-[var(--color-inset)] border border-[var(--color-border)] p-3 text-xs text-[var(--color-muted)] font-mono">
+                {sessionId}.jsonl
+              </div>
+            }
+          />
         </div>
       </div>
 

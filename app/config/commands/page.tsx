@@ -5,7 +5,6 @@ import { CLAUDE_DIR } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import MdEntryList from "@/components/MdEntryList";
 import CreateEntryButton from "@/components/CreateEntryButton";
-import PermissionNotice from "@/components/PermissionNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -29,18 +28,15 @@ export default async function CommandsPage() {
       </p>
 
       <div className="mt-6">
-        {canCreate ? (
-          <CreateEntryButton
-            endpoint="/api/md"
-            extraBody={{ kind: "commands" }}
-            redirectBase="/config/commands"
-            label="Nouvelle commande"
-            placeholder="ma-commande ou namespace/ma-commande"
-            hint="Minuscules, chiffres, tirets ; « / » pour un namespace. Un .md pré-rempli sera créé."
-          />
-        ) : (
-          <PermissionNotice>Création des commandes verrouillée.</PermissionNotice>
-        )}
+        <CreateEntryButton
+          endpoint="/api/md"
+          extraBody={{ kind: "commands" }}
+          redirectBase="/config/commands"
+          label="Nouvelle commande"
+          placeholder="ma-commande ou namespace/ma-commande"
+          hint="Minuscules, chiffres, tirets ; « / » pour un namespace. Un .md pré-rempli sera créé."
+          locked={!canCreate}
+        />
       </div>
 
       <div className="mt-6">

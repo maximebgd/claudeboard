@@ -115,26 +115,25 @@ export default async function HooksPage() {
         </div>
       )}
 
-      {canWrite && (
-        <section className="mt-10">
-          <h2 className="text-lg font-medium">Éditer les hooks</h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-            Objet <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5 font-mono text-[12px]">hooks</code>{" "}
-            de <code className="font-mono text-[12px]">settings.json</code> (event → matchers).
-            Ajouter, modifier ou supprimer un hook se fait ici. Un backup horodaté est créé à
-            chaque écriture. Les hooks de{" "}
-            <code className="font-mono text-[12px]">settings.local.json</code> ne sont pas touchés.
-          </p>
-          <ConfigEditor
-            endpoint="/api/hooks"
-            payload={{}}
-            initialRaw={hooksRaw}
-            mode="json"
-            label="hooks (settings.json)"
-            exists
-          />
-        </section>
-      )}
+      <section className="mt-10">
+        <h2 className="text-lg font-medium">Éditer les hooks</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
+          Objet <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5 font-mono text-[12px]">hooks</code>{" "}
+          de <code className="font-mono text-[12px]">settings.json</code> (event → matchers).
+          Ajouter, modifier ou supprimer un hook se fait ici. Un backup horodaté est créé à
+          chaque écriture. Les hooks de{" "}
+          <code className="font-mono text-[12px]">settings.local.json</code> ne sont pas touchés.
+        </p>
+        <ConfigEditor
+          endpoint="/api/hooks"
+          payload={{}}
+          initialRaw={hooksRaw}
+          mode="json"
+          label="hooks (settings.json)"
+          exists
+          canWrite={canWrite}
+        />
+      </section>
     </div>
   );
 }
