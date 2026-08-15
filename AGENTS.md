@@ -190,7 +190,8 @@ components/
   ConfigEditor (éditeur générique JSON/markdown : validation live, backup au save, mode
   lecture seule via `canWrite` + bannière) ·
   PermissionsMatrix (matrice d'autorisations) · PermissionNotice (bannière « lecture seule ») ·
-  DeleteButton · ResetButton · CreateEntryButton (actions gated, avec confirmation) ·
+  DeleteButton · ResetButton · CreateEntryButton (actions gated, avec confirmation ;
+  verrouillées → bouton grisé/inopérant + tooltip `LOCKED_HINT` de `lockedHint.ts`) ·
   MdEntryList · MdEntryDetail (liste/détail partagés agents & commandes) ·
   ActivityPanel (bascule heatmap/courbe + streak) · ActivityHeatmap (heatmap façon GitHub) ·
   TrendChart (courbe des messages par jour) · DayDetail (détail d'un jour, partagé) ·
@@ -233,7 +234,8 @@ components/
   **conditionnée** par une permission du store (`PERMISSION_SCHEMA` dans `lib/store.ts`,
   ressource × action). Le contrôle d'accès est fait **côté serveur** dans chaque route API
   via `isAllowed(resource, action)` (403 sinon) — l'UI ne fait que refléter l'état (bouton
-  masqué, bannière `PermissionNotice`). Ajouter une nouvelle action d'écriture ⇒ l'ajouter
+  grisé et inopérant avec tooltip `LOCKED_HINT`, bannière `PermissionNotice`). Ajouter une
+  nouvelle action d'écriture ⇒ l'ajouter
   au schéma **et** la garder derrière `isAllowed`. Défaut : tout `false`.
 - **État propre à claudeboard vs config Claude** : les données qui n'appartiennent pas à
   Claude Code (favoris, overrides de tarifs, choix d'abonnement, `permissions`, préférences
