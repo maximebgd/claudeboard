@@ -18,7 +18,9 @@ interface Props {
  */
 export default function ExportButton({ scope, projectId, sessionId, label = "Exporter" }: Props) {
   const [open, setOpen] = useState(false);
+  const [includeStats, setIncludeStats] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+  const isProject = scope === "project";
 
   useEffect(() => {
     if (!open) return;
@@ -32,6 +34,7 @@ export default function ExportButton({ scope, projectId, sessionId, label = "Exp
   function href(format: "md" | "html") {
     const params = new URLSearchParams({ scope, projectId, format });
     if (sessionId) params.set("sessionId", sessionId);
+    if (isProject && !includeStats) params.set("stats", "0");
     return `/api/export?${params.toString()}`;
   }
 
@@ -47,7 +50,23 @@ export default function ExportButton({ scope, projectId, sessionId, label = "Exp
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] shadow-lg">
+        <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] shadow-lg">
+          {isProject && (
+            <label className="flex cursor-pointer items-start gap-2 border-b border-[var(--color-border)] px-3 py-2.5 text-xs text-[var(--color-muted)] hover:bg-[var(--color-inset)]">
+              <input
+                type="checkbox"
+                checked={includeStats}
+                onChange={(e) => setIncludeStats(e.target.checked)}
+                className="mt-0.5 accent-[var(--color-accent)]"
+              />
+              <span>
+                Inclure les statistiques
+                <span className="mt-0.5 block text-[10px] leading-tight text-[var(--color-faint)]">
+                  KPI, tokens in/out, modèles, outils &amp; skills
+                </span>
+              </span>
+            </label>
+          )}
           <a
             href={href("md")}
             download

@@ -201,7 +201,8 @@ export function projectToMarkdown(
   projectLabel: string,
   sessions: Session[],
   stats: ProjectStats,
-  metas: SessionMeta[]
+  metas: SessionMeta[],
+  includeStats = true
 ): string {
   const metaById = new Map(metas.map((m) => [m.id, m]));
   const totalMessages = sessions.reduce((n, s) => n + s.events.length, 0);
@@ -239,7 +240,8 @@ export function projectToMarkdown(
     })
     .join("\n\n---\n\n");
 
-  return `${header}\n${projectStatsMarkdown(stats)}\n\n${toc}\n---\n\n${body}\n`;
+  const statsBlock = includeStats ? `${projectStatsMarkdown(stats)}\n\n` : "";
+  return `${header}\n${statsBlock}${toc}\n---\n\n${body}\n`;
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +516,8 @@ export async function projectToHtml(
   projectLabel: string,
   sessions: Session[],
   stats: ProjectStats,
-  metas: SessionMeta[]
+  metas: SessionMeta[],
+  includeStats = true
 ): Promise<string> {
   const metaById = new Map(metas.map((m) => [m.id, m]));
   const totalMessages = sessions.reduce((n, s) => n + s.events.length, 0);
@@ -541,7 +544,7 @@ export async function projectToHtml(
   const overview = `<section class="page" id="overview">
 <h1>${esc(projectLabel)}</h1>
 ${metaBlockHtml(meta)}
-${projectStatsHtml(stats)}
+${includeStats ? projectStatsHtml(stats) : ""}
 <section class="card"><h2>Sessions · ${sessions.length}</h2><div class="session-list">${sessionCards}</div></section>
 </section>`;
 

@@ -25,6 +25,10 @@ export async function GET(req: Request) {
   const projectId = searchParams.get("projectId") ?? "";
   const sessionId = searchParams.get("sessionId") ?? "";
   const format = (searchParams.get("format") ?? "md") as ExportFormat;
+  // Stats incluses par défaut ; `stats=0` (ou `none`) exporte le projet sans le
+  // bloc de statistiques (KPI, tokens in/out, modèles, top outils).
+  const statsParam = searchParams.get("stats");
+  const includeStats = statsParam !== "0" && statsParam !== "none";
 
   if (format !== "md" && format !== "html") {
     return new Response("format invalide", { status: 400 });
@@ -77,8 +81,8 @@ export async function GET(req: Request) {
       }
       const out =
         format === "html"
-          ? await projectToHtml(realPath, label, sessions, stats, metas)
-          : projectToMarkdown(realPath, label, sessions, stats, metas);
+          ? await projectToHtml(realPath, label, sessions, stats, metas, includeStats)
+          : projectToMarkdown(realPath, label, sessions, stats, metas, includeStats);
       const filename = exportFilename(label, format);
       return new Response(out, {
         headers: {
