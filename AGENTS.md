@@ -51,6 +51,17 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   donc hors du modèle de permissions.
   La **suppression** d'un projet ou d'une session (déplacement en corbeille, via
   `/api/projects`) est possible si la permission `projects.delete` est activée.
+- **Recherche** (`/search`, ouverte par le bouton flottant `SearchFab` en bas à droite de
+  l'écran, visible **uniquement** sur `/projects` et ses sous-pages) : recherche **full-text lecture seule**
+  à travers tous les transcripts (`lib/search.ts` → `searchTranscripts`, servie par
+  `GET /api/search`). Chaque
+  `.jsonl` est lu en **streaming** (ligne par ligne via `readline`, sans charger tout le
+  fichier), la casse et les accents sont ignorés (repli `fold` **préservant la longueur** →
+  index alignés pour découper les extraits). Scanne par défaut les prompts & réponses (blocs
+  `text`) ; toggles pour inclure les `thinking` et les `tool_result`. Résultats regroupés par
+  session (triés du plus récent au plus ancien, plafonnés à 100), chacun avec un compteur de
+  correspondances et quelques extraits surlignés reliés à leur transcript. UI cliente
+  `SearchView` (débounce + `AbortController`). **Hors du modèle de permissions.**
 - **Config Claude** (section « Config » de la Sidebar) :
   - **Préférences** (`/config/preferences`) : réglages **propres à claudeboard** (stockés
     dans `data/claudeboard.json`), regroupés en une page :
@@ -182,6 +193,10 @@ lib/
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
   docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (dans le repo, hors CLAUDE_DIR)
                pour la page /docs ; garde-fou de slug dédié (pas safeResolve)
+  search.ts    searchTranscripts : recherche full-text LECTURE SEULE, scan streamé
+               (readline, ligne par ligne) de tous les .jsonl ; `fold` (minuscule +
+               accents ôtés, longueur préservée → index alignés) + extraits surlignables,
+               résultats groupés par session (récents d'abord, plafonnés à 100)
 app/
   page.tsx                       Dashboard analytics (KPI, heatmap, modèles, coût par
                                  projet, outils, sessions, abonnement) + RangeSelector
@@ -190,6 +205,7 @@ app/
   projects/page.tsx              Liste des projets
   projects/[id]/page.tsx         Sessions d'un projet
   projects/[id]/[session]/page.tsx   Transcript d'une session
+  search/page.tsx                Recherche full-text (coquille + `SearchView` client)
   config/preferences/page.tsx    Préférences claudeboard : permissions + tarifs + abonnement
   config/pricing/page.tsx        Redirection → /config/preferences (compat ancien lien)
   config/settings/page.tsx       Éditeur settings.json + settings.local.json (+ reset)
@@ -210,6 +226,8 @@ app/
   api/export/route.ts            GET ?scope&projectId&sessionId?&format=md|html&stats=0? → export
                                  Markdown/HTML en téléchargement (lecture seule, hors permissions ;
                                  `stats=0` = projet sans le bloc de statistiques)
+  api/search/route.ts            GET ?q&projectId?&thinking=1?&tools=1? → recherche full-text
+                                 (lecture seule, hors permissions)
   api/hooks/route.ts             POST { raw } → écrit le bloc hooks de settings.json (gated)
   api/store/route.ts             POST { section, … } → état claudeboard (favoris, tarifs,
                                  abonnement, permissions, preferences) ; dispatch par section whitelistée → lib/store.ts
@@ -232,6 +250,8 @@ components/
   HourlyDistribution (débuts de session par heure, heure locale) ·
   FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
   ExportButton (menu de téléchargement Markdown/HTML d'une session ou d'un projet) ·
+  SearchView (recherche full-text : saisie débouncée, toggles thinking/outils, extraits surlignés) ·
+  SearchFab (bouton flottant bas-droite ouvrant /search, visible seulement sur /projects) ·
   DependencyGraph (graphe force-dirigé skills/agents/commandes, survol + panneau de références) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
   DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
