@@ -13,6 +13,7 @@ import {
   Brain,
   Minus,
   Star,
+  Wallet,
 } from "lucide-react";
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
@@ -22,7 +23,7 @@ import { type HeatDay } from "@/components/ActivityHeatmap";
 import ActivityPanel from "@/components/ActivityPanel";
 import ModelDonut from "@/components/ModelDonut";
 import RangeSelector from "@/components/RangeSelector";
-import SubscriptionCard from "@/components/SubscriptionCard";
+// import SubscriptionCard from "@/components/SubscriptionCard"; // désormais affiché en survol de « Coût estimé »
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
@@ -185,6 +186,7 @@ function StatCard({
   sub,
   trend,
   href,
+  tooltip,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
@@ -193,6 +195,8 @@ function StatCard({
   /** Delta de vélocité (vs période précédente), affiché sous le `sub`. */
   trend?: React.ReactNode;
   href?: string;
+  /** Panneau riche révélé au survol de la carte (ex. détail de l'abonnement). */
+  tooltip?: React.ReactNode;
 }) {
   const inner = (
     <>
@@ -224,6 +228,23 @@ function StatCard({
       </Link>
     );
   }
+
+  // Carte avec panneau de survol : wrapper `group` dédié pour que le tooltip
+  // (positionné hors du `overflow-hidden` de la carte) apparaisse au hover.
+  if (tooltip) {
+    return (
+      <div className="group relative">
+        <div className={cls}>{inner}</div>
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-72 max-w-[calc(100vw-4rem)] translate-y-1 opacity-0 invisible transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+        >
+          {tooltip}
+        </div>
+      </div>
+    );
+  }
+
   return <div className={cls}>{inner}</div>;
 }
 
@@ -332,6 +353,66 @@ export default async function HomePage({
   );
   const costTrend = tr && (
     <TrendDelta pct={pctChange(totals.costUSD, tr.costUSD)} compareLabel={compareLabel} />
+  );
+
+  // Détail de l'abonnement, désormais révélé au survol de la carte « Coût estimé »
+  // (auparavant une section `SubscriptionCard` dédiée). Compare le coût d'usage estimé
+  // au prix de l'abonnement sur la fenêtre pour afficher l'économie nette.
+  const netPositive = netSavings >= 0;
+  const subTooltip = (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4 shadow-lg shadow-black/20">
+      <div className="flex items-center gap-2">
+        <Wallet size={13} className="text-[var(--color-accent)]" />
+        <span className="eyebrow text-[var(--color-muted)]">Abonnement</span>
+      </div>
+      {sub.known ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
+              <Wallet size={12} />
+              {sub.label}
+            </span>
+            <span className="font-mono text-[11px] text-[var(--color-faint)]">
+              {fmtUSD(sub.monthlyPriceUSD)}/mois
+            </span>
+            {sub.since && (
+              <span className="font-mono text-[11px] text-[var(--color-faint)]">
+                depuis le {formatDate(sub.since)}
+              </span>
+            )}
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--color-border)] pt-3 text-center">
+            <div>
+              <div className="eyebrow">Usage</div>
+              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmtUSD(totals.costUSD)}</div>
+            </div>
+            <div>
+              <div className="eyebrow">Abonnement</div>
+              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmtUSD(subCost)}</div>
+              <div className="mt-0.5 font-mono text-[10px] text-[var(--color-faint)]">{subMonths} mois</div>
+            </div>
+            <div>
+              <div className="eyebrow">Net</div>
+              <div
+                className={`mt-1 font-mono text-sm font-medium tabular-nums ${
+                  netPositive ? "text-emerald-500" : "text-red-400"
+                }`}
+              >
+                {netPositive ? "+" : "−"}
+                {fmtUSD(Math.abs(netSavings))}
+              </div>
+            </div>
+          </div>
+          {/* <div className="mt-2 font-mono text-[10px] text-[var(--color-faint)]">
+            {netPositive ? "gagné grâce à l'abonnement" : "l'abonnement coûte plus que l'usage"}
+          </div> */}
+        </>
+      ) : (
+        <p className="mt-3 text-xs text-[var(--color-muted)]">
+          Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
+        </p>
+      )}
+    </div>
   );
 
   // Données de la heatmap : % et couleurs des modèles pré-calculés côté serveur
@@ -445,10 +526,11 @@ export default async function HomePage({
           value={fmtUSD(totals.costUSD)}
           sub="tarifs indicatifs"
           trend={costTrend}
+          tooltip={subTooltip}
         />
       </div>
 
-      {/* Abonnement : valeur nette (coût usage estimé − prix de l'abo sur la fenêtre) */}
+      {/* Abonnement : désormais révélé au survol de la carte KPI « Coût estimé » ci-dessus.
       <SubscriptionCard
         known={sub.known}
         label={sub.label}
@@ -459,7 +541,7 @@ export default async function HomePage({
         months={subMonths}
         netPositive={netSavings >= 0}
         netAbs={fmtUSD(Math.abs(netSavings))}
-      />
+      /> */}
 
       {/* Sessions épinglées */}
       {favorites.length > 0 && (
