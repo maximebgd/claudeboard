@@ -24,6 +24,7 @@ import ActivityPanel from "@/components/ActivityPanel";
 import ModelDonut from "@/components/ModelDonut";
 import RangeSelector from "@/components/RangeSelector";
 // import SubscriptionCard from "@/components/SubscriptionCard"; // désormais affiché en survol de « Coût estimé »
+import CostStatCard from "@/components/CostStatCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
@@ -186,7 +187,6 @@ function StatCard({
   sub,
   trend,
   href,
-  tooltip,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
@@ -195,8 +195,6 @@ function StatCard({
   /** Delta de vélocité (vs période précédente), affiché sous le `sub`. */
   trend?: React.ReactNode;
   href?: string;
-  /** Panneau riche révélé au survol de la carte (ex. détail de l'abonnement). */
-  tooltip?: React.ReactNode;
 }) {
   const inner = (
     <>
@@ -226,22 +224,6 @@ function StatCard({
       <Link href={href} className={`${cls} block`}>
         {inner}
       </Link>
-    );
-  }
-
-  // Carte avec panneau de survol : wrapper `group` dédié pour que le tooltip
-  // (positionné hors du `overflow-hidden` de la carte) apparaisse au hover.
-  if (tooltip) {
-    return (
-      <div className="group relative">
-        <div className={cls}>{inner}</div>
-        <div
-          role="tooltip"
-          className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-72 max-w-[calc(100vw-4rem)] translate-y-1 opacity-0 invisible transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
-        >
-          {tooltip}
-        </div>
-      </div>
     );
   }
 
@@ -520,11 +502,12 @@ export default async function HomePage({
           }
           trend={tokensTrend}
         />
-        <StatCard
-          icon={Coins}
-          label="Coût estimé"
-          value={fmtUSD(totals.costUSD)}
-          sub="tarifs indicatifs"
+        <CostStatCard
+          usageValue={fmtUSD(totals.costUSD)}
+          savingsValue={fmtUSD(Math.abs(netSavings))}
+          netPositive={netPositive}
+          known={sub.known}
+          usageSub="tarifs indicatifs"
           trend={costTrend}
           tooltip={subTooltip}
         />
