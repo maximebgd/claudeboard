@@ -233,11 +233,11 @@ export function projectLabel(realPath: string): string {
 /** Supprime un projet entier (déplace son dossier dans la corbeille, réversible). */
 export async function deleteProject(projectId: string): Promise<string> {
   const dir = safeResolve(PROJECTS_DIR, projectId);
-  return moveToTrash(dir);
+  return moveToTrash(dir, { resource: "projects", scope: "project", label: projectId });
 }
 
 /** Supprime une session (déplace son `.jsonl` dans la corbeille, réversible). */
 export async function deleteSession(projectId: string, sessionId: string): Promise<string> {
   const fp = safeResolve(PROJECTS_DIR, projectId, `${sessionId}.jsonl`);
-  return moveToTrash(fp);
+  return moveToTrash(fp, { resource: "projects", scope: "session", label: sessionId });
 }

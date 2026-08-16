@@ -200,7 +200,7 @@ export default async function ProjectSessionsPage({
             body={{ scope: "project", projectId: id }}
             label="Supprimer le projet"
             title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
-            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main.`}
+            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard — restaurable depuis la page Corbeille.`}
             confirmLabel="Supprimer le projet"
             redirectTo="/projects"
             locked={!canDelete}

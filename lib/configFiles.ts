@@ -113,5 +113,12 @@ export function resetConfigFile(target: ConfigTarget): Promise<string | null> {
  * Retourne le chemin de corbeille. Lève si le fichier n'existe pas.
  */
 export function deleteConfigFile(target: ConfigTarget): Promise<string> {
-  return moveToTrash(safeResolve(TARGETS[target].file));
+  const def = TARGETS[target];
+  const resource =
+    target === "settings" || target === "settingsLocal"
+      ? "settings"
+      : target === "claudeMd"
+        ? "claudeMd"
+        : "keybindings";
+  return moveToTrash(safeResolve(def.file), { resource, scope: "config", label: def.label });
 }

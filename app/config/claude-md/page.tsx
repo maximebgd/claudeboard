@@ -63,7 +63,7 @@ export default async function ClaudeMdPage() {
               body={{ target: "claudeMd" }}
               label="Supprimer"
               title="Supprimer le CLAUDE.md global ?"
-              description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              description="Le fichier est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
               confirmLabel="Supprimer"
               locked={!canDelete}
             />
