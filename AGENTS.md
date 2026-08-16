@@ -110,6 +110,14 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
     création si absent, **réinitialisation** et **suppression** (gated par
     `keybindings.{create,modify,delete,reset}`).
+  - **Corbeille** (`/config/trash`) : liste les éléments supprimés depuis l'app (skills,
+    agents, commandes, projets, sessions, fichiers de config) stockés **hors** de `~/.claude`
+    dans `data/trash/` (cf. `lib/trash.ts`, `TrashList`). Chaque entrée peut être
+    **restaurée** à son emplacement d'origine (refus si la cible existe déjà — aucun
+    écrasement) ou supprimée définitivement, et la corbeille peut être **vidée**. La
+    restauration est gated par la permission `delete` de la ressource d'origine (« si tu
+    pouvais le supprimer, tu peux annuler la suppression ») ; le vidage et la suppression
+    définitive par la nouvelle permission `trash.empty`.
   - **Structure du dossier** (`/docs/structure`, rattachée à la section Documentation) :
     arbre pédagogique (`DirectoryExplorer`) du contenu de `.claude/` (projet) et `~/.claude`
     (rôle, chargement, exemple par fichier) ; contenu statique, reproduit d'après la doc officielle.
@@ -154,8 +162,12 @@ lib/
                getPreferences/setPreferences (`costCardMode`) ; `PERMISSION_SCHEMA`
                (ressource → actions), `getPermissions`/`setPermissions` (patch partiel) et
                `isAllowed(resource, action)` (garde serveur), migration de l'ancien `unlockedFields`
-  trash.ts     moveToTrash : suppression **réversible** (déplace fichier/dossier vers
-               `CLAUDE_DIR/.claudeboard-trash/`, horodaté) — utilisée par tous les delete
+  trash.ts     corbeille **de claudeboard**, hors de CLAUDE_DIR : `data/trash/<id>/`
+               (`meta.json` + `payload`), override TRASH_DIR sinon dérivé de STORE_DIR.
+               moveToTrash(absPath, {resource,scope,label}) : suppression **réversible**
+               (payload + manifest) utilisée par tous les delete ; listTrash / restoreTrash
+               (refus si la cible existe déjà) / deleteTrashEntry / emptyTrash ; déplacement
+               robuste inter-volumes (rename, repli copie+rm sur EXDEV)
   favorites.ts getFavoriteSessions : résout les clés de favoris « <projectId>/<sessionId> »
                en métadonnées de session (marque les favoris orphelins `exists: false`)
   plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
@@ -217,12 +229,15 @@ app/
   config/mcp/page.tsx            MCP servers (lecture seule)
   config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
   config/keybindings/page.tsx    Aperçu + éditeur des keybindings (+ reset/suppression)
+  config/trash/page.tsx          Corbeille de claudeboard (liste, restaurer, vider)
   docs/layout.tsx · page.tsx · [slug]/page.tsx   Documentation (rend les `.md` de docs/)
   docs/structure/page.tsx        Structure du dossier .claude (arbre pédagogique)
   api/skills/route.ts            POST { op, slug, raw } → SKILL.md : write/create/delete (gated)
   api/config-file/route.ts       POST { op, target, raw } → fichiers uniques : write/reset/delete (gated)
   api/md/route.ts                POST { op, kind, slug, raw } → agents/commandes : write/create/delete (gated)
   api/projects/route.ts          POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
+  api/trash/route.ts             GET → listTrash ; POST { op:restore|delete|empty, id? } →
+                                 restaurer (gated <resource>.delete) / supprimer / vider (gated trash.empty)
   api/export/route.ts            GET ?scope&projectId&sessionId?&format=md|html&stats=0? → export
                                  Markdown/HTML en téléchargement (lecture seule, hors permissions ;
                                  `stats=0` = projet sans le bloc de statistiques)
@@ -254,6 +269,7 @@ components/
   SearchFab (bouton flottant bas-droite ouvrant /search, visible seulement sur /projects) ·
   DependencyGraph (graphe force-dirigé skills/agents/commandes, survol + panneau de références) ·
   PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
+  TrashList (corbeille : entrées, restaurer/supprimer/vider, boutons gated + ConfirmDialog) ·
   DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
 ```
 
@@ -280,7 +296,8 @@ components/
   fichiers de config (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) via
   `writeConfigFile` sont explicites (flux « Créer » dans `ConfigEditor`). Les
   **suppressions ne sont jamais destructives** : elles passent par `moveToTrash`
-  (`lib/trash.ts`) qui déplace vers `CLAUDE_DIR/.claudeboard-trash/` (réversible).
+  (`lib/trash.ts`) qui déplace vers la corbeille de claudeboard `data/trash/` (**hors**
+  de CLAUDE_DIR), restaurable/videable depuis la page `/config/trash`.
 - **Autorisations d'écriture (permissions)** : toute mutation de `~/.claude` est
   **conditionnée** par une permission du store (`PERMISSION_SCHEMA` dans `lib/store.ts`,
   ressource × action). Le contrôle d'accès est fait **côté serveur** dans chaque route API
