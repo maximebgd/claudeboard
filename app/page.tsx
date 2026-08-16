@@ -530,7 +530,7 @@ export default async function HomePage({
       /> */}
 
       {/* Sessions épinglées */}
-      {favorites.length > 0 && (
+      {/* {favorites.length > 0 && (
         <section className="mt-8">
           <SectionTitle icon={Star}>Sessions épinglées</SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)]">
@@ -568,7 +568,7 @@ export default async function HomePage({
             ))}
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Activité : heatmap ou courbe (toggle) + streak dans l'en-tête */}
       <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
