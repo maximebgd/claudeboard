@@ -182,5 +182,6 @@ export async function createMdEntry(kind: MdKind, slug: string, raw?: string): P
 export async function deleteMdEntry(kind: MdKind, slug: string): Promise<string> {
   const baseDir = DIRS[kind];
   const filePath = safeResolve(baseDir, relFromSlug(slug));
-  return moveToTrash(filePath);
+  const scope = kind === "agents" ? "agent" : "command";
+  return moveToTrash(filePath, { resource: kind, scope, label: slug });
 }

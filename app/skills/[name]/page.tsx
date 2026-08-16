@@ -58,7 +58,7 @@ export default async function SkillDetailPage({
             body={{ slug: skill.slug }}
             label="Supprimer le skill"
             title={`Supprimer le skill « ${skill.name} » ?`}
-            description="Le dossier du skill est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+            description="Le dossier du skill est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
             confirmLabel="Supprimer"
             redirectTo="/skills"
             locked={!canDelete}

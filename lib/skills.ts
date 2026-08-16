@@ -129,5 +129,5 @@ export async function createSkill(slug: string, raw?: string): Promise<string> {
  */
 export async function deleteSkill(slug: string): Promise<string> {
   const dir = safeResolve(SKILLS_DIR, slug);
-  return moveToTrash(dir);
+  return moveToTrash(dir, { resource: "skills", scope: "skill", label: slug });
 }

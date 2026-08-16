@@ -94,7 +94,7 @@ export default async function KeybindingsPage() {
               body={{ target: "keybindings" }}
               label="Supprimer"
               title="Supprimer keybindings.json ?"
-              description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+              description="Le fichier est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
               confirmLabel="Supprimer"
               locked={!canDelete}
             />

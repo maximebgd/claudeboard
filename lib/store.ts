@@ -45,6 +45,9 @@ export const PERMISSION_SCHEMA = {
   // ce bloc JSON. Une seule permission d'édition (pas de create/delete distincts).
   hooks: ["modify"],
   keybindings: ["create", "modify", "delete", "reset"],
+  // Corbeille de claudeboard : vider (définitif) est la seule action gérée ici ;
+  // la restauration réutilise la permission `delete` de la ressource d'origine.
+  trash: ["empty"],
 } as const;
 
 export type PermissionResource = keyof typeof PERMISSION_SCHEMA;

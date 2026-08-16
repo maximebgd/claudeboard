@@ -61,7 +61,7 @@ export default function MdEntryDetail({
             body={{ kind, slug: entry.slug }}
             label={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"}`}
             title={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"} « ${entry.name} » ?`}
-            description="Le fichier est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+            description="Le fichier est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
             confirmLabel="Supprimer"
             redirectTo={backHref}
             locked={!canDelete}

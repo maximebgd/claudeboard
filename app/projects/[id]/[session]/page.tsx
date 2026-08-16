@@ -93,7 +93,7 @@ export default async function SessionPage({
             body={{ scope: "session", projectId: id, sessionId }}
             label="Supprimer la session"
             title="Supprimer cette session ?"
-            description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard (.claudeboard-trash) — réversible à la main."
+            description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
             confirmLabel="Supprimer"
             redirectTo={`/projects/${encodeURIComponent(id)}`}
             locked={!canDelete}

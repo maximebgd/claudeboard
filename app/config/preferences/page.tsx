@@ -35,6 +35,7 @@ const ACTION_COLUMNS: ActionMeta[] = [
   { key: "modify", label: "Modifier" },
   { key: "delete", label: "Supprimer", destructive: true },
   { key: "reset", label: "Réinitialiser", destructive: true },
+  { key: "empty", label: "Vider", destructive: true },
 ];
 
 // Libellé + description par ressource (l'ordre suit PERMISSION_SCHEMA).
@@ -47,6 +48,7 @@ const RESOURCE_META: Record<PermissionResource, { label: string; description: st
   settings: { label: "Settings Claude", description: "Modifier ou réinitialiser settings.json" },
   hooks: { label: "Hooks", description: "Éditer le bloc hooks de settings.json (créer/supprimer/modifier)" },
   keybindings: { label: "Keybindings", description: "Créer, modifier, supprimer ou réinitialiser keybindings.json" },
+  trash: { label: "Corbeille", description: "Vider définitivement la corbeille de claudeboard (la restauration suit la permission de suppression d'origine)" },
 };
 
 export default async function PreferencesPage() {
