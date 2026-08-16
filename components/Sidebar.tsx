@@ -51,7 +51,6 @@ const SECTIONS: { label?: string; items: NavItem[] }[] = [
       { href: "/config/mcp", label: "MCP servers", icon: Plug },
       { href: "/config/plugins", label: "Plugins & Marketplaces", icon: Blocks },
       { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
-      { href: "/config/trash", label: "Corbeille", icon: Trash2 },
     ],
   },
 ];
@@ -152,6 +151,18 @@ export default function Sidebar({
             <BookOpen size={16} />
           </Link>
         </div>
+        <Link
+          href="/config/trash"
+          aria-label="Corbeille"
+          title="Corbeille"
+          className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+            pathname.startsWith("/config/trash")
+              ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+              : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+          }`}
+        >
+          <Trash2 size={16} />
+        </Link>
       </div>
     </aside>
   );
