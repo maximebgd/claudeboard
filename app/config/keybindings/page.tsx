@@ -105,7 +105,7 @@ export default async function KeybindingsPage() {
           </div>
         )}
         <div className="mt-4">
-          <BackupsPanel target="keybindings" canRestore={canModify} />
+          <BackupsPanel target="keybindings" canRestore={canModify} currentRaw={file.raw} />
         </div>
       </div>
     </div>

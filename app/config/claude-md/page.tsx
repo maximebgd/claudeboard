@@ -71,7 +71,7 @@ export default async function ClaudeMdPage() {
           </div>
         )}
         <div className="mt-4">
-          <BackupsPanel target="claudeMd" canRestore={canModify} />
+          <BackupsPanel target="claudeMd" canRestore={canModify} currentRaw={file.raw} />
         </div>
       </div>
     </div>

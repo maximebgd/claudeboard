@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, History, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, ChevronRight, History, RotateCcw, GitCompare } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import { useTranslation } from "@/components/I18nProvider";
 import { tPlural } from "@/lib/i18n/core";
+import { unifiedDiff } from "@/lib/diff";
 
 interface Version {
   id: string;
@@ -16,15 +17,19 @@ interface Version {
 /**
  * Panneau « Versions » replié sous l'éditeur d'un fichier de config. Liste les
  * sauvegardes automatiques (créées à chaque enregistrement, stockées hors de
- * ~/.claude), avec aperçu et restauration. La restauration est verrouillée si la
- * permission `modify` de la cible est désactivée (l'API refuse de toute façon).
+ * ~/.claude). Chaque version peut être comparée au **contenu actuel** du fichier
+ * (`currentRaw`) sous forme de diff unifié façon `git diff`, puis restaurée. La
+ * restauration est verrouillée si la permission `modify` de la cible est désactivée
+ * (l'API refuse de toute façon).
  */
 export default function BackupsPanel({
   target,
   canRestore,
+  currentRaw,
 }: {
   target: string;
   canRestore: boolean;
+  currentRaw: string;
 }) {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -100,6 +105,13 @@ export default function BackupsPanel({
     }
   }
 
+  // Diff façon git : du contenu actuel (ancien) vers la version choisie (nouveau).
+  // Vert (+) = ce que la restauration ajouterait ; rouge (−) = ce qu'elle retirerait.
+  const diff = useMemo(
+    () => (preview ? unifiedDiff(currentRaw, preview.content) : null),
+    [preview, currentRaw]
+  );
+
   const fmtDate = (ms: number) =>
     new Date(ms).toLocaleString(locale === "en" ? "en-US" : "fr-FR", {
       day: "2-digit",
@@ -152,10 +164,14 @@ export default function BackupsPanel({
                     <div className="ml-auto flex items-center gap-1.5">
                       <button
                         onClick={() => showPreview(v.id)}
-                        className="flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+                        className={`flex items-center gap-1 rounded-md border px-2 py-1 ${
+                          preview?.id === v.id
+                            ? "border-[var(--color-accent)]/50 bg-[var(--color-hover)] text-[var(--color-fg)]"
+                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+                        }`}
                       >
-                        {preview?.id === v.id ? <EyeOff size={12} /> : <Eye size={12} />}
-                        {t("backups.preview")}
+                        <GitCompare size={12} />
+                        {t("backups.diff")}
                       </button>
                       <button
                         onClick={() => {
@@ -175,10 +191,41 @@ export default function BackupsPanel({
                       </button>
                     </div>
                   </div>
-                  {preview?.id === v.id && (
-                    <pre className="max-h-72 overflow-auto border-t border-[var(--color-border)] bg-[var(--color-code)] p-3 font-mono text-[11px] leading-relaxed text-[var(--color-fg)]">
-                      {preview.content || t("editor.emptyContent")}
-                    </pre>
+                  {preview?.id === v.id && diff && (
+                    <div className="border-t border-[var(--color-border)]">
+                      <div className="flex items-center gap-3 px-3 py-1.5 text-[11px] text-[var(--color-muted)]">
+                        <span>{t("backups.diffCaption")}</span>
+                        <span className="ml-auto font-mono">
+                          <span className="text-emerald-400">+{diff.added}</span>{" "}
+                          <span className="text-red-400">−{diff.removed}</span>
+                        </span>
+                      </div>
+                      {diff.lines.length === 0 ? (
+                        <p className="px-3 pb-3 text-[11px] text-[var(--color-faint)]">
+                          {t("backups.identical")}
+                        </p>
+                      ) : (
+                        <div className="max-h-80 overflow-auto bg-[var(--color-code)] font-mono text-[11px] leading-[1.5]">
+                          {diff.lines.map((l, k) => {
+                            const prefix = l.kind === "add" ? "+" : l.kind === "del" ? "-" : l.kind === "hunk" ? "" : " ";
+                            const cls =
+                              l.kind === "add"
+                                ? "bg-emerald-500/10 text-emerald-300"
+                                : l.kind === "del"
+                                  ? "bg-red-500/10 text-red-300"
+                                  : l.kind === "hunk"
+                                    ? "bg-[var(--color-inset)] text-cyan-400 select-none"
+                                    : "text-[var(--color-muted)]";
+                            return (
+                              <div key={k} className={`whitespace-pre px-3 ${cls}`}>
+                                <span className="select-none opacity-60">{prefix}</span>
+                                {l.text || " "}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}

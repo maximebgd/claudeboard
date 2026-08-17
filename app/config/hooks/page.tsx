@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Webhook, Terminal } from "lucide-react";
 import { getHooks, getHooksRaw } from "@/lib/hooks";
+import { readConfigFile } from "@/lib/configFiles";
 import { isAllowed } from "@/lib/store";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ConfigEditor from "@/components/ConfigEditor";
@@ -25,13 +26,15 @@ const EVENT_DESC_KEY: Record<string, TranslationKey> = {
 };
 
 export default async function HooksPage() {
-  const [{ events, totalHooks, sources }, canWrite, canRestore, hooksRaw, { t }] = await Promise.all([
-    getHooks(),
-    isAllowed("hooks", "modify"),
-    isAllowed("settings", "modify"),
-    getHooksRaw(),
-    getT(),
-  ]);
+  const [{ events, totalHooks, sources }, canWrite, canRestore, hooksRaw, settingsFile, { t }] =
+    await Promise.all([
+      getHooks(),
+      isAllowed("hooks", "modify"),
+      isAllowed("settings", "modify"),
+      getHooksRaw(),
+      readConfigFile("settings"),
+      getT(),
+    ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -131,7 +134,7 @@ export default async function HooksPage() {
           canWrite={canWrite}
         />
         <div className="mt-4">
-          <BackupsPanel target="settings" canRestore={canRestore} />
+          <BackupsPanel target="settings" canRestore={canRestore} currentRaw={settingsFile.raw} />
         </div>
       </section>
     </div>

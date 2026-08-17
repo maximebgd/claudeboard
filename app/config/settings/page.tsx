@@ -98,7 +98,7 @@ export default async function SettingsPage() {
               </div>
             )}
             <div className="mt-4">
-              <BackupsPanel target={target} canRestore={canWrite} />
+              <BackupsPanel target={target} canRestore={canWrite} currentRaw={file.raw} />
             </div>
           </section>
         ))}
