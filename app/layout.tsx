@@ -3,7 +3,9 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import SearchFab from "@/components/SearchFab";
+import { I18nProvider } from "@/components/I18nProvider";
 import { getEffectiveSubscription } from "@/lib/subscription";
+import { getPreferences } from "@/lib/store";
 
 // Lecture du système de fichiers (abonnement) au moment de la requête.
 export const dynamic = "force-dynamic";
@@ -28,9 +30,12 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const subscription = await getEffectiveSubscription();
+  const [subscription, { language }] = await Promise.all([
+    getEffectiveSubscription(),
+    getPreferences(),
+  ]);
   return (
-    <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang={language} className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         {/* Applique le thème avant le premier rendu pour éviter tout flash. */}
         <script
@@ -40,11 +45,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className="antialiased">
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar subscription={{ label: subscription.label, known: subscription.known }} />
-          <main className="flex-1 overflow-y-auto">{children}</main>
-        </div>
-        <SearchFab />
+        <I18nProvider locale={language}>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar subscription={{ label: subscription.label, known: subscription.known }} />
+            <main className="flex-1 overflow-y-auto">{children}</main>
+          </div>
+          <SearchFab />
+        </I18nProvider>
       </body>
     </html>
   );

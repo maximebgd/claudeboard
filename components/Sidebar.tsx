@@ -21,36 +21,38 @@ import {
   Trash2,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import { useTranslation } from "@/components/I18nProvider";
+import type { TranslationKey } from "@/lib/i18n/core";
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: TranslationKey;
   icon: typeof LayoutDashboard;
   exact?: boolean;
 };
 
 // Groupe principal (haut, sans titre) puis la section Config regroupant les
 // réglages et références (Préférences claudeboard en tête, avant les fichiers ~/.claude).
-const SECTIONS: { label?: string; items: NavItem[] }[] = [
+const SECTIONS: { labelKey?: TranslationKey; items: NavItem[] }[] = [
   {
     items: [
-      { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
-      { href: "/skills", label: "Skills", icon: Sparkles },
-      { href: "/projects", label: "Projets & Sessions", icon: FolderGit2 },
+      { href: "/", labelKey: "sidebar.overview", icon: LayoutDashboard, exact: true },
+      { href: "/skills", labelKey: "sidebar.skills", icon: Sparkles },
+      { href: "/projects", labelKey: "sidebar.projects", icon: FolderGit2 },
     ],
   },
   {
-    label: "Config",
+    labelKey: "sidebar.config",
     items: [
-      { href: "/config/claude-md", label: "CLAUDE.md", icon: FileText },
-      { href: "/config/agents", label: "Agents", icon: Bot },
-      { href: "/config/commands", label: "Commandes", icon: SquareSlash },
-      { href: "/config/graph", label: "Graphe de dépendances", icon: Share2 },
-      { href: "/config/settings", label: "Settings Claude", icon: Settings },
-      { href: "/config/hooks", label: "Hooks", icon: Webhook },
-      { href: "/config/mcp", label: "MCP servers", icon: Plug },
-      { href: "/config/plugins", label: "Plugins & Marketplaces", icon: Blocks },
-      { href: "/config/keybindings", label: "Keybindings", icon: Keyboard },
+      { href: "/config/claude-md", labelKey: "sidebar.claudeMd", icon: FileText },
+      { href: "/config/agents", labelKey: "sidebar.agents", icon: Bot },
+      { href: "/config/commands", labelKey: "sidebar.commands", icon: SquareSlash },
+      { href: "/config/graph", labelKey: "sidebar.graph", icon: Share2 },
+      { href: "/config/settings", labelKey: "sidebar.settings", icon: Settings },
+      { href: "/config/hooks", labelKey: "sidebar.hooks", icon: Webhook },
+      { href: "/config/mcp", labelKey: "sidebar.mcp", icon: Plug },
+      { href: "/config/plugins", labelKey: "sidebar.plugins", icon: Blocks },
+      { href: "/config/keybindings", labelKey: "sidebar.keybindings", icon: Keyboard },
     ],
   },
 ];
@@ -61,6 +63,7 @@ export default function Sidebar({
   subscription: { label: string; known: boolean };
 }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col">
       <div className="py-5 pl-5 pr-3 border-b border-[var(--color-border)]">
@@ -77,7 +80,7 @@ export default function Sidebar({
             </div>
           </div>
           <span
-            title="Abonnement Claude"
+            title={t("sidebar.subscription")}
             className={`ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium ${
               subscription.known
                 ? "border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
@@ -91,11 +94,11 @@ export default function Sidebar({
       </div>
       <nav className="p-3 flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
         {SECTIONS.map((section, si) => (
-          <div key={section.label ?? si} className="flex flex-col gap-1">
-            {section.label && (
-              <div className="eyebrow px-3 pb-1 pt-5">{section.label}</div>
+          <div key={section.labelKey ?? si} className="flex flex-col gap-1">
+            {section.labelKey && (
+              <div className="eyebrow px-3 pb-1 pt-5">{t(section.labelKey)}</div>
             )}
-            {section.items.map(({ href, label, icon: Icon, exact }) => {
+            {section.items.map(({ href, labelKey, icon: Icon, exact }) => {
               const active = exact
                 ? pathname === href
                 : pathname.startsWith(href);
@@ -116,7 +119,7 @@ export default function Sidebar({
                     />
                   )}
                   <Icon size={16} />
-                  {label}
+                  {t(labelKey)}
                 </Link>
               );
             })}
@@ -128,8 +131,8 @@ export default function Sidebar({
         <div className="flex items-center gap-1">
           <Link
             href="/config/preferences"
-            aria-label="Préférences"
-            title="Préférences"
+            aria-label={t("sidebar.preferences")}
+            title={t("sidebar.preferences")}
             className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
               pathname.startsWith("/config/preferences")
                 ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
@@ -140,8 +143,8 @@ export default function Sidebar({
           </Link>
           <Link
             href="/docs"
-            aria-label="Documentation"
-            title="Documentation"
+            aria-label={t("sidebar.docs")}
+            title={t("sidebar.docs")}
             className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
               pathname.startsWith("/docs")
                 ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
@@ -153,8 +156,8 @@ export default function Sidebar({
         </div>
         <Link
           href="/config/trash"
-          aria-label="Corbeille"
-          title="Corbeille"
+          aria-label={t("sidebar.trash")}
+          title={t("sidebar.trash")}
           className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
             pathname.startsWith("/config/trash")
               ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
