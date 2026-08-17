@@ -22,7 +22,8 @@ display:
 - **Hourly distribution** of session starts (`HourlyDistribution`: 24 bars, **local** time,
   raw count per hour).
 - **Most-used tools / skills** (`ToolUsageList`).
-- **Session stats**: averages, durations, thinking/text ratio, recent projects.
+- **Session stats**: averages, durations (active time, see [Metrics &
+  estimation](./metriques.md)), thinking/text ratio, recent projects.
 - **Pinned sessions**: favorites (see the local store), each linked to its transcript.
 - **Subscription** (`SubscriptionCard`): compares the estimated usage cost to the price of
   the Claude plan (via `lib/subscription.ts`) to show the net savings (plan details revealed
@@ -43,8 +44,8 @@ change vs the previous period of the same length (N vs N-1, with the real dates 
 N-1) — hidden for the "All" window.
 
 > The **cost is a local estimate** (indicative rates per model family), not real billing.
-> Calculation details in [Costs & estimation](./couts.md); rates editable in
-> **Preferences → Estimation rates**.
+> Calculation details (cost **and** durations) in [Metrics & estimation](./metriques.md);
+> rates editable in **Preferences → Estimation rates**.
 
 ## Write permissions
 

@@ -22,7 +22,8 @@ pour afficher :
 - **Distribution horaire** des débuts de session (`HourlyDistribution` : 24 barres, heure
   **locale**, comptage brut par heure).
 - **Outils / skills** les plus utilisés (`ToolUsageList`).
-- **Stats de session** : moyennes, durées, ratio thinking/texte, projets récents.
+- **Stats de session** : moyennes, durées (temps actif, cf. [Métriques &
+  estimation](./metriques.md)), ratio thinking/texte, projets récents.
 - **Sessions épinglées** : les favoris (cf. store local), chacun relié à son transcript.
 - **Abonnement** (`SubscriptionCard`) : compare le coût estimé de l'usage au prix du plan
   Claude (via `lib/subscription.ts`) pour afficher l'économie nette (détails du plan
@@ -43,8 +44,9 @@ vélocité** : la variation vs la période précédente de même durée (N vs N-
 réelles de la période N-1) — masqué pour la fenêtre « Tout ».
 
 > Le **coût est une estimation locale** (tarifs indicatifs par famille de modèle), pas une
-> facturation réelle. Détails du calcul dans [Coûts & estimation](./couts.md) ; tarifs
-> éditables dans **Préférences → Tarifs d'estimation**.
+> facturation réelle. Détails du calcul (coût **et** durées) dans
+> [Métriques & estimation](./metriques.md) ; tarifs éditables dans
+> **Préférences → Tarifs d'estimation**.
 
 ## Autorisations d'écriture
 
