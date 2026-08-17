@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { DocMeta } from "@/lib/docs";
+import { useTranslation } from "@/components/I18nProvider";
 
 /**
  * Sommaire latéral des pages de doc. Le fetch FS reste côté serveur (layout) ;
@@ -10,18 +11,19 @@ import type { DocMeta } from "@/lib/docs";
  */
 export default function DocsNav({ docs }: { docs: DocMeta[] }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const sections: { label: string; items: { href: string; label: string; exact: boolean }[] }[] = [
     {
-      label: "Documentation",
+      label: t("sidebar.docs"),
       items: [
-        { href: "/docs", label: "Vue d'ensemble", exact: true },
+        { href: "/docs", label: t("dash.title"), exact: true },
         ...docs.map((d) => ({ href: `/docs/${d.slug}`, label: d.title, exact: false })),
       ],
     },
     {
-      label: "Référence",
-      items: [{ href: "/docs/structure", label: "Structure du dossier", exact: false }],
+      label: t("docsNav.reference"),
+      items: [{ href: "/docs/structure", label: t("docsNav.structure"), exact: false }],
     },
   ];
 

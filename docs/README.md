@@ -2,15 +2,25 @@
 
 Cette documentation est **la même** que celle affichée dans l'application, sur la page
 `/docs`. Les fichiers `.md` de ce dossier sont la source unique : lisibles ici sur GitHub,
-et rendus proprement dans le dashboard.
+et rendus proprement dans le dashboard. Chaque page existe en deux langues, dans
+`docs/fr/` et `docs/en/` (le français fait référence ; l'anglais est servi selon la langue
+choisie dans **Préférences**, avec repli sur le français si une traduction manque).
 
-## Sommaire
+## Sommaire (français)
 
-1. [Prise en main](./prise-en-main.md) — ce qu'est l'app, prérequis, installation, lancement.
-2. [Architecture](./architecture.md) — stack, structure du code, conventions Next 16.
-3. [Fonctionnalités](./fonctionnalites.md) — dashboard, skills, projets, config.
-4. [Sécurité](./securite.md) — garde anti-traversée, backups, accès lecture seule.
-5. [Développement](./developpement.md) — scripts, vérification, contribution.
+1. [Prise en main](./fr/prise-en-main.md) — ce qu'est l'app, prérequis, installation, lancement.
+2. [Architecture](./fr/architecture.md) — stack, structure du code, conventions Next 16.
+3. [Fonctionnalités](./fr/fonctionnalites.md) — dashboard, skills, projets, config.
+4. [Sécurité](./fr/securite.md) — garde anti-traversée, backups, accès lecture seule.
+5. [Développement](./fr/developpement.md) — scripts, vérification, contribution.
+
+## Table of contents (English)
+
+1. [Getting started](./en/prise-en-main.md) — what the app is, prerequisites, install, running.
+2. [Architecture](./en/architecture.md) — stack, code structure, Next 16 conventions.
+3. [Features](./en/fonctionnalites.md) — dashboard, skills, projects, config.
+4. [Security](./en/securite.md) — path-traversal guard, backups, read-only access.
+5. [Development](./en/developpement.md) — scripts, verification, contributing.
 
 > Astuce : pour naviguer cette doc avec un rendu soigné (thème clair/sombre, sommaire
 > latéral), lancez le dashboard (`npm run dev`) et ouvrez **Documentation** dans la barre

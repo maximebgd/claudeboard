@@ -46,6 +46,8 @@ conflit avec un `npm run dev` déjà lancé.
 
 ## Mettre à jour cette documentation
 
-Les pages de `/docs` sont les fichiers `.md` du dossier `docs/`. Pour ajouter une page :
-créez `docs/<slug>.md` avec un frontmatter `title` / `description` / `order`, et elle
-apparaîtra automatiquement dans le sommaire du site (et sur GitHub).
+Les pages de `/docs` sont les fichiers `.md` des dossiers `docs/<langue>/` (une variante
+par langue, ex. `docs/fr/` et `docs/en/`). Pour ajouter une page : créez
+`docs/<langue>/<slug>.md` avec un frontmatter `title` / `description` / `order`. Le
+**français est la source de vérité** (il définit l'ensemble des pages) ; une page sans
+traduction retombe automatiquement sur sa version française.
