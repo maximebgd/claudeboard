@@ -181,3 +181,11 @@ flowchart TD
     style EXT fill:#3f3f46,color:#fff
     style DATA fill:#1e3a5f,color:#fff
 ```
+
+## Contributing
+
+Contributions are welcome! Please read [`CONTRIBUTING.md`](./CONTRIBUTING.md) to get started, and note the [Code of Conduct](./CODE_OF_CONDUCT.md). Found a security issue? See [`SECURITY.md`](./SECURITY.md) — please report it privately.
+
+## License
+
+[MIT](./LICENSE) © Maxime Bégoud
