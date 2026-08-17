@@ -6,6 +6,7 @@ import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
 import ResetButton from "@/components/ResetButton";
 import DeleteButton from "@/components/DeleteButton";
+import BackupsPanel from "@/components/BackupsPanel";
 import { getT } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +21,9 @@ const TEMPLATE = `{
 export default async function KeybindingsPage() {
   const file = await readConfigFile("keybindings");
   const bindings = parseKeybindings(file.data);
-  const [canWrite, canReset, canDelete, { t, locale }] = await Promise.all([
+  const [canWrite, canModify, canReset, canDelete, { t, locale }] = await Promise.all([
     isAllowed("keybindings", file.exists ? "modify" : "create"),
+    isAllowed("keybindings", "modify"),
     isAllowed("keybindings", "reset"),
     isAllowed("keybindings", "delete"),
     getT(),
@@ -102,6 +104,9 @@ export default async function KeybindingsPage() {
             />
           </div>
         )}
+        <div className="mt-4">
+          <BackupsPanel target="keybindings" canRestore={canModify} />
+        </div>
       </div>
     </div>
   );

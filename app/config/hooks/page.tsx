@@ -4,6 +4,7 @@ import { getHooks, getHooksRaw } from "@/lib/hooks";
 import { isAllowed } from "@/lib/store";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ConfigEditor from "@/components/ConfigEditor";
+import BackupsPanel from "@/components/BackupsPanel";
 import { getT } from "@/lib/i18n";
 import { tPlural } from "@/lib/i18n/core";
 import type { TranslationKey } from "@/lib/i18n/core";
@@ -24,9 +25,10 @@ const EVENT_DESC_KEY: Record<string, TranslationKey> = {
 };
 
 export default async function HooksPage() {
-  const [{ events, totalHooks, sources }, canWrite, hooksRaw, { t }] = await Promise.all([
+  const [{ events, totalHooks, sources }, canWrite, canRestore, hooksRaw, { t }] = await Promise.all([
     getHooks(),
     isAllowed("hooks", "modify"),
+    isAllowed("settings", "modify"),
     getHooksRaw(),
     getT(),
   ]);
@@ -128,6 +130,9 @@ export default async function HooksPage() {
           exists
           canWrite={canWrite}
         />
+        <div className="mt-4">
+          <BackupsPanel target="settings" canRestore={canRestore} />
+        </div>
       </section>
     </div>
   );

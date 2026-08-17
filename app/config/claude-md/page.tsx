@@ -5,6 +5,7 @@ import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
 import ResetButton from "@/components/ResetButton";
 import DeleteButton from "@/components/DeleteButton";
+import BackupsPanel from "@/components/BackupsPanel";
 import { getT } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function ClaudeMdPage() {
   const file = await readConfigFile("claudeMd");
   // Fichier présent → permission « modify » ; absent → « create ».
-  const [canWrite, canReset, canDelete, { t, locale }] = await Promise.all([
+  const [canWrite, canModify, canReset, canDelete, { t, locale }] = await Promise.all([
     isAllowed("claudeMd", file.exists ? "modify" : "create"),
+    isAllowed("claudeMd", "modify"),
     isAllowed("claudeMd", "reset"),
     isAllowed("claudeMd", "delete"),
     getT(),
@@ -68,6 +70,9 @@ export default async function ClaudeMdPage() {
             />
           </div>
         )}
+        <div className="mt-4">
+          <BackupsPanel target="claudeMd" canRestore={canModify} />
+        </div>
       </div>
     </div>
   );
