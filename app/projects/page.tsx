@@ -6,20 +6,20 @@ import { formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import FavoriteButton from "@/components/FavoriteButton";
 import { readStore } from "@/lib/store";
+import { getT } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
+import { makeFormatters } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-function fmtUSD(n: number): string {
-  if (n > 0 && n < 0.01) return "< 0,01 $";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
-
 export default async function ProjectsPage() {
-  const [projects, analytics, store] = await Promise.all([
+  const [projects, analytics, store, { t, locale }] = await Promise.all([
     listProjects(),
     getAnalytics(),
     readStore(),
+    getT(),
   ]);
+  const fmt = makeFormatters(locale);
   const costById = new Map(analytics.projectCosts.map((p) => [p.id, p.costUSD]));
   const favSet = new Set(store.favoriteProjects);
   // Projets épinglés toujours en tête ; à l'intérieur de chaque groupe, tri par
@@ -36,18 +36,18 @@ export default async function ProjectsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <FolderGit2 size={22} className="text-[var(--color-accent)]" />
-          Projets & Sessions
+          {t("sidebar.projects")}
         </h1>
         <ReadOnlyBadge />
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        {projects.length} projet{projects.length > 1 ? "s" : ""} avec historique de session
+        {tPlural(t, "projects.count", projects.length)}
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
         {projects.length === 0 && (
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-            Aucun projet trouvé dans ~/.claude/projects.
+            {t("projects.empty")}
           </div>
         )}
         {sortedProjects.map((p) => (
@@ -59,7 +59,7 @@ export default async function ProjectsPage() {
           >
             <Link
               href={`/projects/${encodeURIComponent(p.id)}`}
-              aria-label={`Ouvrir le projet ${projectLabel(p.realPath)}`}
+              aria-label={t("projects.open", { label: projectLabel(p.realPath) })}
               className="absolute inset-0 rounded-xl"
             />
             <div className="min-w-0 flex-1">
@@ -70,20 +70,20 @@ export default async function ProjectsPage() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
                 <span className="flex items-center gap-1">
                   <MessagesSquare size={12} />
-                  {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
+                  {tPlural(t, "dash.session", p.sessionCount)}
                 </span>
-                <span className="flex items-center gap-1" title={`Créé le ${formatDate(p.createdAt)}`}>
+                <span className="flex items-center gap-1" title={t("dash.createdOn", { date: formatDate(p.createdAt, locale) })}>
                   <Clock size={12} />
-                  Existe depuis {formatDuration(Date.now() - p.createdAt)}
+                  {t("dash.existsFor", { duration: formatDuration(Date.now() - p.createdAt, locale) })}
                 </span>
-                <span className="flex items-center gap-1" title={formatDate(p.lastModified)}>
+                <span className="flex items-center gap-1" title={formatDate(p.lastModified, locale)}>
                   <History size={12} />
-                  Modifié {formatRelative(p.lastModified)}
+                  {t("dash.modified", { relative: formatRelative(p.lastModified, locale) })}
                 </span>
                 {(costById.get(p.id) ?? 0) > 0 && (
                   <span className="flex items-center gap-1">
                     <Coins size={12} />
-                    {fmtUSD(costById.get(p.id) ?? 0)}
+                    {fmt.usd(costById.get(p.id) ?? 0)}
                   </span>
                 )}
               </div>

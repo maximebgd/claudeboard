@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, User, Sparkles } from "lucide-react";
 import { getSession, type Block } from "@/lib/projects";
 import { formatDate } from "@/lib/claude";
+import { getT, type ServerI18n } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
 import Markdown from "@/components/Markdown";
 import Collapsible from "@/components/Collapsible";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
@@ -15,19 +17,19 @@ import { favoriteKey } from "@/lib/favorites";
 
 export const dynamic = "force-dynamic";
 
-function BlockView({ block }: { block: Block }) {
+function BlockView({ block, t }: { block: Block; t: ServerI18n["t"] }) {
   switch (block.kind) {
     case "text":
       return <Markdown>{block.text}</Markdown>;
     case "thinking":
       return (
-        <Collapsible label="Réflexion" accent="#a78bfa">
+        <Collapsible label={t("block.thinking")} accent="#a78bfa">
           <div className="text-sm text-[var(--color-muted)] whitespace-pre-wrap">{block.text}</div>
         </Collapsible>
       );
     case "tool_use":
       return (
-        <Collapsible label={`Outil : ${block.name}`} accent="#60a5fa">
+        <Collapsible label={t("block.tool", { name: block.name })} accent="#60a5fa">
           <pre className="text-xs text-[var(--color-muted)] overflow-x-auto">
             {JSON.stringify(block.input, null, 2)}
           </pre>
@@ -36,7 +38,7 @@ function BlockView({ block }: { block: Block }) {
     case "tool_result":
       return (
         <Collapsible
-          label={block.isError ? "Résultat outil (erreur)" : "Résultat outil"}
+          label={block.isError ? t("block.toolResultError") : t("block.toolResult")}
           accent={block.isError ? "#f87171" : "#34d399"}
         >
           <pre className="text-xs text-[var(--color-muted)] whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
@@ -55,10 +57,11 @@ export default async function SessionPage({
   const { id: rawId, session: rawSession } = await params;
   const id = decodeURIComponent(rawId);
   const sessionId = decodeURIComponent(rawSession);
-  const [session, store, canDelete] = await Promise.all([
+  const [session, store, canDelete, { t, locale }] = await Promise.all([
     getSession(id, sessionId),
     readStore(),
     isAllowed("projects", "delete"),
+    getT(),
   ]);
   if (!session) notFound();
   const favKey = favoriteKey(id, sessionId);
@@ -70,7 +73,7 @@ export default async function SessionPage({
         href={`/projects/${encodeURIComponent(id)}`}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
       >
-        <ArrowLeft size={15} /> Sessions
+        <ArrowLeft size={15} /> {t("session.back")}
       </Link>
 
       <div className="mt-4 mb-8">
@@ -80,8 +83,8 @@ export default async function SessionPage({
           <FavoriteButton favoriteKey={favKey} initial={favorited} variant="labeled" />
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)] font-mono">
-          <span>{session.events.length} messages</span>
-          {session.gitBranch && <span>branche : {session.gitBranch}</span>}
+          <span>{tPlural(t, "common.message", session.events.length)}</span>
+          {session.gitBranch && <span>{t("session.branch", { branch: session.gitBranch })}</span>}
           {session.version && <span>v{session.version}</span>}
           <span>{sessionId}</span>
         </div>
@@ -91,10 +94,10 @@ export default async function SessionPage({
           <DeleteButton
             endpoint="/api/projects"
             body={{ scope: "session", projectId: id, sessionId }}
-            label="Supprimer la session"
-            title="Supprimer cette session ?"
-            description="Le transcript .jsonl est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
-            confirmLabel="Supprimer"
+            label={t("session.delete")}
+            title={t("session.deleteTitle")}
+            description={t("session.deleteDesc")}
+            confirmLabel={t("common.delete")}
             redirectTo={`/projects/${encodeURIComponent(id)}`}
             locked={!canDelete}
             detail={
@@ -125,13 +128,13 @@ export default async function SessionPage({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[11px] text-[var(--color-muted)] mb-1">
                   <span className="font-medium text-[var(--color-muted)]">
-                    {isUser ? "Vous" : "Claude"}
+                    {isUser ? t("session.you") : "Claude"}
                   </span>
-                  {ev.timestamp && <span>{formatDate(ev.timestamp)}</span>}
+                  {ev.timestamp && <span>{formatDate(ev.timestamp, locale)}</span>}
                 </div>
                 <div className="flex flex-col gap-2">
                   {ev.blocks.map((b, i) => (
-                    <BlockView key={i} block={b} />
+                    <BlockView key={i} block={b} t={t} />
                   ))}
                 </div>
               </div>

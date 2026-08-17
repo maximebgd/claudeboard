@@ -23,34 +23,27 @@ import DeleteButton from "@/components/DeleteButton";
 import ExportButton from "@/components/ExportButton";
 import { readStore, isAllowed } from "@/lib/store";
 import { favoriteKey } from "@/lib/favorites";
+import { getT, type Language } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
+import { makeFormatters } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
-const full = new Intl.NumberFormat("fr-FR");
-
-function fmtNum(n: number): string {
-  return n >= 10000 ? compact.format(n) : full.format(n);
-}
-
-function fmtUSD(n: number): string {
-  if (n > 0 && n < 0.01) return "< 0,01 $";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
+const bcp = (locale: Language) => (locale === "en" ? "en-US" : "fr-FR");
 
 /** Jour compact « 8 août » (sans année) pour les cartes KPI étroites. */
-function fmtDay(ms: number): string {
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+function fmtDay(ms: number, locale: Language): string {
+  return new Date(ms).toLocaleDateString(bcp(locale), { day: "numeric", month: "short" });
 }
 
 /** Heure « 20:50 ». */
-function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+function fmtTime(ms: number, locale: Language): string {
+  return new Date(ms).toLocaleTimeString(bcp(locale), { hour: "2-digit", minute: "2-digit" });
 }
 
 /** Date de création « Mer. 12 Août 2026 » (jour de semaine + mois capitalisés). */
-function fmtCreatedDate(ms: number): string {
-  const s = new Date(ms).toLocaleDateString("fr-FR", {
+function fmtCreatedDate(ms: number, locale: Language): string {
+  const s = new Date(ms).toLocaleDateString(bcp(locale), {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -60,14 +53,15 @@ function fmtCreatedDate(ms: number): string {
 }
 
 /** Durée précise : « 2j 05h 30min » au-delà de 24 h, sinon « h / min / s ». */
-function fmtDuration(ms: number): string {
+function fmtDuration(ms: number, locale: Language): string {
+  const dU = locale === "en" ? "d" : "j";
   if (ms <= 0) return "—";
   const s = Math.round(ms / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   if (h >= 24) {
     const d = Math.floor(h / 24);
-    return `${d}j ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
+    return `${d}${dU} ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
   }
   if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
   if (m > 0) return `${m} min`;
@@ -123,13 +117,15 @@ export default async function ProjectSessionsPage({
 }) {
   const { id: rawId } = await params;
   const id = decodeURIComponent(rawId);
-  const [sessions, projects, stats, store, canDelete] = await Promise.all([
+  const [sessions, projects, stats, store, canDelete, { t, locale }] = await Promise.all([
     listSessions(id),
     listProjects(),
     getProjectStats(id),
     readStore(),
     isAllowed("projects", "delete"),
+    getT(),
   ]);
+  const fmt = makeFormatters(locale);
   const favSet = new Set(store.favorites);
   // Les sessions épinglées remontent toujours en tête ; à l'intérieur de chaque
   // groupe (épinglées / autres), tri par dernière activité (récent → ancien).
@@ -148,11 +144,11 @@ export default async function ProjectSessionsPage({
   const hasActivity = stats.firstActivity > 0;
   // « Activité » : temps actif total passé sur le projet (gaps > 30 min ignorés),
   // avec en sous-titre la date du premier message (« depuis le … »).
-  const activityValue = stats.totalDurationMs > 0 ? fmtDuration(stats.totalDurationMs) : "—";
+  const activityValue = stats.totalDurationMs > 0 ? fmtDuration(stats.totalDurationMs, locale) : "—";
   const activitySub = hasActivity ? (
     <span className="flex flex-col">
-      <span>depuis le {fmtDay(stats.firstActivity)}</span>
-      <span>{fmtTime(stats.firstActivity)}</span>
+      <span>{t("projectDetail.since", { day: fmtDay(stats.firstActivity, locale) })}</span>
+      <span>{fmtTime(stats.firstActivity, locale)}</span>
     </span>
   ) : undefined;
 
@@ -162,7 +158,7 @@ export default async function ProjectSessionsPage({
         href="/projects"
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
       >
-        <ArrowLeft size={15} /> Projets
+        <ArrowLeft size={15} /> {t("projectDetail.back")}
       </Link>
 
       <div className="mt-4 mb-6 flex items-end justify-between gap-4">
@@ -177,31 +173,31 @@ export default async function ProjectSessionsPage({
             <>
               <p className="mt-1 text-xs text-[var(--color-muted)] font-mono">{project.realPath}</p>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
-                <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                <span className="flex items-center gap-1" title={t("dash.createdOn", { date: formatDate(project.createdAt, locale) })}>
                   <CalendarDays size={12} />
-                  {fmtCreatedDate(project.createdAt)}
+                  {fmtCreatedDate(project.createdAt, locale)}
                 </span>
-                <span className="flex items-center gap-1" title={`Créé le ${formatDate(project.createdAt)}`}>
+                <span className="flex items-center gap-1" title={t("dash.createdOn", { date: formatDate(project.createdAt, locale) })}>
                   <Clock size={12} />
-                  Existe depuis {formatDuration(Date.now() - project.createdAt)}
+                  {t("dash.existsFor", { duration: formatDuration(Date.now() - project.createdAt, locale) })}
                 </span>
-                <span className="flex items-center gap-1" title={formatDate(project.lastModified)}>
+                <span className="flex items-center gap-1" title={formatDate(project.lastModified, locale)}>
                   <History size={12} />
-                  Modifié {formatRelative(project.lastModified)}
+                  {t("dash.modified", { relative: formatRelative(project.lastModified, locale) })}
                 </span>
               </div>
             </>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <ExportButton scope="project" projectId={id} label="Exporter le projet" />
+          <ExportButton scope="project" projectId={id} label={t("projectDetail.exportProject")} />
           <DeleteButton
             endpoint="/api/projects"
             body={{ scope: "project", projectId: id }}
-            label="Supprimer le projet"
-            title={`Supprimer le projet « ${project ? projectLabel(project.realPath) : id} » ?`}
-            description={`Le dossier du projet et ses ${full.format(sessions.length)} session(s) sont déplacés dans la corbeille de claudeboard — restaurable depuis la page Corbeille.`}
-            confirmLabel="Supprimer le projet"
+            label={t("projectDetail.deleteProject")}
+            title={t("projectDetail.deleteTitle", { name: project ? projectLabel(project.realPath) : id })}
+            description={t("projectDetail.deleteDesc", { sessions: tPlural(t, "dash.session", sessions.length) })}
+            confirmLabel={t("projectDetail.deleteProject")}
             redirectTo="/projects"
             locked={!canDelete}
             detail={
@@ -217,20 +213,20 @@ export default async function ProjectSessionsPage({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Stat
           icon={FolderGit2}
-          label="Sessions"
-          value={fmtNum(totals.sessions)}
+          label={t("common.sessions")}
+          value={fmt.num(totals.sessions)}
           sub={
             <span className="flex flex-col gap-0.5">
-              <span>{fmtNum(totals.messages)} messages</span>
+              <span>{tPlural(t, "common.message", totals.messages)}</span>
               <span className="inline-flex items-center gap-2">
                 <span className="inline-flex items-center gap-0.5">
                   <ArrowUp size={12} className="text-[var(--color-accent)]" />
-                  {fmtNum(totals.userMessages)}
+                  {fmt.num(totals.userMessages)}
                 </span>
                 <span aria-hidden>·</span>
                 <span className="inline-flex items-center gap-0.5">
                   <ArrowDown size={12} className="text-[var(--color-accent)]" />
-                  {fmtNum(totals.assistantMessages)}
+                  {fmt.num(totals.assistantMessages)}
                 </span>
               </span>
             </span>
@@ -238,27 +234,27 @@ export default async function ProjectSessionsPage({
         />
         <Stat
           icon={Cpu}
-          label="Tokens (in/out)"
-          value={fmtNum(totals.tokensIn + totals.tokensOut)}
+          label={t("dash.tokens")}
+          value={fmt.num(totals.tokensIn + totals.tokensOut)}
           sub={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-0.5">
                 <ArrowUp size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensIn)}
+                {fmt.num(totals.tokensIn)}
               </span>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-0.5">
                 <ArrowDown size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensOut)}
+                {fmt.num(totals.tokensOut)}
               </span>
             </span>
           }
         />
-        <Stat icon={Coins} label="Coût estimé" value={fmtUSD(totals.costUSD)} sub="tarifs indicatifs" />
-        <Stat icon={Wrench} label="Outils appelés" value={fmtNum(totals.toolUses)} />
+        <Stat icon={Coins} label={t("cost.estimated")} value={fmt.usd(totals.costUSD)} sub={t("dash.indicativePricing")} />
+        <Stat icon={Wrench} label={t("dash.toolsCalled")} value={fmt.num(totals.toolUses)} />
         <Stat
           icon={Clock}
-          label="Activité"
+          label={t("projectDetail.activity")}
           value={activityValue}
           sub={activitySub}
           valueClassName="text-[1.4rem] leading-none"
@@ -268,13 +264,13 @@ export default async function ProjectSessionsPage({
       {/* Modèles utilisés */}
       {stats.models.length > 0 && (
         <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle icon={Cpu}>Modèles utilisés</SectionTitle>
+          <SectionTitle icon={Cpu}>{t("projectDetail.modelsUsed")}</SectionTitle>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left eyebrow">
-                  <th className="pb-2 font-normal">Modèle</th>
-                  <th className="pb-2 text-right font-normal">Msg</th>
+                  <th className="pb-2 font-normal">{t("common.model")}</th>
+                  <th className="pb-2 text-right font-normal">{t("donut.msg")}</th>
                   <th className="pb-2 text-right font-normal">
                     <span className="inline-flex items-center gap-0.5">
                       <ArrowUp size={12} className="text-[var(--color-accent)]" />
@@ -287,8 +283,8 @@ export default async function ProjectSessionsPage({
                       Out
                     </span>
                   </th>
-                  <th className="pb-2 text-right font-normal">Cache</th>
-                  <th className="pb-2 text-right font-normal">Coût</th>
+                  <th className="pb-2 text-right font-normal">{t("dash.cache")}</th>
+                  <th className="pb-2 text-right font-normal">{t("common.cost")}</th>
                 </tr>
               </thead>
               <tbody className="font-mono tabular-nums">
@@ -300,24 +296,24 @@ export default async function ProjectSessionsPage({
                         {m.label}
                       </span>
                     </td>
-                    <td className="py-2 text-right">{fmtNum(m.messages)}</td>
-                    <td className="py-2 text-right">{fmtNum(m.tokensIn)}</td>
-                    <td className="py-2 text-right">{fmtNum(m.tokensOut)}</td>
+                    <td className="py-2 text-right">{fmt.num(m.messages)}</td>
+                    <td className="py-2 text-right">{fmt.num(m.tokensIn)}</td>
+                    <td className="py-2 text-right">{fmt.num(m.tokensOut)}</td>
                     <td className="py-2 text-right text-[var(--color-muted)]">
-                      {fmtNum(m.cacheRead + m.cacheWrite)}
+                      {fmt.num(m.cacheRead + m.cacheWrite)}
                     </td>
-                    <td className="py-2 text-right">{fmtUSD(m.costUSD)}</td>
+                    <td className="py-2 text-right">{fmt.usd(m.costUSD)}</td>
                   </tr>
                 ))}
                 <tr className="border-t border-[var(--color-border)] font-medium">
-                  <td className="py-2 font-sans">Total</td>
-                  <td className="py-2 text-right">{fmtNum(totals.assistantMessages)}</td>
-                  <td className="py-2 text-right">{fmtNum(totals.tokensIn)}</td>
-                  <td className="py-2 text-right">{fmtNum(totals.tokensOut)}</td>
+                  <td className="py-2 font-sans">{t("common.total")}</td>
+                  <td className="py-2 text-right">{fmt.num(totals.assistantMessages)}</td>
+                  <td className="py-2 text-right">{fmt.num(totals.tokensIn)}</td>
+                  <td className="py-2 text-right">{fmt.num(totals.tokensOut)}</td>
                   <td className="py-2 text-right text-[var(--color-muted)]">
-                    {fmtNum(totals.cacheRead + totals.cacheWrite)}
+                    {fmt.num(totals.cacheRead + totals.cacheWrite)}
                   </td>
-                  <td className="py-2 text-right">{fmtUSD(totals.costUSD)}</td>
+                  <td className="py-2 text-right">{fmt.usd(totals.costUSD)}</td>
                 </tr>
               </tbody>
             </table>
@@ -328,7 +324,7 @@ export default async function ProjectSessionsPage({
       {/* Outils les plus utilisés */}
       {stats.topTools.length > 0 && (
         <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle icon={Wrench}>Outils &amp; skills les plus utilisés</SectionTitle>
+          <SectionTitle icon={Wrench}>{t("toolUsage.title")}</SectionTitle>
           <div className="flex flex-col gap-2 max-h-[152px] overflow-y-auto pr-1">
             {stats.topTools.map((t) => (
               <div key={t.name} className="flex items-center gap-3">
@@ -342,7 +338,7 @@ export default async function ProjectSessionsPage({
                   />
                 </div>
                 <span className="w-12 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                  {fmtNum(t.count)}
+                  {fmt.num(t.count)}
                 </span>
               </div>
             ))}
@@ -352,11 +348,11 @@ export default async function ProjectSessionsPage({
 
       {/* Sessions */}
       <div className="mt-8">
-        <SectionTitle icon={MessagesSquare}>Sessions · {full.format(sessions.length)}</SectionTitle>
+        <SectionTitle icon={MessagesSquare}>{t("common.sessions")} · {fmt.int(sessions.length)}</SectionTitle>
         <div className="flex flex-col gap-3">
           {sessions.length === 0 && (
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-              Aucune session.
+              {t("projectDetail.noSessions")}
             </div>
           )}
           {sortedSessions.map((s) => (
@@ -368,7 +364,7 @@ export default async function ProjectSessionsPage({
             >
               <Link
                 href={`/projects/${encodeURIComponent(id)}/${encodeURIComponent(s.id)}`}
-                aria-label={`Ouvrir la session ${s.title}`}
+                aria-label={t("projectDetail.openSession", { title: s.title })}
                 className="absolute inset-0 rounded-xl"
               />
               <div className="min-w-0 flex-1">
@@ -381,10 +377,10 @@ export default async function ProjectSessionsPage({
                 <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-faint)]">
                   <span className="flex items-center gap-1">
                     <MessagesSquare size={12} />
-                    {s.messageCount} messages
+                    {tPlural(t, "common.message", s.messageCount)}
                   </span>
-                  <span>{formatDate(s.lastModified)}</span>
-                  <span>{formatSize(s.size)}</span>
+                  <span>{formatDate(s.lastModified, locale)}</span>
+                  <span>{formatSize(s.size, locale)}</span>
                   <code className="text-[var(--color-faint)]">{s.id.slice(0, 8)}</code>
                 </div>
               </div>
