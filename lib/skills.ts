@@ -3,6 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { translate, type Language } from "./i18n/core";
 
 const SKILLS_DIR = "skills";
 
@@ -11,18 +12,18 @@ export function isValidSkillSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]*$/.test(slug);
 }
 
-/** Contenu de départ d'un nouveau SKILL.md (frontmatter + squelette). */
-export function skillTemplate(slug: string): string {
+/** Contenu de départ d'un nouveau SKILL.md (frontmatter + squelette), dans la langue de l'UI. */
+export function skillTemplate(slug: string, locale: Language = "fr"): string {
   return `---
 name: ${slug}
-description: Décris ici quand et pourquoi utiliser ce skill (une phrase claire).
+description: ${translate(locale, "skills.template.description")}
 ---
 
 # ${slug}
 
-Explique ce que fait ce skill et comment l'utiliser.
+${translate(locale, "skills.template.intro")}
 
-## Étapes
+## ${translate(locale, "skills.template.steps")}
 
 1. …
 `;

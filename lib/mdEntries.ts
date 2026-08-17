@@ -3,6 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { translate, type Language } from "./i18n/core";
 
 /**
  * Modèle générique pour les dossiers d'entrées markdown à frontmatter de
@@ -101,23 +102,23 @@ export function isValidMdSlug(slug: string): boolean {
   return slug.split("/").every((seg) => /^[a-z0-9][a-z0-9-]*$/.test(seg));
 }
 
-/** Contenu de départ d'une nouvelle entrée markdown (frontmatter adapté au kind). */
-export function mdTemplate(kind: MdKind, slug: string): string {
+/** Contenu de départ d'une nouvelle entrée markdown (frontmatter adapté au kind), dans la langue de l'UI. */
+export function mdTemplate(kind: MdKind, slug: string, locale: Language = "fr"): string {
   const name = slug.split("/").pop() || slug;
   if (kind === "agents") {
     return `---
 name: ${name}
-description: Décris quand déléguer une tâche à cet agent.
+description: ${translate(locale, "agents.template.description")}
 ---
 
-Instructions système de l'agent : son rôle, ses limites, sa méthode.
+${translate(locale, "agents.template.body")}
 `;
   }
   return `---
-description: Décris ce que fait cette commande.
+description: ${translate(locale, "commands.template.description")}
 ---
 
-Corps de la commande \`/${slug}\`. Utilise \`$ARGUMENTS\` pour les arguments passés.
+${translate(locale, "commands.template.body", { slug })}
 `;
 }
 
