@@ -40,7 +40,8 @@ section ne donne que le panorama fonctionnel.
     (`data/claudeboard.json`) — **Autorisations d'écriture** (`PermissionsMatrix`, tout
     `false` par défaut ; plugins/marketplaces exclus), **Tarifs d'estimation**
     (`PricingEditor`), **Abonnement** (`SubscriptionSelector` : auto depuis `~/.claude.json`
-    ou plan manuel), **Affichage** (`CostModeSelector` → `costCardMode`).
+    ou plan manuel), **Affichage** (`CostModeSelector` → `costCardMode`), **Langue**
+    (`LanguageSelector` → `language`, FR/EN).
   - **Settings Claude** : édition de `settings.json` / `settings.local.json` (JSON validé
     live + backup, création `.local` à la demande). Gated par `settings.modify` ; reset par
     `settings.reset`.
@@ -77,7 +78,7 @@ section ne donne que le panorama fonctionnel.
 - Next.js 16 (App Router, RSC par défaut), React 19, TypeScript strict, alias `@/*` → racine
 - Tailwind CSS v4 (via `@tailwindcss/postcss` + `app/globals.css`, pas de `tailwind.config`)
 - `gray-matter` (frontmatter), `react-markdown` + `remark-gfm` (rendu), `lucide-react` (icônes)
-- UI en français
+- UI **bilingue FR/EN** (i18n maison, cf. Conventions ; défaut français)
 
 ## Structure
 
@@ -124,6 +125,11 @@ lib/
                surlignables, groupés par session (récents d'abord, plafonnés à 100)
   docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (hors CLAUDE_DIR, garde-fou dédié)
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
+  i18n.ts      getT() (serveur) : lit la langue du store → { locale, t } lié
+  i18n/core.ts     translate/tPlural **isomorphes** (types + données statiques only,
+               bundlables client) ; interpolation `{var}`, pluriel `.one`/`.other`
+  i18n/translations.ts  dico plat pointé fr/en ; `en: Record<keyof typeof fr, string>`
+               **force** une traduction anglaise pour chaque clé (erreur de compil sinon)
   --- LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR, champs ciblés — cf. Conventions) ---
   mcp.ts          getMcpServers : MCP globaux + par projet, statut d'auth, env masqué
   subscription.ts getSubscription (champs non sensibles d'oauthAccount) ·
@@ -158,6 +164,7 @@ app/
   layout.tsx · globals.css · icon.svg
 components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · ThemeToggle · ReadOnlyBadge
+  I18nProvider (contexte client, `useTranslation`) · LanguageSelector (choix FR/EN)
   Écriture gated : ConfigEditor (JSON/markdown, validation live, backup au save, mode
     lecture seule via `canWrite`) · SkillEditor · PermissionsMatrix · PermissionNotice ·
     DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
@@ -197,6 +204,12 @@ components/
   (favoris, tarifs, abonnement, permissions, préférences) vivent dans `data/claudeboard.json`
   (**hors** de CLAUDE_DIR, gitignored, écriture atomique). Ne jamais les mélanger avec les
   fichiers de `~/.claude`. `/api/store` valide et dispatche par `section` whitelistée.
+- **i18n (FR/EN)** : `lib/i18n/core.ts` est **isomorphe** (aucune lecture FS/store — reste
+  bundlable client). Côté serveur, les pages `async` appellent `await getT()` → `{ locale, t }`
+  (lit `language` du store). Côté client, `I18nProvider` (seedé par `layout.tsx`) expose
+  `useTranslation()`. Changer de langue = `setPreferences` puis `router.refresh()`, qui relit
+  le store et re-seed le provider. Toute nouvelle chaîne visible ⇒ une clé dans **fr et en**
+  (`translations.ts` ; l'anglais manquant est une **erreur de compilation**).
 - **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs en
   USD/million de tokens), pas une facturation réelle. `getAnalytics` fait un **seul passage**
   sur les JSONL — garder l'agrégation là plutôt que multiplier les scans du FS.
