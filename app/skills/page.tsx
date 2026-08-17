@@ -4,18 +4,24 @@ import { listSkills } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import CreateEntryButton from "@/components/CreateEntryButton";
+import { getT } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
 
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
-  const [skills, canCreate] = await Promise.all([listSkills(), isAllowed("skills", "create")]);
+  const [skills, canCreate, { t, locale }] = await Promise.all([
+    listSkills(),
+    isAllowed("skills", "create"),
+    getT(),
+  ]);
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="eyebrow flex items-center gap-2">
         <Sparkles size={13} className="text-[var(--color-accent)]" />
-        <span>{skills.length} skill{skills.length > 1 ? "s" : ""}</span>
+        <span>{tPlural(t, "skills.count", skills.length)}</span>
       </div>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Skills</h1>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">{t("sidebar.skills")}</h1>
       <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
         <span className="text-[var(--color-accent)]" aria-hidden>$</span>
         ~/.claude/skills
@@ -25,9 +31,9 @@ export default async function SkillsPage() {
         <CreateEntryButton
           endpoint="/api/skills"
           redirectBase="/skills"
-          label="Nouveau skill"
-          placeholder="mon-skill"
-          hint="Minuscules, chiffres et tirets. Un SKILL.md pré-rempli sera créé."
+          label={t("skills.new")}
+          placeholder={t("skills.slugPlaceholder")}
+          hint={t("skills.createHint")}
           locked={!canCreate}
         />
       </div>
@@ -35,7 +41,7 @@ export default async function SkillsPage() {
       <div className="mt-6 flex flex-col gap-3">
         {skills.length === 0 && (
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-            Aucun skill trouvé dans ~/.claude/skills.
+            {t("skills.empty")}
           </div>
         )}
         {skills.map((s) => (
@@ -53,7 +59,7 @@ export default async function SkillsPage() {
               </div>
               <p className="mt-1.5 text-sm text-[var(--color-muted)] line-clamp-2">{s.description}</p>
               <p className="mt-2 text-[11px] text-[var(--color-faint)]">
-                Modifié le {formatDate(s.updatedAt)}
+                {t("common.modifiedOn", { date: formatDate(s.updatedAt, locale) })}
               </p>
             </div>
             <ChevronRight
