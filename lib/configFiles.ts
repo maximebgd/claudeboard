@@ -1,7 +1,9 @@
 import fs from "fs/promises";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { saveBackup } from "./backups";
 import { translate, type Language } from "./i18n/core";
+import type { PermissionResource } from "./store";
 
 /**
  * Fichiers de configuration « uniques » de ~/.claude (par opposition aux
@@ -26,6 +28,12 @@ const TARGETS: Record<ConfigTarget, TargetDef> = {
 
 export function isConfigTarget(v: unknown): v is ConfigTarget {
   return typeof v === "string" && v in TARGETS;
+}
+
+/** Ressource de permission correspondant à une cible de config. */
+export function configResource(target: ConfigTarget): PermissionResource {
+  if (target === "settings" || target === "settingsLocal") return "settings";
+  return target === "claudeMd" ? "claudeMd" : "keybindings";
 }
 
 export interface ConfigFile {
@@ -71,9 +79,11 @@ export async function readConfigFile(target: ConfigTarget): Promise<ConfigFile> 
 
 /**
  * Écrit une cible de config. Les cibles JSON sont validées (JSON.parse) avant
- * écriture. Un backup horodaté `.bak.<ts>` est créé si le fichier existait déjà
- * (les créations — settings.local.json, keybindings.json, CLAUDE.md global —
- * sont explicites côté UI). Retourne le chemin du backup, ou null si création.
+ * écriture. Si le fichier existait déjà, sa version précédente est archivée dans
+ * l'historique de versions (`data/backups/`, **hors** de ~/.claude — cf. `backups.ts`),
+ * restaurable depuis le panneau « Versions » de l'éditeur. Les créations
+ * (settings.local.json, keybindings.json, CLAUDE.md global) sont explicites côté UI.
+ * Retourne le chemin de la version archivée, ou null si création.
  */
 export async function writeConfigFile(target: ConfigTarget, raw: string): Promise<string | null> {
   const def = TARGETS[target];
@@ -83,11 +93,10 @@ export async function writeConfigFile(target: ConfigTarget, raw: string): Promis
   const filePath = safeResolve(def.file);
   let backupPath: string | null = null;
   try {
-    await fs.access(filePath);
-    backupPath = `${filePath}.bak.${Date.now()}`;
-    await fs.copyFile(filePath, backupPath);
+    const prev = await fs.readFile(filePath, "utf8");
+    backupPath = await saveBackup(target, prev);
   } catch {
-    // le fichier n'existe pas encore : création explicite, pas de backup
+    // le fichier n'existe pas encore : création explicite, pas d'archivage
   }
   await fs.writeFile(filePath, raw, "utf8");
   return backupPath;
@@ -124,11 +133,9 @@ export function resetConfigFile(target: ConfigTarget, locale: Language = "fr"): 
  */
 export function deleteConfigFile(target: ConfigTarget): Promise<string> {
   const def = TARGETS[target];
-  const resource =
-    target === "settings" || target === "settingsLocal"
-      ? "settings"
-      : target === "claudeMd"
-        ? "claudeMd"
-        : "keybindings";
-  return moveToTrash(safeResolve(def.file), { resource, scope: "config", label: def.label });
+  return moveToTrash(safeResolve(def.file), {
+    resource: configResource(target),
+    scope: "config",
+    label: def.label,
+  });
 }
