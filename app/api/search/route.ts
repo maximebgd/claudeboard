@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const includeToolResults = searchParams.get("tools") === "1";
 
   if (projectId && (projectId.includes("/") || projectId.includes(".."))) {
-    return new Response("projet invalide", { status: 400 });
+    return new Response("Invalid project", { status: 400 });
   }
 
   try {
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     });
     return Response.json(results);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Échec de la recherche";
+    const msg = e instanceof Error ? e.message : "Search failed";
     return new Response(msg, { status: 500 });
   }
 }

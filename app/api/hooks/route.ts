@@ -12,17 +12,17 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { raw } = body;
   if (typeof raw !== "string") {
-    return NextResponse.json({ error: "contenu manquant" }, { status: 400 });
+    return NextResponse.json({ error: "Missing content" }, { status: 400 });
   }
 
   if (!(await isAllowed("hooks", "modify"))) {
     return NextResponse.json(
-      { error: "Édition des hooks non autorisée — activez-la dans Préférences." },
+      { error: "Editing hooks is not allowed — enable it in Preferences." },
       { status: 403 }
     );
   }
@@ -33,10 +33,10 @@ export async function POST(req: Request) {
   } catch (e) {
     const msg =
       e instanceof SyntaxError
-        ? "JSON invalide — écriture annulée"
+        ? "Invalid JSON — write aborted"
         : e instanceof Error
           ? e.message
-          : "Échec de l'écriture";
+          : "Write failed";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

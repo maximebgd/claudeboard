@@ -8,6 +8,7 @@ import {
   type ConfigTarget,
 } from "@/lib/configFiles";
 import { isAllowed, type PermissionResource } from "@/lib/store";
+import { getT } from "@/lib/i18n";
 
 /** Ressource de permission correspondant à une cible de config. */
 function resourceOf(target: ConfigTarget): PermissionResource {
@@ -27,20 +28,20 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { target } = body;
   const op = body.op === "reset" || body.op === "delete" ? body.op : "write";
   if (!isConfigTarget(target)) {
-    return NextResponse.json({ error: "cible inconnue" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown target" }, { status: 400 });
   }
   const resource = resourceOf(target);
 
   if (op === "delete") {
     if (!(await isAllowed(resource, "delete"))) {
       return NextResponse.json(
-        { error: "Suppression non autorisée — activez-la dans Préférences." },
+        { error: "Deleting is not allowed — enable it in Preferences." },
         { status: 403 }
       );
     }
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       const trashPath = await deleteConfigFile(target);
       return NextResponse.json({ ok: true, trashPath });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de la suppression";
+      const msg = e instanceof Error ? e.message : "Delete failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
@@ -56,15 +57,16 @@ export async function POST(req: Request) {
   if (op === "reset") {
     if (!(await isAllowed(resource, "reset"))) {
       return NextResponse.json(
-        { error: "Réinitialisation non autorisée — activez-la dans Préférences." },
+        { error: "Reset is not allowed — enable it in Preferences." },
         { status: 403 }
       );
     }
     try {
-      const backupPath = await resetConfigFile(target);
+      const { locale } = await getT();
+      const backupPath = await resetConfigFile(target, locale);
       return NextResponse.json({ ok: true, backupPath });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de la réinitialisation";
+      const msg = e instanceof Error ? e.message : "Reset failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
@@ -72,14 +74,14 @@ export async function POST(req: Request) {
   // op === "write" : création (fichier absent) ou modification (fichier présent).
   const { raw } = body;
   if (typeof raw !== "string") {
-    return NextResponse.json({ error: "contenu manquant" }, { status: 400 });
+    return NextResponse.json({ error: "Missing content" }, { status: 400 });
   }
   const { exists } = await readConfigFile(target);
   const action = resource === "settings" ? "modify" : exists ? "modify" : "create";
   if (!(await isAllowed(resource, action))) {
-    const verb = action === "create" ? "Création" : "Modification";
+    const verb = action === "create" ? "Creating" : "Modifying";
     return NextResponse.json(
-      { error: `${verb} non autorisée — activez-la dans Préférences.` },
+      { error: `${verb} is not allowed — enable it in Preferences.` },
       { status: 403 }
     );
   }
@@ -91,10 +93,10 @@ export async function POST(req: Request) {
     // JSON.parse échoué sur une cible JSON, ou erreur FS.
     const msg =
       e instanceof SyntaxError
-        ? "JSON invalide — écriture annulée"
+        ? "Invalid JSON — write aborted"
         : e instanceof Error
           ? e.message
-          : "Échec de l'écriture";
+          : "Write failed";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

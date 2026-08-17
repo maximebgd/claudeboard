@@ -19,7 +19,7 @@ export async function GET() {
     const entries = await listTrash();
     return NextResponse.json({ ok: true, entries });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Échec de la lecture de la corbeille";
+    const msg = e instanceof Error ? e.message : "Failed to read trash";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
@@ -34,23 +34,23 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { op, id } = body;
 
   if (op === "restore") {
     if (typeof id !== "string" || !id) {
-      return NextResponse.json({ error: "id manquant" }, { status: 400 });
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
     const meta = await readTrashMeta(id);
     if (!meta) {
-      return NextResponse.json({ error: "Entrée introuvable" }, { status: 404 });
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
     // Si tu pouvais le supprimer, tu peux annuler la suppression.
     if (!isPermissionResource(meta.resource) || !(await isAllowed(meta.resource, "delete"))) {
       return NextResponse.json(
-        { error: "Restauration non autorisée — activez la suppression de cette ressource dans Préférences." },
+        { error: "Restore is not allowed — enable deletion of this resource in Preferences." },
         { status: 403 }
       );
     }
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       if (e instanceof TrashConflictError) {
         return NextResponse.json({ error: e.message }, { status: 409 });
       }
-      const msg = e instanceof Error ? e.message : "Échec de la restauration";
+      const msg = e instanceof Error ? e.message : "Restore failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   if (op === "empty") {
     if (!(await isAllowed("trash", "empty"))) {
       return NextResponse.json(
-        { error: "Vidage non autorisé — activez-le dans Préférences." },
+        { error: "Emptying is not allowed — enable it in Preferences." },
         { status: 403 }
       );
     }
@@ -77,18 +77,18 @@ export async function POST(req: Request) {
       const count = await emptyTrash();
       return NextResponse.json({ ok: true, count });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec du vidage";
+      const msg = e instanceof Error ? e.message : "Empty failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
   if (op === "delete") {
     if (typeof id !== "string" || !id) {
-      return NextResponse.json({ error: "id manquant" }, { status: 400 });
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
     if (!(await isAllowed("trash", "empty"))) {
       return NextResponse.json(
-        { error: "Suppression définitive non autorisée — activez le vidage dans Préférences." },
+        { error: "Permanent deletion is not allowed — enable emptying in Preferences." },
         { status: 403 }
       );
     }
@@ -96,10 +96,10 @@ export async function POST(req: Request) {
       await deleteTrashEntry(id);
       return NextResponse.json({ ok: true });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de la suppression";
+      const msg = e instanceof Error ? e.message : "Delete failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+  return NextResponse.json({ error: "Unknown op" }, { status: 400 });
 }
