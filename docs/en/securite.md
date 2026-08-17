@@ -51,8 +51,9 @@ The `/docs` page reads `docs/` (in the repo, outside `~/.claude`): it therefore 
 - Config file creations (`settings.local.json`, `keybindings.json`, global `CLAUDE.md`) via
   `writeConfigFile` are **explicit** (the "Create" flow in `ConfigEditor`).
 - **Deletions are never destructive**: they go through `moveToTrash` (`lib/trash.ts`), which
-  moves the file/folder to `CLAUDE_DIR/.claudeboard-trash/` (timestamped, reversible) instead
-  of erasing it.
+  moves the file/folder to `data/trash/<id>/` — **outside** `CLAUDE_DIR`, at the project root
+  (`TRASH_DIR` override) — instead of erasing it. Each entry keeps a restoration `meta.json`,
+  restorable or emptyable from `/config/trash` (emptying gated by `trash.empty`).
 
 > **claudeboard-specific state vs Claude config.** The data that does not belong to Claude
 > Code (favorites, pricing overrides, subscription choice, permissions, display preferences)

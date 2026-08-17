@@ -72,16 +72,28 @@ also shows its aggregated statistics (`getProjectStats`) above the list of sessi
   projects rise to the top of the list.
 - **Resume**: a session's page offers a `ResumeButton` that **copies** the
   `claude --resume <sessionId>` command to the clipboard (the app runs nothing).
+- **Export**: `ExportButton` downloads a session or a whole project as **Markdown** or
+  **standalone HTML** (`/api/export`, read-only, outside permissions). The project export
+  reproduces the site's rendering (KPIs, models, top tools, session list) as a standalone
+  mini-site.
 - **Deletion**: projects and sessions can be deleted (moved to the trash, via
   `/api/projects`) if the `projects.delete` permission is enabled.
+
+## Full-text search
+
+A **search** (`/search`, opened by the `SearchFab` visible on `/projects`) sweeps **read-only**
+across all transcripts, streamed line by line, ignoring case and accents. It scans `text`
+blocks by default (toggles for `thinking` and `tool_result`), groups results by session
+(most recent first) and highlights the excerpts. Outside permissions.
 
 ## Claude config (the "Config" section)
 
 - **Preferences** (`/config/preferences`): settings **specific to claudeboard**, grouped on
   a single page — **Write permissions** (`PermissionsMatrix`), **Estimation rates**
   (`PricingEditor`, overrides per family + cost formula), **Subscription**
-  (`SubscriptionSelector`: auto-detection or manual plan Pro / Max 5× / Max 20×) and
-  **Display** (`CostModeSelector`: the default value of the "Estimated cost" card).
+  (`SubscriptionSelector`: auto-detection from `~/.claude.json` or manual plan Pro /
+  Max 5× / Max 20×), **Display** (`CostModeSelector`: the default value of the "Estimated
+  cost" card) and **Language** (`LanguageSelector`: FR / EN).
 - **Settings**: editing `settings.json` and `settings.local.json` (JSON validated live +
   backup, `.local` created on demand); **reset** possible (`settings.reset`).
 - **Hooks**: a viewer grouped by event (merging both settings files) **and editing** of the
@@ -90,6 +102,9 @@ also shows its aggregated statistics (`getProjectStats`) above the list of sessi
 - **Agents** (`~/.claude/agents/*`) and **Commands** (`~/.claude/commands/**`):
   list/preview/**edit**/**create**/**delete** on the same model as skills (command
   subfolders = namespaces).
+- **Dependency graph** (`/config/graph`): **read-only** — who references whom among skills,
+  agents and commands (textual detection: `/command`, `@agent`, name in backticks), with a
+  client-side force-directed layout.
 - **Global CLAUDE.md**: markdown editor, creation if absent, **reset** and **delete**.
 - **MCP servers**: **read-only** view of the servers in `~/.claude.json` + auth status
   (`env` values masked).
@@ -98,6 +113,10 @@ also shows its aggregated statistics (`getProjectStats`) above the list of sessi
   Deliberately **outside** the permissions model.
 - **Keybindings** (`~/.claude/keybindings.json`): tabular preview + JSON editor, creation if
   absent, **reset** and **delete**.
+- **Trash** (`/config/trash`): items deleted from the app, stored **outside** `~/.claude`
+  (`data/trash/`). Each entry is **restorable** (refused if the target already exists) or can
+  be permanently deleted; the trash can be emptied. Restoration reuses the original
+  resource's `delete` permission; emptying/permanent deletion is gated by `trash.empty`.
 - **Folder structure**: an educational tree of the contents of `.claude/`.
 
 All the write actions above are **gated** by the corresponding permission (see *Write

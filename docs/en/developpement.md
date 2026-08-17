@@ -38,12 +38,18 @@ Use **`npm run build`** to check that a change compiles (strict TypeScript + ESL
 - **Permissions**: any new write action must be added to `PERMISSION_SCHEMA` (`lib/store.ts`)
   **and** guarded server-side behind `isAllowed(resource, action)`. Do not mix
   claudeboard-specific state (`data/claudeboard.json`) with the files in `~/.claude`.
-- **Deletions**: never destructive — go through `moveToTrash` (`lib/trash.ts`).
+- **Deletions**: never destructive — go through `moveToTrash` (`lib/trash.ts`), which moves
+  to `data/trash/` (outside `CLAUDE_DIR`).
+- **i18n (FR/EN)**: any new visible string ⇒ a key in **both fr and en**
+  (`lib/i18n/translations.ts`); a missing English string is a **compile error**. Keep
+  `lib/i18n/core.ts` isomorphic (no FS/store reads).
 - **Analytics**: keep the aggregation in the single pass of `getAnalytics` rather than
   multiplying FS scans.
 
 ## Updating this documentation
 
-The `/docs` pages are the `.md` files in the `docs/` folder. To add a page: create
-`docs/<lang>/<slug>.md` with a `title` / `description` / `order` frontmatter, and it will
-appear automatically in the site's table of contents (and on GitHub).
+The `/docs` pages are the `.md` files in the `docs/<lang>/` folders (one variant per
+language, e.g. `docs/fr/` and `docs/en/`). To add a page: create `docs/<lang>/<slug>.md`
+with a `title` / `description` / `order` frontmatter. **French is the source of truth** (it
+defines the full set of pages); a page without a translation automatically falls back to its
+French version.

@@ -52,8 +52,10 @@ La page `/docs` lit `docs/` (dans le repo, hors `~/.claude`) : elle n'utilise do
   `CLAUDE.md` global) via `writeConfigFile` sont **explicites** (flux « Créer » dans
   `ConfigEditor`).
 - Les **suppressions ne sont jamais destructives** : elles passent par `moveToTrash`
-  (`lib/trash.ts`), qui déplace le fichier/dossier vers `CLAUDE_DIR/.claudeboard-trash/`
-  (horodaté, réversible) au lieu de l'effacer.
+  (`lib/trash.ts`), qui déplace le fichier/dossier vers `data/trash/<id>/` — **hors** de
+  `CLAUDE_DIR`, à la racine du projet (override `TRASH_DIR`) — au lieu de l'effacer.
+  Chaque entrée conserve un `meta.json` de restauration, restaurable ou vidable depuis
+  `/config/trash` (vidage gated par `trash.empty`).
 
 > **État propre à claudeboard vs config Claude.** Les données qui n'appartiennent pas à
 > Claude Code (favoris, overrides de tarifs, choix d'abonnement, permissions, préférences

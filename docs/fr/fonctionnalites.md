@@ -74,16 +74,29 @@ la liste des sessions.
   les projets épinglés remontent en tête de liste.
 - **Reprise** : la page d'une session propose un `ResumeButton` qui **copie** la commande
   `claude --resume <sessionId>` dans le presse-papier (l'app n'exécute rien).
+- **Export** : `ExportButton` télécharge une session ou un projet entier en **Markdown** ou
+  en **HTML autonome** (`/api/export`, lecture seule, hors permissions). L'export projet
+  reprend le rendu du site (KPI, modèles, top outils, liste de sessions) sous forme de
+  mini-site autonome.
 - **Suppression** : projets et sessions sont supprimables (déplacement en corbeille, via
   `/api/projects`) si la permission `projects.delete` est activée.
+
+## Recherche full-text
+
+Une **recherche** (`/search`, ouverte par le `SearchFab` visible sur `/projects`) balaie
+**en lecture seule** tous les transcripts, ligne par ligne en streaming, casse et accents
+ignorés. Elle scanne les blocs `text` par défaut (toggles pour `thinking` et `tool_result`),
+groupe les résultats par session (récents d'abord) et surligne les extraits. Hors
+permissions.
 
 ## Config Claude (section « Config »)
 
 - **Préférences** (`/config/preferences`) : réglages **propres à claudeboard**, regroupés
   en une page — **Autorisations d'écriture** (`PermissionsMatrix`), **Tarifs d'estimation**
   (`PricingEditor`, overrides par famille + formule de coût), **Abonnement**
-  (`SubscriptionSelector` : auto-détection ou plan manuel Pro / Max 5× / Max 20×) et
-  **Affichage** (`CostModeSelector` : valeur par défaut de la carte « Coût estimé »).
+  (`SubscriptionSelector` : auto-détection depuis `~/.claude.json` ou plan manuel Pro /
+  Max 5× / Max 20×), **Affichage** (`CostModeSelector` : valeur par défaut de la carte
+  « Coût estimé ») et **Langue** (`LanguageSelector` : FR / EN).
 - **Settings** : édition de `settings.json` et `settings.local.json` (JSON validé live +
   backup, création de `.local` à la demande) ; **réinitialisation** possible (`settings.reset`).
 - **Hooks** : visualiseur groupé par event (fusion des deux settings) **et édition** du
@@ -92,6 +105,9 @@ la liste des sessions.
 - **Agents** (`~/.claude/agents/*`) et **Commandes** (`~/.claude/commands/**`) :
   liste/aperçu/**édition**/**création**/**suppression** sur le modèle des skills
   (sous-dossiers de commands = namespaces).
+- **Graphe de dépendances** (`/config/graph`) : **lecture seule** — qui référence qui entre
+  skills, agents et commandes (détection textuelle : `/commande`, `@agent`, nom en
+  backticks), avec un layout force-dirigé côté client.
 - **CLAUDE.md global** : éditeur markdown, création si absent, **réinitialisation** et
   **suppression**.
 - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` + statut d'auth
@@ -101,6 +117,11 @@ la liste des sessions.
   copiable). Volontairement **hors** du modèle d'autorisations.
 - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
   création si absent, **réinitialisation** et **suppression**.
+- **Corbeille** (`/config/trash`) : les éléments supprimés depuis l'app, stockés **hors** de
+  `~/.claude` (`data/trash/`). Chaque entrée est **restaurable** (refus si la cible existe)
+  ou supprimable définitivement ; la corbeille peut être vidée. La restauration réutilise le
+  `delete` de la ressource d'origine ; le vidage/suppression définitive est gated par
+  `trash.empty`.
 - **Structure du dossier** : arbre pédagogique du contenu de `.claude/`.
 
 Les actions d'écriture ci-dessus sont toutes **gated** par la permission correspondante

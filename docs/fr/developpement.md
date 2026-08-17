@@ -40,7 +40,11 @@ conflit avec un `npm run dev` déjà lancé.
   `PERMISSION_SCHEMA` (`lib/store.ts`) **et** gardée côté serveur derrière
   `isAllowed(resource, action)`. Ne mélangez pas l'état propre à claudeboard
   (`data/claudeboard.json`) avec les fichiers de `~/.claude`.
-- **Suppressions** : jamais destructives — passez par `moveToTrash` (`lib/trash.ts`).
+- **Suppressions** : jamais destructives — passez par `moveToTrash` (`lib/trash.ts`), qui
+  déplace vers `data/trash/` (hors `CLAUDE_DIR`).
+- **i18n (FR/EN)** : toute nouvelle chaîne visible ⇒ une clé dans **fr et en**
+  (`lib/i18n/translations.ts`) ; l'anglais manquant est une **erreur de compilation**.
+  Gardez `lib/i18n/core.ts` isomorphe (pas de lecture FS/store).
 - **Analytics** : gardez l'agrégation dans le passage unique de `getAnalytics` plutôt que
   de multiplier les scans du FS.
 
