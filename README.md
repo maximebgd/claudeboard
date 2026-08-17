@@ -9,7 +9,7 @@
 A **local** dashboard to analyze, browse and edit the Claude Code configuration stored in `~/.claude`.
 
 <p align="center">
-  <video src="https://github.com/maximebgd/claudeboard/raw/main/public/en/rec.mp4" controls muted></video>
+  <video src="https://github.com/user-attachments/assets/14018ef7-d160-4485-85fa-21c500fea2e8" controls muted></video>
 </p>
 
 > 🔒 **100% local — nothing ever leaves your machine.** claudeboard makes **zero network calls** with your data: no telemetry, no analytics, no external API, no cloud. **Absolutely everything stays on your disk.** It has read-only access to `~/.claude`, and read-write access to the project directory.
