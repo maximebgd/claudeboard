@@ -134,6 +134,8 @@ lib/
                surlignables, groupés par session (récents d'abord, plafonnés à 100)
   docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (hors CLAUDE_DIR, garde-fou dédié)
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
+  diff.ts      unifiedDiff **isomorphe** (LCS) : deux textes → lignes de diff unifié façon
+               `git diff` (hunks `@@`, ajouts/retraits/contexte) pour le panneau Versions
   i18n.ts      getT() (serveur) : lit la langue du store → { locale, t } lié
   i18n/core.ts     translate/tPlural **isomorphes** (types + données statiques only,
                bundlables client) ; interpolation `{var}`, pluriel `.one`/`.other`
@@ -179,7 +181,8 @@ components/
     lecture seule via `canWrite`) · SkillEditor · PermissionsMatrix · PermissionNotice ·
     DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
     LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList ·
-    BackupsPanel (panneau Versions replié : liste/aperçu/restaure les backups d'un fichier)
+    BackupsPanel (panneau Versions replié : liste les backups, diff `git diff` vs fichier
+    actuel via `diff.ts`, restaure)
   Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
     RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
     PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution
