@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   /** Endpoint POST recevant `body` (avec `op: "reset"`). */
@@ -28,10 +28,12 @@ export default function ResetButton({
   title,
   description,
   detail,
-  label = "Réinitialiser",
+  label,
   locked = false,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const resetLabel = label ?? t("reset.label");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +48,11 @@ export default function ResetButton({
         body: JSON.stringify({ op: "reset", ...body }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de la réinitialisation");
+      if (!res.ok) throw new Error(data.error || t("reset.failed"));
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setBusy(false);
     }
@@ -65,14 +67,14 @@ export default function ResetButton({
           setOpen(true);
         }}
         aria-disabled={locked || undefined}
-        title={locked ? LOCKED_HINT : undefined}
+        title={locked ? t("lockedHint") : undefined}
         className={`flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] ${
           locked
             ? "cursor-not-allowed opacity-40"
             : "hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
         }`}
       >
-        <RotateCcw size={14} /> {label}
+        <RotateCcw size={14} /> {resetLabel}
       </button>
       {error && (
         <div className="mt-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
@@ -84,7 +86,7 @@ export default function ResetButton({
         title={title}
         description={description}
         detail={detail}
-        confirmLabel={label}
+        confirmLabel={resetLabel}
         busy={busy}
         onCancel={() => setOpen(false)}
         onConfirm={doReset}

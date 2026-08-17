@@ -9,6 +9,7 @@ import {
   mdTemplate,
 } from "@/lib/mdEntries";
 import { isAllowed } from "@/lib/store";
+import { getT } from "@/lib/i18n";
 
 /**
  * Écrit / crée / supprime une entrée markdown (agents/commands). `op` : "write"
@@ -21,27 +22,27 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { kind, slug } = body;
   const op = body.op === "create" || body.op === "delete" ? body.op : "write";
   if (!isMdKind(kind)) {
-    return NextResponse.json({ error: "type inconnu" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown type" }, { status: 400 });
   }
   if (typeof slug !== "string" || !slug) {
-    return NextResponse.json({ error: "slug manquant" }, { status: 400 });
+    return NextResponse.json({ error: "Missing slug" }, { status: 400 });
   }
   // Les namespaces (sous-dossiers) sont autorisés via "/", mais pas la traversée.
   if (slug.includes("..") || slug.startsWith("/")) {
-    return NextResponse.json({ error: "slug invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
   }
-  const what = kind === "agents" ? "agents" : "commandes";
+  const what = kind === "agents" ? "agents" : "commands";
 
   if (op === "delete") {
     if (!(await isAllowed(kind, "delete"))) {
       return NextResponse.json(
-        { error: `Suppression des ${what} non autorisée — activez-la dans Préférences.` },
+        { error: `Deleting ${what} is not allowed — enable it in Preferences.` },
         { status: 403 }
       );
     }
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
       const trashPath = await deleteMdEntry(kind, slug);
       return NextResponse.json({ ok: true, trashPath });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de la suppression";
+      const msg = e instanceof Error ? e.message : "Delete failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
@@ -57,21 +58,22 @@ export async function POST(req: Request) {
   if (op === "create") {
     if (!isValidMdSlug(slug)) {
       return NextResponse.json(
-        { error: "Nom invalide (minuscules, chiffres, tirets ; « / » pour un namespace)." },
+        { error: "Invalid name (lowercase letters, digits, hyphens; use \"/\" for a namespace)." },
         { status: 400 }
       );
     }
     if (!(await isAllowed(kind, "create"))) {
       return NextResponse.json(
-        { error: `Création de ${what} non autorisée — activez-la dans Préférences.` },
+        { error: `Creating ${what} is not allowed — enable it in Preferences.` },
         { status: 403 }
       );
     }
     try {
-      await createMdEntry(kind, slug, mdTemplate(kind, slug));
+      const { locale } = await getT();
+      await createMdEntry(kind, slug, mdTemplate(kind, slug, locale));
       return NextResponse.json({ ok: true, slug });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de la création";
+      const msg = e instanceof Error ? e.message : "Create failed";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
   }
@@ -79,20 +81,20 @@ export async function POST(req: Request) {
   // op === "write" (modification d'une entrée existante)
   const { raw } = body;
   if (typeof raw !== "string") {
-    return NextResponse.json({ error: "contenu manquant" }, { status: 400 });
+    return NextResponse.json({ error: "Missing content" }, { status: 400 });
   }
   try {
     matter(raw);
   } catch {
     return NextResponse.json(
-      { error: "Frontmatter YAML invalide — écriture annulée" },
+      { error: "Invalid YAML frontmatter — write aborted" },
       { status: 400 }
     );
   }
 
   if (!(await isAllowed(kind, "modify"))) {
     return NextResponse.json(
-      { error: `Modification des ${what} non autorisée — activez-la dans Préférences.` },
+      { error: `Modifying ${what} is not allowed — enable it in Preferences.` },
       { status: 403 }
     );
   }
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
     const backupPath = await writeMdEntry(kind, slug, raw);
     return NextResponse.json({ ok: true, backupPath });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+    const msg = e instanceof Error ? e.message : "Write failed";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

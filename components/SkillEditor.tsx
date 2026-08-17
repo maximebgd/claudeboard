@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   slug: string;
@@ -19,6 +19,7 @@ interface Props {
 
 export default function SkillEditor({ slug, initialRaw, content, canWrite = true, rightActions }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialRaw);
   const [savedRaw, setSavedRaw] = useState(initialRaw);
@@ -39,7 +40,7 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
         body: JSON.stringify({ slug, raw: draft }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de l'écriture");
+      if (!res.ok) throw new Error(data.error || t("common.writeFailed"));
       setSavedRaw(draft);
       setConfirmOpen(false);
       setEditing(false);
@@ -47,7 +48,7 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
       setTimeout(() => setFlash(false), 2500);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setBusy(false);
     }
@@ -65,12 +66,12 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
                 setEditing(true);
               }}
               aria-disabled={!canWrite || undefined}
-              title={!canWrite ? LOCKED_HINT : undefined}
+              title={!canWrite ? t("lockedHint") : undefined}
               className={`flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm ${
                 canWrite ? "hover:bg-[var(--color-hover)]" : "cursor-not-allowed opacity-40"
               }`}
             >
-              <Pencil size={14} /> Éditer
+              <Pencil size={14} /> {t("editor.edit")}
             </button>
           ) : (
             <>
@@ -79,7 +80,7 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
                 disabled={!dirty}
                 className="flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90 disabled:opacity-40"
               >
-                <Save size={14} /> Enregistrer
+                <Save size={14} /> {t("editor.save")}
               </button>
               <button
                 onClick={() => {
@@ -89,14 +90,14 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
                 }}
                 className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
               >
-                <X size={14} /> Annuler
+                <X size={14} /> {t("common.cancel")}
               </button>
-              {dirty && <span className="text-xs text-amber-400">Modifications non enregistrées</span>}
+              {dirty && <span className="text-xs text-amber-400">{t("editor.unsaved")}</span>}
             </>
           )}
           {flash && (
             <span className="flex items-center gap-1 text-xs text-emerald-400">
-              <Check size={14} /> Enregistré (backup créé)
+              <Check size={14} /> {t("editor.savedBackup")}
             </span>
           )}
         </div>
@@ -124,9 +125,9 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Écrire dans SKILL.md ?"
-        description={`Le fichier du skill « ${slug} » va être écrasé. Une copie de sauvegarde horodatée (.bak) sera créée automatiquement.`}
-        confirmLabel="Écrire le fichier"
+        title={t("skillEditor.confirmTitle")}
+        description={t("skillEditor.confirmDesc", { slug })}
+        confirmLabel={t("editor.writeFile")}
         busy={busy}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={doSave}

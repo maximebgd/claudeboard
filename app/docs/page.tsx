@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { BookOpen, ArrowRight } from "lucide-react";
 import { listDocs } from "@/lib/docs";
+import { getT } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocsIndexPage() {
-  const docs = await listDocs();
+  const { t, locale } = await getT();
+  const docs = await listDocs(locale);
   return (
     <div>
       <h1 className="flex items-center gap-2 text-2xl font-semibold">
         <BookOpen size={22} className="text-[var(--color-accent)]" />
-        Documentation
+        {t("sidebar.docs")}
       </h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Guide de Claudeboard : prise en main, architecture, fonctionnalités, sécurité et
-        développement. Ces pages sont aussi versionnées en <code>.md</code> dans le repo.
-      </p>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">{t("docsIndex.subtitle")}</p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {docs.map((doc) => (

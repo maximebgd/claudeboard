@@ -4,27 +4,31 @@ import { getHooks, getHooksRaw } from "@/lib/hooks";
 import { isAllowed } from "@/lib/store";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
 import ConfigEditor from "@/components/ConfigEditor";
+import { getT } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
+import type { TranslationKey } from "@/lib/i18n/core";
 
 export const dynamic = "force-dynamic";
 
-/** Courte description de chaque event pour situer quand il se déclenche. */
-const EVENT_DESC: Record<string, string> = {
-  PreToolUse: "Avant l'exécution d'un outil (peut bloquer l'appel).",
-  PostToolUse: "Après l'exécution d'un outil.",
-  UserPromptSubmit: "À l'envoi d'un prompt utilisateur.",
-  Notification: "Sur les notifications de l'agent.",
-  Stop: "Quand l'agent principal s'arrête.",
-  SubagentStop: "Quand un sous-agent s'arrête.",
-  PreCompact: "Avant une compaction du contexte.",
-  SessionStart: "Au démarrage d'une session.",
-  SessionEnd: "À la fin d'une session.",
+/** Clé de traduction de la description de chaque event. */
+const EVENT_DESC_KEY: Record<string, TranslationKey> = {
+  PreToolUse: "hooks.evt.PreToolUse",
+  PostToolUse: "hooks.evt.PostToolUse",
+  UserPromptSubmit: "hooks.evt.UserPromptSubmit",
+  Notification: "hooks.evt.Notification",
+  Stop: "hooks.evt.Stop",
+  SubagentStop: "hooks.evt.SubagentStop",
+  PreCompact: "hooks.evt.PreCompact",
+  SessionStart: "hooks.evt.SessionStart",
+  SessionEnd: "hooks.evt.SessionEnd",
 };
 
 export default async function HooksPage() {
-  const [{ events, totalHooks, sources }, canWrite, hooksRaw] = await Promise.all([
+  const [{ events, totalHooks, sources }, canWrite, hooksRaw, { t }] = await Promise.all([
     getHooks(),
     isAllowed("hooks", "modify"),
     getHooksRaw(),
+    getT(),
   ]);
 
   return (
@@ -32,28 +36,25 @@ export default async function HooksPage() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Webhook size={22} className="text-[var(--color-accent)]" />
-          Hooks
+          {t("sidebar.hooks")}
         </h1>
         {!canWrite && <ReadOnlyBadge />}
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        {totalHooks} hook{totalHooks > 1 ? "s" : ""} sur {events.length} event
-        {events.length > 1 ? "s" : ""}, lus depuis settings.json + settings.local.json.
-        {canWrite
-          ? " Édite le bloc hooks de settings.json ci-dessous."
-          : " Vue en lecture seule."}
+        {tPlural(t, "hooks.hook", totalHooks)} {t("hooks.on")} {tPlural(t, "hooks.event", events.length)}, {t("hooks.readSource")}
+        {canWrite ? ` ${t("hooks.editHint")}` : ` ${t("hooks.readOnlyHint")}`}
       </p>
       <div className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
         {sources.map((s) => (
           <div key={s.file}>
-            {s.path} {s.hasHooks ? "· contient des hooks" : "· pas de hooks"}
+            {s.path} {s.hasHooks ? `· ${t("hooks.hasHooks")}` : `· ${t("hooks.noHooks")}`}
           </div>
         ))}
       </div>
 
       {events.length === 0 ? (
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-          Aucun hook configuré. Ajoute une clé <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5">hooks</code> dans{" "}
+          {t("hooks.emptyBefore")} <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5">hooks</code> {t("hooks.emptyIn")}{" "}
           <Link href="/config/settings" className="text-[var(--color-accent)] underline">
             settings.json
           </Link>
@@ -69,7 +70,7 @@ export default async function HooksPage() {
               <div className="flex items-baseline gap-2">
                 <h2 className="font-semibold text-[var(--color-accent)]">{ev.event}</h2>
                 <span className="text-xs text-[var(--color-muted)]">
-                  {EVENT_DESC[ev.event] || "Event de hook."}
+                  {EVENT_DESC_KEY[ev.event] ? t(EVENT_DESC_KEY[ev.event]) : t("hooks.eventFallback")}
                 </span>
               </div>
 
@@ -82,7 +83,7 @@ export default async function HooksPage() {
                     <div className="mb-2 flex items-center gap-2 text-xs">
                       <span className="text-[var(--color-muted)]">matcher</span>
                       <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5 text-[var(--color-fg)]">
-                        {m.matcher || "* (tous)"}
+                        {m.matcher || t("hooks.matcherAll")}
                       </code>
                       <span className="ml-auto text-[10px] text-[var(--color-faint)]">
                         {m.source}
@@ -116,14 +117,8 @@ export default async function HooksPage() {
       )}
 
       <section className="mt-10">
-        <h2 className="text-lg font-medium">Éditer les hooks</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-          Objet <code className="rounded bg-[var(--color-code)] px-1.5 py-0.5 font-mono text-[12px]">hooks</code>{" "}
-          de <code className="font-mono text-[12px]">settings.json</code> (event → matchers).
-          Ajouter, modifier ou supprimer un hook se fait ici. Un backup horodaté est créé à
-          chaque écriture. Les hooks de{" "}
-          <code className="font-mono text-[12px]">settings.local.json</code> ne sont pas touchés.
-        </p>
+        <h2 className="text-lg font-medium">{t("hooks.editTitle")}</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("hooks.editDesc")}</p>
         <ConfigEditor
           endpoint="/api/hooks"
           payload={{}}

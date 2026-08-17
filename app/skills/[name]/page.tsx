@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getSkill } from "@/lib/skills";
 import { formatDate } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
+import { getT } from "@/lib/i18n";
 import SkillEditor from "@/components/SkillEditor";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -16,10 +17,11 @@ export default async function SkillDetailPage({
 }) {
   const { name } = await params;
   const slug = decodeURIComponent(name);
-  const [skill, canWrite, canDelete] = await Promise.all([
+  const [skill, canWrite, canDelete, { t, locale }] = await Promise.all([
     getSkill(slug),
     isAllowed("skills", "modify"),
     isAllowed("skills", "delete"),
+    getT(),
   ]);
   if (!skill) notFound();
 
@@ -29,7 +31,7 @@ export default async function SkillDetailPage({
         href="/skills"
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
       >
-        <ArrowLeft size={15} /> Skills
+        <ArrowLeft size={15} /> {t("sidebar.skills")}
       </Link>
 
       <div className="mt-4 mb-6">
@@ -43,7 +45,7 @@ export default async function SkillDetailPage({
           <p className="mt-2 text-sm text-[var(--color-muted)]">{skill.description}</p>
         )}
         <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
-          {skill.path} · modifié le {formatDate(skill.updatedAt)}
+          {skill.path} · {t("common.modifiedOn", { date: formatDate(skill.updatedAt, locale) })}
         </p>
       </div>
 
@@ -56,10 +58,10 @@ export default async function SkillDetailPage({
           <DeleteButton
             endpoint="/api/skills"
             body={{ slug: skill.slug }}
-            label="Supprimer le skill"
-            title={`Supprimer le skill « ${skill.name} » ?`}
-            description="Le dossier du skill est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
-            confirmLabel="Supprimer"
+            label={t("skillDetail.delete")}
+            title={t("skillDetail.deleteTitle", { name: skill.name })}
+            description={t("skillDetail.deleteDesc")}
+            confirmLabel={t("common.delete")}
             redirectTo="/skills"
             locked={!canDelete}
             detail={

@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { translate, type Language } from "./i18n/core";
 
 /**
  * Fichiers de configuration « uniques » de ~/.claude (par opposition aux
@@ -92,20 +93,29 @@ export async function writeConfigFile(target: ConfigTarget, raw: string): Promis
   return backupPath;
 }
 
-/** Contenu « par défaut » restauré par une réinitialisation, selon la cible. */
-const RESET_TEMPLATE: Record<ConfigTarget, string> = {
-  settings: `{\n\n}\n`,
-  settingsLocal: `{\n\n}\n`,
-  keybindings: `{\n  "keybindings": []\n}\n`,
-  claudeMd: `# Instructions globales\n\n`,
-};
+/**
+ * Contenu « par défaut » restauré par une réinitialisation, selon la cible. Le
+ * CLAUDE.md global (markdown) est traduit dans la langue de l'UI ; les cibles JSON
+ * sont structurelles (non traduites).
+ */
+function resetTemplate(target: ConfigTarget, locale: Language): string {
+  switch (target) {
+    case "settings":
+    case "settingsLocal":
+      return `{\n\n}\n`;
+    case "keybindings":
+      return `{\n  "keybindings": []\n}\n`;
+    case "claudeMd":
+      return `# ${translate(locale, "claudeMd.template.title")}\n\n`;
+  }
+}
 
 /**
  * Réinitialise une cible à son contenu par défaut (backup préalable si le fichier
  * existait). Retourne le chemin du backup, ou null si le fichier n'existait pas.
  */
-export function resetConfigFile(target: ConfigTarget): Promise<string | null> {
-  return writeConfigFile(target, RESET_TEMPLATE[target]);
+export function resetConfigFile(target: ConfigTarget, locale: Language = "fr"): Promise<string | null> {
+  return writeConfigFile(target, resetTemplate(target, locale));
 }
 
 /**

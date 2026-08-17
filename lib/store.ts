@@ -63,10 +63,15 @@ export type Permissions = {
 /** Valeur affichée en premier par la carte KPI « Coût estimé » du dashboard. */
 export type CostCardMode = "usage" | "savings";
 
+/** Langue de l'interface claudeboard (français / anglais). */
+export type Language = "fr" | "en";
+
 /** Préférences d'affichage de claudeboard (réglages d'UI, pas de la config Claude). */
 export interface Preferences {
   /** `usage` = coût d'usage d'abord ; `savings` = économie d'abonnement d'abord. */
   costCardMode: CostCardMode;
+  /** Langue de l'interface (`fr` par défaut). */
+  language: Language;
 }
 
 export interface StoreData {
@@ -104,7 +109,7 @@ function defaults(): StoreData {
     permissions: buildPermissions(false),
     pricingOverrides: {},
     subscription: { plan: null, source: "auto" },
-    preferences: { costCardMode: "usage" },
+    preferences: { costCardMode: "usage", language: "fr" },
   };
 }
 
@@ -184,7 +189,10 @@ function normalize(raw: unknown): StoreData {
   }
   if (o.preferences && typeof o.preferences === "object") {
     const p = o.preferences as Record<string, unknown>;
-    d.preferences = { costCardMode: p.costCardMode === "savings" ? "savings" : "usage" };
+    d.preferences = {
+      costCardMode: p.costCardMode === "savings" ? "savings" : "usage",
+      language: p.language === "en" ? "en" : "fr",
+    };
   }
   return d;
 }
@@ -282,11 +290,16 @@ export async function getPreferences(): Promise<Preferences> {
  * Applique un patch partiel de préférences d'affichage et persiste. Les valeurs
  * invalides sont ignorées (on conserve l'existant). Retourne les préférences résultantes.
  */
-export async function setPreferences(patch: { costCardMode?: unknown }): Promise<Preferences> {
+export async function setPreferences(
+  patch: { costCardMode?: unknown; language?: unknown }
+): Promise<Preferences> {
   const current = await readStore();
   const next: Preferences = { ...current.preferences };
   if (patch.costCardMode === "usage" || patch.costCardMode === "savings") {
     next.costCardMode = patch.costCardMode;
+  }
+  if (patch.language === "fr" || patch.language === "en") {
+    next.language = patch.language;
   }
   await writeStore({ preferences: next });
   return next;

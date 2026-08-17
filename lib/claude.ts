@@ -1,5 +1,6 @@
 import os from "os";
 import path from "path";
+import type { Language } from "@/lib/store";
 
 /**
  * Racine de la configuration Claude Code. Surchargeable via CLAUDE_DIR pour les
@@ -22,12 +23,14 @@ export function safeResolve(...segments: string[]): string {
   return resolved;
 }
 
-/** Formate un timestamp (ms) en date lisible FR. */
-export function formatDate(ms: number | string | undefined): string {
+const bcp = (locale: Language) => (locale === "en" ? "en-US" : "fr-FR");
+
+/** Formate un timestamp (ms) en date lisible selon la locale (défaut FR). */
+export function formatDate(ms: number | string | undefined, locale: Language = "fr"): string {
   if (ms === undefined) return "—";
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("fr-FR", {
+  return d.toLocaleString(bcp(locale), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -37,39 +40,46 @@ export function formatDate(ms: number | string | undefined): string {
 }
 
 /**
- * Durée lisible et compacte en français (ex. « 1 an 2 mois », « 5 jours »,
- * « 3 h »). Utilisée pour l'ancienneté d'un projet.
+ * Durée lisible et compacte (ex. « 1 an 2 mois » / « 1 year 2 months »,
+ * « 5 jours » / « 5 days », « 3 h »). Utilisée pour l'ancienneté d'un projet.
  */
-export function formatDuration(ms: number): string {
+export function formatDuration(ms: number, locale: Language = "fr"): string {
   if (ms < 0) ms = 0;
   const min = Math.floor(ms / 60000);
   const hr = Math.floor(min / 60);
   const day = Math.floor(hr / 24);
   const year = Math.floor(day / 365);
   const month = Math.floor((day % 365) / 30);
+  const en = locale === "en";
+  const s = (n: number) => (n > 1 ? "s" : "");
   if (year >= 1) {
-    return month >= 1
-      ? `${year} an${year > 1 ? "s" : ""} ${month} mois`
-      : `${year} an${year > 1 ? "s" : ""}`;
+    const y = en ? `${year} year${s(year)}` : `${year} an${s(year)}`;
+    if (month < 1) return y;
+    return en ? `${y} ${month} month${s(month)}` : `${y} ${month} mois`;
   }
-  if (day >= 30) return `${Math.floor(day / 30)} mois`;
-  if (day >= 1) return `${day} jour${day > 1 ? "s" : ""}`;
+  if (day >= 30) {
+    const m = Math.floor(day / 30);
+    return en ? `${m} month${s(m)}` : `${m} mois`;
+  }
+  if (day >= 1) return en ? `${day} day${s(day)}` : `${day} jour${s(day)}`;
   if (hr >= 1) return `${hr} h`;
   if (min >= 1) return `${min} min`;
-  return "à l'instant";
+  return en ? "just now" : "à l'instant";
 }
 
-/** Durée écoulée depuis un timestamp, préfixée « il y a ». */
-export function formatRelative(ms: number | undefined): string {
+/** Durée écoulée depuis un timestamp, préfixée « il y a » / suffixée « ago ». */
+export function formatRelative(ms: number | undefined, locale: Language = "fr"): string {
   if (ms === undefined) return "—";
   const diff = Date.now() - ms;
-  if (diff < 60000) return "à l'instant";
-  return `il y a ${formatDuration(diff)}`;
+  if (diff < 60000) return locale === "en" ? "just now" : "à l'instant";
+  const d = formatDuration(diff, locale);
+  return locale === "en" ? `${d} ago` : `il y a ${d}`;
 }
 
-/** Taille de fichier lisible. */
-export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+/** Taille de fichier lisible (o/Ko/Mo en FR, B/KB/MB en EN). */
+export function formatSize(bytes: number, locale: Language = "fr"): string {
+  const u = locale === "en" ? ["B", "KB", "MB"] : ["o", "Ko", "Mo"];
+  if (bytes < 1024) return `${bytes} ${u[0]}`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${u[1]}`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} ${u[2]}`;
 }

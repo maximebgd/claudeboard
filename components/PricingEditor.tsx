@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, RotateCcw, Eraser, Check, AlertCircle } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 export interface PricingRow {
   in: number;
@@ -58,6 +59,7 @@ function parseCell(v: string): number | null {
  */
 export default function PricingEditor({ families, cols, defaults, initial }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [values, setValues] = useState<FormValues>(() => toForm(initial, cols, families));
   const [saved, setSaved] = useState<FormValues>(() => toForm(initial, cols, families));
   const [busy, setBusy] = useState(false);
@@ -110,7 +112,7 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
         row[c.key] = n;
       }
       if (!ok) {
-        setStatus({ kind: "error", msg: "Certaines valeurs sont invalides (nombres ≥ 0 attendus)." });
+        setStatus({ kind: "error", msg: t("pricing.invalidValues") });
         return;
       }
       if (isOverridden(fam.key)) overrides[fam.key] = row as PricingRow;
@@ -125,12 +127,12 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
         body: JSON.stringify({ section: "pricing", op: "save", overrides }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec");
+      if (!res.ok) throw new Error(data.error || t("common.failed"));
       setSaved(values);
-      setStatus({ kind: "ok", msg: "Tarifs enregistrés." });
+      setStatus({ kind: "ok", msg: t("pricing.saved") });
       router.refresh(); // recalcule les stats du dashboard avec les nouveaux tarifs
     } catch (e) {
-      setStatus({ kind: "error", msg: e instanceof Error ? e.message : "Échec de l'écriture" });
+      setStatus({ kind: "error", msg: e instanceof Error ? e.message : t("common.writeFailed") });
     } finally {
       setBusy(false);
     }
@@ -142,7 +144,7 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--color-code)] text-left text-xs text-[var(--color-muted)]">
-              <th className="px-4 py-2 font-medium">Famille</th>
+              <th className="px-4 py-2 font-medium">{t("pricing.family")}</th>
               {cols.map((c) => (
                 <th key={c.key} className="px-4 py-2 font-medium text-right">
                   {c.label}
@@ -166,7 +168,7 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
                     {fam.label}
                     {isOverridden(fam.key) && (
                       <span className="rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]">
-                        modifié
+                        {t("pricing.modified")}
                       </span>
                     )}
                   </span>
@@ -206,7 +208,7 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
           className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Save size={15} />
-          {busy ? "Enregistrement…" : "Sauvegarder"}
+          {busy ? t("perm.saving") : t("perm.save")}
         </button>
         <button
           onClick={revert}
@@ -214,16 +216,16 @@ export default function PricingEditor({ families, cols, defaults, initial }: Pro
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-fg)] disabled:opacity-40"
         >
           <RotateCcw size={15} />
-          Annuler
+          {t("common.cancel")}
         </button>
         <button
           onClick={fillDefaults}
           disabled={busy}
-          title="Remettre tous les tarifs à leurs valeurs par défaut"
+          title={t("pricing.resetTitle")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:opacity-40"
         >
           <Eraser size={15} />
-          Réinitialiser
+          {t("reset.label")}
         </button>
         {status && (
           <span

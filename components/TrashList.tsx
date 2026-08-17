@@ -15,7 +15,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
+import { tPlural } from "@/lib/i18n/core";
+import type { TranslationKey } from "@/lib/i18n/core";
 
 export interface TrashRow {
   id: string;
@@ -31,13 +33,13 @@ export interface TrashRow {
   deletedLabel: string;
 }
 
-const SCOPE_LABEL: Record<string, string> = {
-  skill: "Skill",
-  agent: "Agent",
-  command: "Commande",
-  project: "Projet",
-  session: "Session",
-  config: "Config",
+const SCOPE_LABEL_KEY: Record<string, TranslationKey> = {
+  skill: "trash.scope.skill",
+  agent: "trash.scope.agent",
+  command: "trash.scope.command",
+  project: "trash.scope.project",
+  session: "trash.scope.session",
+  config: "trash.scope.config",
 };
 
 // Icône par type d'élément (alignée sur la Sidebar), plutôt que fichier/dossier.
@@ -58,6 +60,7 @@ export default function TrashList({
   canEmpty: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | { kind: "empty" } | { kind: "delete"; row: TrashRow }>(
@@ -74,11 +77,11 @@ export default function TrashList({
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de l'opération");
+      if (!res.ok) throw new Error(data.error || t("trash.opFailed"));
       router.refresh();
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
       return false;
     } finally {
       setBusyId(null);
@@ -105,11 +108,7 @@ export default function TrashList({
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--color-muted)]">
-          {entries.length === 0
-            ? "La corbeille est vide."
-            : `${entries.length} élément${entries.length > 1 ? "s" : ""} supprimé${
-                entries.length > 1 ? "s" : ""
-              }.`}
+          {entries.length === 0 ? t("trash.isEmpty") : tPlural(t, "trash.count", entries.length)}
         </p>
         <button
           onClick={() => {
@@ -118,14 +117,14 @@ export default function TrashList({
             setConfirm({ kind: "empty" });
           }}
           aria-disabled={!canEmpty || entries.length === 0 || undefined}
-          title={!canEmpty ? LOCKED_HINT : undefined}
+          title={!canEmpty ? t("lockedHint") : undefined}
           className={`flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-400 ${
             !canEmpty || entries.length === 0
               ? "cursor-not-allowed opacity-40"
               : "hover:bg-red-500/10"
           }`}
         >
-          <Trash2 size={14} /> Vider la corbeille
+          <Trash2 size={14} /> {t("trash.emptyBtn")}
         </button>
       </div>
 
@@ -141,9 +140,9 @@ export default function TrashList({
             const restoreLocked = !row.canRestore;
             const restoreBlocked = !row.restorable;
             const restoreTitle = restoreLocked
-              ? LOCKED_HINT
+              ? t("lockedHint")
               : restoreBlocked
-                ? "Un élément porte déjà ce nom à l'emplacement d'origine — supprimez ou renommez la cible avant de restaurer."
+                ? t("trash.restoreBlocked")
                 : undefined;
             const rowBusy = busyId === row.id;
             const Icon = SCOPE_ICON[row.scope] ?? File;
@@ -159,7 +158,7 @@ export default function TrashList({
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{row.label}</span>
                     <span className="shrink-0 rounded-md border border-[var(--color-border)] px-1.5 py-0.5 text-[11px] text-[var(--color-muted)]">
-                      {SCOPE_LABEL[row.scope] ?? row.scope}
+                      {SCOPE_LABEL_KEY[row.scope] ? t(SCOPE_LABEL_KEY[row.scope]) : row.scope}
                     </span>
                   </div>
                   <div className="truncate font-mono text-[11px] text-[var(--color-faint)]">
@@ -180,7 +179,7 @@ export default function TrashList({
                     } disabled:opacity-40`}
                   >
                     <Undo2 size={14} />
-                    {rowBusy ? "…" : "Restaurer"}
+                    {rowBusy ? "…" : t("trash.restore")}
                   </button>
                   <button
                     onClick={() => {
@@ -190,7 +189,7 @@ export default function TrashList({
                     }}
                     disabled={busy}
                     aria-disabled={!canEmpty || undefined}
-                    title={!canEmpty ? LOCKED_HINT : "Supprimer définitivement"}
+                    title={!canEmpty ? t("lockedHint") : t("trash.deletePermanent")}
                     className={`flex items-center rounded-lg border border-red-500/40 p-1.5 text-red-400 ${
                       !canEmpty ? "cursor-not-allowed opacity-40" : "hover:bg-red-500/10"
                     } disabled:opacity-40`}
@@ -208,15 +207,15 @@ export default function TrashList({
         open={confirm !== null}
         title={
           confirm?.kind === "delete"
-            ? `Supprimer « ${confirm.row.label} » définitivement ?`
-            : "Vider la corbeille ?"
+            ? t("trash.deleteTitle", { label: confirm.row.label })
+            : t("trash.emptyTitle")
         }
         description={
           confirm?.kind === "delete"
-            ? "Cette entrée sera supprimée définitivement — cette action est irréversible."
-            : `Les ${entries.length} élément${entries.length > 1 ? "s" : ""} de la corbeille seront supprimés définitivement — cette action est irréversible.`
+            ? t("trash.deleteDesc")
+            : tPlural(t, "trash.emptyDesc", entries.length)
         }
-        confirmLabel={confirm?.kind === "delete" ? "Supprimer définitivement" : "Vider"}
+        confirmLabel={confirm?.kind === "delete" ? t("trash.deletePermanent") : t("trash.emptyConfirm")}
         busy={busy}
         onCancel={() => (busy ? undefined : setConfirm(null))}
         onConfirm={confirmAction}

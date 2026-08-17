@@ -1,5 +1,6 @@
 import { getSession, listSessions, listProjects, projectLabel } from "@/lib/projects";
 import { getProjectStats } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 import {
   sessionToMarkdown,
   sessionToHtml,
@@ -31,16 +32,18 @@ export async function GET(req: Request) {
   const includeStats = statsParam !== "0" && statsParam !== "none";
 
   if (format !== "md" && format !== "html") {
-    return new Response("format invalide", { status: 400 });
+    return new Response("Invalid format", { status: 400 });
   }
   if (!projectId || projectId.includes("/") || projectId.includes("..")) {
-    return new Response("projet invalide", { status: 400 });
+    return new Response("Invalid project", { status: 400 });
   }
 
   const contentType =
     format === "html" ? "text/html; charset=utf-8" : "text/markdown; charset=utf-8";
 
   try {
+    // Langue de claudeboard (store) : traduit les libellés de l'app dans l'export.
+    const i18n = await getT();
     // Chemin réel du projet (best-effort) pour un en-tête lisible.
     const projects = await listProjects();
     const meta = projects.find((p) => p.id === projectId);
@@ -49,14 +52,14 @@ export async function GET(req: Request) {
 
     if (scope === "session") {
       if (!sessionId || sessionId.includes("/") || sessionId.includes("..")) {
-        return new Response("session invalide", { status: 400 });
+        return new Response("Invalid session", { status: 400 });
       }
       const session = await getSession(projectId, sessionId);
-      if (!session) return new Response("session introuvable", { status: 404 });
+      if (!session) return new Response("Session not found", { status: 404 });
       const out =
         format === "html"
-          ? await sessionToHtml(session, realPath)
-          : sessionToMarkdown(session, realPath);
+          ? await sessionToHtml(session, realPath, i18n)
+          : sessionToMarkdown(session, realPath, i18n);
       const filename = exportFilename(`${label}-${session.title}`, format);
       return new Response(out, {
         headers: {
@@ -77,12 +80,12 @@ export async function GET(req: Request) {
         if (full) sessions.push(full);
       }
       if (sessions.length === 0) {
-        return new Response("aucune session à exporter", { status: 404 });
+        return new Response("No session to export", { status: 404 });
       }
       const out =
         format === "html"
-          ? await projectToHtml(realPath, label, sessions, stats, metas, includeStats)
-          : projectToMarkdown(realPath, label, sessions, stats, metas, includeStats);
+          ? await projectToHtml(realPath, label, sessions, stats, metas, i18n, includeStats)
+          : projectToMarkdown(realPath, label, sessions, stats, metas, i18n, includeStats);
       const filename = exportFilename(label, format);
       return new Response(out, {
         headers: {
@@ -92,9 +95,9 @@ export async function GET(req: Request) {
       });
     }
 
-    return new Response("scope inconnu", { status: 400 });
+    return new Response("Unknown scope", { status: 400 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Échec de l'export";
+    const msg = e instanceof Error ? e.message : "Export failed";
     return new Response(msg, { status: 500 });
   }
 }

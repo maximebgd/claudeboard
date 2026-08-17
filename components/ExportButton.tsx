@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Upload, FileText, FileCode, ChevronDown } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   scope: "session" | "project";
@@ -16,7 +17,8 @@ interface Props {
  * Déclenche un téléchargement direct via `/api/export` (rien n'est écrit dans
  * ~/.claude). Menu déroulant pour choisir le format.
  */
-export default function ExportButton({ scope, projectId, sessionId, label = "Exporter" }: Props) {
+export default function ExportButton({ scope, projectId, sessionId, label }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [includeStats, setIncludeStats] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
@@ -43,10 +45,10 @@ export default function ExportButton({ scope, projectId, sessionId, label = "Exp
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Exporter en Markdown ou HTML"
+        title={t("export.title")}
         className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
       >
-        <Upload size={14} /> {label}
+        <Upload size={14} /> {label ?? t("export.default")}
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
@@ -60,9 +62,9 @@ export default function ExportButton({ scope, projectId, sessionId, label = "Exp
                 className="mt-0.5 accent-[var(--color-accent)]"
               />
               <span>
-                Inclure les statistiques
+                {t("export.includeStats")}
                 <span className="mt-0.5 block text-[10px] leading-tight text-[var(--color-faint)]">
-                  KPI, tokens in/out, modèles, outils &amp; skills
+                  {t("export.includeStatsHint")}
                 </span>
               </span>
             </label>

@@ -6,6 +6,8 @@ import type { StreakStat } from "@/lib/analytics";
 import ActivityHeatmap, { type HeatDay } from "./ActivityHeatmap";
 import TrendChart, { type TrendPoint } from "./TrendChart";
 import DayDetail, { type DetailCell } from "./DayDetail";
+import { useTranslation } from "@/components/I18nProvider";
+import type { Language } from "@/lib/i18n/core";
 
 /**
  * Section « Activité » du dashboard : bascule entre la heatmap (grille façon GitHub)
@@ -24,8 +26,8 @@ const seg = (on: boolean) =>
   }`;
 
 /** Jour `YYYY-MM-DD` (UTC) → « 13 juil. » (cohérent avec les clés de la heatmap). */
-function fmtDay(dayKey: string): string {
-  return new Date(dayKey + "T00:00:00Z").toLocaleDateString("fr-FR", {
+function fmtDay(dayKey: string, locale: Language): string {
+  return new Date(dayKey + "T00:00:00Z").toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -38,22 +40,24 @@ function fmtDay(dayKey: string): string {
  * rendu s'il n'y a aucun historique.
  */
 function StreakBadge({ streak }: { streak: StreakStat }) {
+  const { t, locale } = useTranslation();
   if (streak.longest === 0) return null;
   const alive = streak.current > 0;
-  const j = (n: number) => (n > 1 ? "jours" : "jour");
+  const dayWord = (n: number) => (n > 1 ? t("activity.day.other") : t("activity.day.one"));
   const range =
     streak.longestEnd && streak.longestEnd !== streak.longestStart
-      ? ` (${fmtDay(streak.longestStart)} – ${fmtDay(streak.longestEnd)})`
+      ? ` (${fmtDay(streak.longestStart, locale)} – ${fmtDay(streak.longestEnd, locale)})`
       : streak.longestStart
-        ? ` (${fmtDay(streak.longestStart)})`
+        ? ` (${fmtDay(streak.longestStart, locale)})`
         : "";
   const state =
     streak.current === 0
-      ? "Série interrompue"
+      ? t("activity.streakBroken")
       : streak.activeToday
-        ? "Série en cours · actif aujourd'hui"
-        : "Série en cours";
-  const title = `${state} : ${streak.current} ${j(streak.current)} · Record : ${streak.longest} ${j(
+        ? t("activity.streakActiveToday")
+        : t("activity.streakOngoing");
+  const dUnit = locale === "en" ? "d" : "j";
+  const title = `${state} : ${streak.current} ${dayWord(streak.current)} · ${t("activity.record")} : ${streak.longest} ${dayWord(
     streak.longest,
   )}${range}`;
 
@@ -66,8 +70,8 @@ function StreakBadge({ streak }: { streak: StreakStat }) {
         size={12}
         className={alive ? "text-[var(--color-accent)]" : "text-[var(--color-faint)]"}
       />
-      <span className="tabular-nums font-medium">{streak.current}j</span>
-      <span className="text-[var(--color-faint)]">· record {streak.longest}</span>
+      <span className="tabular-nums font-medium">{streak.current}{dUnit}</span>
+      <span className="text-[var(--color-faint)]">· {t("activity.recordShort")} {streak.longest}</span>
     </span>
   );
 }
@@ -83,6 +87,7 @@ export default function ActivityPanel({
   windowFrom?: string;
   windowTo?: string;
 }) {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>("heatmap");
   const [hover, setHover] = useState<DetailCell | null>(null);
   const [selected, setSelected] = useState<DetailCell | null>(null);
@@ -104,14 +109,14 @@ export default function ActivityPanel({
   const header = (
     <div className="mb-4 flex items-center gap-2">
       <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
-      <h2 className="eyebrow text-[var(--color-muted)]">Activité · 12 derniers mois</h2>
+      <h2 className="eyebrow text-[var(--color-muted)]">{t("activity.title")}</h2>
       <StreakBadge streak={streak} />
       <div className="ml-auto inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] p-0.5">
         <button type="button" onClick={() => switchView("heatmap")} className={seg(view === "heatmap")}>
-          <LayoutGrid size={12} /> Heatmap
+          <LayoutGrid size={12} /> {t("activity.heatmap")}
         </button>
         <button type="button" onClick={() => switchView("trend")} className={seg(view === "trend")}>
-          <TrendingUp size={12} /> Courbe
+          <TrendingUp size={12} /> {t("activity.curve")}
         </button>
       </div>
     </div>
@@ -142,13 +147,13 @@ export default function ActivityPanel({
             <div className="absolute inset-0">
               <TrendChart
                 points={trendPoints}
-                series={[{ label: "Messages", color: "var(--color-accent)" }]}
+                series={[{ label: t("dash.messages"), color: "var(--color-accent)" }]}
                 windowFrom={windowFrom}
                 windowTo={windowTo}
                 selectedDate={selected?.key ?? null}
                 onHoverDate={(date) => setHover(date ? cellFor(date) : null)}
                 onSelectDate={(date) => select(cellFor(date))}
-                emptyLabel="Aucune activité sur cette période."
+                emptyLabel={t("activity.empty")}
                 fill
               />
             </div>

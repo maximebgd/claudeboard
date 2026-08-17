@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
+import type { Language } from "@/lib/i18n/core";
 
 /**
  * Sélecteur de fenêtre temporelle du dashboard. Presets rapides (Tout / 30 j / 7 j)
@@ -12,17 +14,22 @@ import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-r
  * la résolution en bornes epoch se fait côté page.
  */
 
-const PRESETS = [
-  { key: "all", label: "Tout" },
-  { key: "30j", label: "30 j" },
-  { key: "7j", label: "7 j" },
-] as const;
+const PRESET_KEYS = ["all", "30j", "7j"] as const;
 
-const MONTHS_SHORT = [
+const bcp = (locale: Language) => (locale === "en" ? "en-US" : "fr-FR");
+
+const MONTHS_SHORT_FR = [
   "janv.", "févr.", "mars", "avr.", "mai", "juin",
   "juil.", "août", "sept.", "oct.", "nov.", "déc.",
 ];
-const WEEKDAYS = ["lu", "ma", "me", "je", "ve", "sa", "di"];
+const MONTHS_SHORT_EN = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const WEEKDAYS_FR = ["lu", "ma", "me", "je", "ve", "sa", "di"];
+const WEEKDAYS_EN = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const monthsShort = (l: Language) => (l === "en" ? MONTHS_SHORT_EN : MONTHS_SHORT_FR);
+const weekdays = (l: Language) => (l === "en" ? WEEKDAYS_EN : WEEKDAYS_FR);
 
 export interface RangeSelectorProps {
   activeKey: string;
@@ -45,16 +52,16 @@ function todayYmd(): string {
   return ymd(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-function fmtMonthLabel(m: string): string {
+function fmtMonthLabel(m: string, locale: Language, fallback: string): string {
   const [y, mo] = m.split("-").map(Number);
-  if (!y || !mo) return "Mois";
-  return new Date(y, mo - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  if (!y || !mo) return fallback;
+  return new Date(y, mo - 1, 1).toLocaleDateString(bcp(locale), { month: "long", year: "numeric" });
 }
 
-function fmtDayShort(d: string): string {
+function fmtDayShort(d: string, locale: Language): string {
   const [y, m, day] = d.split("-").map(Number);
   if (!y) return d;
-  return new Date(y, m - 1, day).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return new Date(y, m - 1, day).toLocaleDateString(bcp(locale), { day: "numeric", month: "short" });
 }
 
 /* ---------------------------------- chips --------------------------------- */
@@ -74,7 +81,17 @@ const navBtn =
 
 /* ------------------------------- MonthPicker ------------------------------ */
 
-function MonthPicker({ value, onPick }: { value: string; onPick: (m: string) => void }) {
+function MonthPicker({
+  value,
+  onPick,
+  locale,
+  t,
+}: {
+  value: string;
+  onPick: (m: string) => void;
+  locale: Language;
+  t: (key: "range.prevYear" | "range.nextYear") => string;
+}) {
   const now = new Date();
   const [vy] = value.split("-").map(Number);
   const [year, setYear] = useState(vy || now.getFullYear());
@@ -84,7 +101,7 @@ function MonthPicker({ value, onPick }: { value: string; onPick: (m: string) => 
   return (
     <div className="w-56">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" className={navBtn} onClick={() => setYear((y) => y - 1)} aria-label="Année précédente">
+        <button type="button" className={navBtn} onClick={() => setYear((y) => y - 1)} aria-label={t("range.prevYear")}>
           <ChevronLeft size={15} />
         </button>
         <span className="font-mono text-sm font-medium tabular-nums">{year}</span>
@@ -93,13 +110,13 @@ function MonthPicker({ value, onPick }: { value: string; onPick: (m: string) => 
           className={navBtn}
           onClick={() => setYear((y) => Math.min(curY, y + 1))}
           disabled={year >= curY}
-          aria-label="Année suivante"
+          aria-label={t("range.nextYear")}
         >
           <ChevronRight size={15} className={year >= curY ? "opacity-30" : ""} />
         </button>
       </div>
       <div className="grid grid-cols-3 gap-1">
-        {MONTHS_SHORT.map((label, i) => {
+        {monthsShort(locale).map((label, i) => {
           const key = ymd(year, i, 1).slice(0, 7);
           const on = key === value;
           const future = year > curY || (year === curY && i > curM);
@@ -132,10 +149,14 @@ function DayPicker({
   from,
   to,
   onApply,
+  locale,
+  t,
 }: {
   from: string;
   to: string;
   onApply: (from: string, to: string) => void;
+  locale: Language;
+  t: (key: "range.apply" | "range.prevMonth" | "range.nextMonth") => string;
 }) {
   const today = todayYmd();
   const init = from || today;
@@ -180,22 +201,22 @@ function DayPicker({
       return { y: y + Math.floor(nm / 12), m: ((nm % 12) + 12) % 12 };
     });
 
-  const monthLabel = new Date(view.y, view.m, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const monthLabel = new Date(view.y, view.m, 1).toLocaleDateString(bcp(locale), { month: "long", year: "numeric" });
 
   return (
     <div className="w-64">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" className={navBtn} onClick={() => shift(-1)} aria-label="Mois précédent">
+        <button type="button" className={navBtn} onClick={() => shift(-1)} aria-label={t("range.prevMonth")}>
           <ChevronLeft size={15} />
         </button>
         <span className="font-mono text-sm font-medium capitalize tabular-nums">{monthLabel}</span>
-        <button type="button" className={navBtn} onClick={() => shift(1)} aria-label="Mois suivant">
+        <button type="button" className={navBtn} onClick={() => shift(1)} aria-label={t("range.nextMonth")}>
           <ChevronRight size={15} />
         </button>
       </div>
 
       <div className="mb-1 grid grid-cols-7 gap-0.5">
-        {WEEKDAYS.map((w) => (
+        {weekdays(locale).map((w) => (
           <span key={w} className="text-center font-mono text-[10px] uppercase text-[var(--color-faint)]">
             {w}
           </span>
@@ -235,7 +256,7 @@ function DayPicker({
 
       <div className="mt-2.5 flex items-center justify-between gap-2">
         <span className="font-mono text-[11px] text-[var(--color-muted)] tabular-nums">
-          {start ? fmtDayShort(start) : "…"} → {end ? fmtDayShort(end) : "…"}
+          {start ? fmtDayShort(start, locale) : "…"} → {end ? fmtDayShort(end, locale) : "…"}
         </span>
         <button
           type="button"
@@ -243,7 +264,7 @@ function DayPicker({
           disabled={!start || !end}
           className="rounded-md bg-[var(--color-accent)] px-3 py-1 font-mono text-xs text-white transition-opacity hover:opacity-90 disabled:opacity-40"
         >
-          Appliquer
+          {t("range.apply")}
         </button>
       </div>
     </div>
@@ -254,8 +275,14 @@ function DayPicker({
 
 export default function RangeSelector({ activeKey, month, from, to }: RangeSelectorProps) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState<null | "month" | "custom">(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const PRESETS = PRESET_KEYS.map((key) => ({
+    key,
+    label: key === "all" ? t("range.all") : key === "30j" ? t("range.30d") : t("range.7d"),
+  }));
 
   // Ferme le popover au clic extérieur ou sur Échap.
   useEffect(() => {
@@ -277,9 +304,11 @@ export default function RangeSelector({ activeKey, month, from, to }: RangeSelec
     router.push(href, { scroll: false });
   };
 
-  const monthLabel = activeKey === "month" ? fmtMonthLabel(month) : "Mois";
+  const monthLabel = activeKey === "month" ? fmtMonthLabel(month, locale, t("range.month")) : t("range.month");
   const customLabel =
-    activeKey === "custom" && from && to ? `${fmtDayShort(from)} – ${fmtDayShort(to)}` : "Période";
+    activeKey === "custom" && from && to
+      ? `${fmtDayShort(from, locale)} – ${fmtDayShort(to, locale)}`
+      : t("range.custom");
 
   return (
     <div
@@ -317,13 +346,19 @@ export default function RangeSelector({ activeKey, month, from, to }: RangeSelec
 
       {open === "month" && (
         <div className={popover}>
-          <MonthPicker value={month} onPick={(m) => nav(`/?range=month&month=${m}`)} />
+          <MonthPicker value={month} onPick={(m) => nav(`/?range=month&month=${m}`)} locale={locale} t={t} />
         </div>
       )}
 
       {open === "custom" && (
         <div className={popover}>
-          <DayPicker from={from} to={to} onApply={(f, t) => nav(`/?range=custom&from=${f}&to=${t}`)} />
+          <DayPicker
+            from={from}
+            to={to}
+            onApply={(f, tt) => nav(`/?range=custom&from=${f}&to=${tt}`)}
+            locale={locale}
+            t={t}
+          />
         </div>
       )}
     </div>

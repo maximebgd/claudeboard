@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   open: boolean;
@@ -18,11 +19,12 @@ export default function ConfirmDialog({
   title,
   description,
   detail,
-  confirmLabel = "Confirmer",
+  confirmLabel,
   busy = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const { t } = useTranslation();
   if (!open) return null;
   return (
     <div
@@ -53,14 +55,14 @@ export default function ConfirmDialog({
             disabled={busy}
             className="rounded-lg px-4 py-2 text-sm text-[var(--color-fg)] hover:bg-[var(--color-hover)] disabled:opacity-50"
           >
-            Annuler
+            {t("common.cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
             className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "En cours…" : confirmLabel}
+            {busy ? t("common.inProgress") : confirmLabel ?? t("common.confirm")}
           </button>
         </div>
       </div>

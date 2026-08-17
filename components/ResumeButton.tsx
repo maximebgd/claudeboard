@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Play, Check, Copy } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 /** Commande CLI pour reprendre une session Claude Code. */
 function resumeCommand(sessionId: string) {
@@ -22,6 +23,7 @@ async function copyToClipboard(text: string, onCopied: () => void) {
  * `CopyCommand` de PluginCatalog — l'exécution reste du ressort du CLI).
  */
 export function ResumeCommand({ sessionId }: { sessionId: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const command = resumeCommand(sessionId);
 
@@ -40,11 +42,11 @@ export function ResumeCommand({ sessionId }: { sessionId: string }) {
       <button
         type="button"
         onClick={copy}
-        title="Copier la commande"
+        title={t("resume.copyCommand")}
         className="flex items-center gap-1 rounded border border-[var(--color-border)] px-1.5 py-1 text-[10px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
       >
         {copied ? <Check size={11} /> : <Copy size={11} />}
-        {copied ? "copié" : "copier"}
+        {copied ? t("resume.copied") : t("resume.copy")}
       </button>
     </div>
   );
@@ -61,6 +63,7 @@ export default function ResumeButton({
   sessionId: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   function copy() {
@@ -74,11 +77,11 @@ export default function ResumeButton({
     <button
       type="button"
       onClick={copy}
-      title={`Copier « ${resumeCommand(sessionId)} »`}
+      title={t("resume.copyTitle", { cmd: resumeCommand(sessionId) })}
       className={`flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors ${className}`}
     >
       {copied ? <Check size={13} /> : <Play size={13} />}
-      {copied ? "copié" : "Reprendre"}
+      {copied ? t("resume.copied") : t("resume.resume")}
     </button>
   );
 }

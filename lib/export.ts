@@ -4,64 +4,98 @@ import remarkGfm from "remark-gfm";
 import type { Block, Session, SessionMeta } from "./projects";
 import type { ProjectStats } from "./analytics";
 import { formatSize } from "./claude";
+import type { ServerI18n } from "./i18n";
+import type { Language } from "./i18n/core";
 
 /**
  * Export **lecture seule** d'une session (ou d'un projet entier) en Markdown ou
  * HTML autonome, pour partage/archive. Aucune écriture dans ~/.claude : le rendu
  * est produit à la volée et servi en téléchargement par `/api/export`.
+ *
+ * Les libellés de l'app (titres, en-têtes, unités…) sont traduits selon la langue
+ * de claudeboard : chaque fonction d'export reçoit un `ServerI18n` (cf. `getT`) que
+ * l'on transforme en `ExportCtx` (traduction + formatage localisé). Le contenu venant
+ * des transcripts (titres de session, messages, outils) n'est jamais traduit.
  */
 
 export type ExportFormat = "md" | "html";
 
-const ROLE_LABEL: Record<Session["events"][number]["role"], string> = {
-  user: "Vous",
-  assistant: "Claude",
-};
+/** Tag Intl par langue (formatage des nombres, montants, dates). */
+const LOCALE_TAG: Record<Language, string> = { fr: "fr-FR", en: "en-US" };
 
-const compactNum = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
-const fullNum = new Intl.NumberFormat("fr-FR");
-
-/** Nombre compact au-delà de 10 000 (comme sur les pages du dashboard). */
-function fmtNum(n: number): string {
-  return n >= 10000 ? compactNum.format(n) : fullNum.format(n);
+/**
+ * Contexte d'export : traduction (`t`) + formatage localisé. Construit une fois par
+ * export et propagé à tous les helpers pour éviter de reconstruire les `Intl.*`.
+ */
+interface ExportCtx {
+  t: ServerI18n["t"];
+  locale: Language;
+  fmtNum: (n: number) => string;
+  fmtUSD: (n: number) => string;
+  fmtDuration: (ms: number) => string;
+  fmtDate: (ts: string | undefined) => string;
+  fmtDateMs: (ms: number | undefined) => string;
+  role: (r: Session["events"][number]["role"]) => string;
 }
 
-function fmtUSD(n: number): string {
-  if (n > 0 && n < 0.01) return "< 0,01 $";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
+function makeCtx(i18n: ServerI18n): ExportCtx {
+  const tag = LOCALE_TAG[i18n.locale] ?? "fr-FR";
+  const t = i18n.t;
+  const compactNum = new Intl.NumberFormat(tag, { notation: "compact", maximumFractionDigits: 1 });
+  const fullNum = new Intl.NumberFormat(tag);
 
-/** Durée active « 2j 05h 30min » / « 3 h 05 » / « 12 min » (comme la page projet). */
-function fmtDuration(ms: number): string {
-  if (ms <= 0) return "—";
-  const s = Math.round(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h >= 24) {
-    const d = Math.floor(h / 24);
-    return `${d}j ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
-  }
-  if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
-  if (m > 0) return `${m} min`;
-  return `${s} s`;
-}
+  /** Nombre compact au-delà de 10 000 (comme sur les pages du dashboard). */
+  const fmtNum = (n: number): string =>
+    n >= 10000 ? compactNum.format(n) : fullNum.format(n);
 
-function fmtDate(ts: string | undefined): string {
-  if (!ts) return "";
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+  const fmtUSD = (n: number): string => {
+    if (n > 0 && n < 0.01) return t("export.cost.under");
+    const num = n.toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return i18n.locale === "en" ? `$${num}` : `${num} $`;
+  };
 
-/** Comme `fmtDate` mais à partir d'un timestamp epoch (ms). */
-function fmtDateMs(ms: number | undefined): string {
-  return ms ? fmtDate(new Date(ms).toISOString()) : "";
+  /** Durée active « 2j 05h 30min » / « 3 h 05 » / « 12 min » (comme la page projet). */
+  const fmtDuration = (ms: number): string => {
+    if (ms <= 0) return "—";
+    const s = Math.round(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const uD = t("export.dur.d");
+    const uH = t("export.dur.h");
+    const uMin = t("export.dur.min");
+    const uS = t("export.dur.s");
+    if (h >= 24) {
+      const d = Math.floor(h / 24);
+      return `${d}${uD} ${(h % 24).toString().padStart(2, "0")}${uH} ${m
+        .toString()
+        .padStart(2, "0")}${uMin}`;
+    }
+    if (h > 0) return `${h} ${uH} ${m.toString().padStart(2, "0")}`;
+    if (m > 0) return `${m} ${uMin}`;
+    return `${s} ${uS}`;
+  };
+
+  const fmtDate = (ts: string | undefined): string => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString(tag, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  /** Comme `fmtDate` mais à partir d'un timestamp epoch (ms). */
+  const fmtDateMs = (ms: number | undefined): string =>
+    ms ? fmtDate(new Date(ms).toISOString()) : "";
+
+  const role = (r: Session["events"][number]["role"]): string =>
+    r === "user" ? t("export.role.user") : "Claude";
+
+  return { t, locale: i18n.locale, fmtNum, fmtUSD, fmtDuration, fmtDate, fmtDateMs, role };
 }
 
 /** Slug de fichier sûr (sans accents ni caractères spéciaux). */
@@ -81,81 +115,95 @@ export function exportFilename(base: string, format: ExportFormat): string {
 // Markdown
 // ---------------------------------------------------------------------------
 
-function blockToMarkdown(block: Block): string {
+function blockToMarkdown(block: Block, ctx: ExportCtx): string {
   switch (block.kind) {
     case "text":
       return block.text.trim();
     case "thinking":
-      return `<details>\n<summary>💭 Réflexion</summary>\n\n${block.text.trim()}\n\n</details>`;
+      return `<details>\n<summary>💭 ${ctx.t("export.block.thinking")}</summary>\n\n${block.text.trim()}\n\n</details>`;
     case "tool_use":
-      return `<details>\n<summary>🔧 Outil : ${block.name}</summary>\n\n\`\`\`json\n${JSON.stringify(
+      return `<details>\n<summary>🔧 ${ctx.t("export.block.tool")} ${block.name}</summary>\n\n\`\`\`json\n${JSON.stringify(
         block.input,
         null,
         2
       )}\n\`\`\`\n\n</details>`;
     case "tool_result": {
-      const label = block.isError ? "⚠️ Résultat outil (erreur)" : "📤 Résultat outil";
+      const label = block.isError
+        ? `⚠️ ${ctx.t("export.block.toolResultError")}`
+        : `📤 ${ctx.t("export.block.toolResult")}`;
       return `<details>\n<summary>${label}</summary>\n\n\`\`\`\n${block.text.trim()}\n\`\`\`\n\n</details>`;
     }
   }
 }
 
-function sessionBodyMarkdown(session: Session): string {
+function sessionBodyMarkdown(session: Session, ctx: ExportCtx): string {
   const parts: string[] = [];
   for (const ev of session.events) {
-    const stamp = fmtDate(ev.timestamp);
+    const stamp = ctx.fmtDate(ev.timestamp);
     const icon = ev.role === "user" ? "🧑" : "🤖";
-    parts.push(`### ${icon} ${ROLE_LABEL[ev.role]}${stamp ? ` · ${stamp}` : ""}`);
-    const rendered = ev.blocks.map(blockToMarkdown).filter(Boolean);
+    parts.push(`### ${icon} ${ctx.role(ev.role)}${stamp ? ` · ${stamp}` : ""}`);
+    const rendered = ev.blocks.map((b) => blockToMarkdown(b, ctx)).filter(Boolean);
     parts.push(rendered.join("\n\n"));
   }
   return parts.join("\n\n");
 }
 
-function sessionMetaLines(session: Session, projectPath: string): string[] {
+function sessionMetaLines(session: Session, projectPath: string, ctx: ExportCtx): string[] {
   const lines = [
-    `- **Projet** : ${projectPath}`,
-    `- **Session** : \`${session.id}\``,
-    `- **Messages** : ${session.events.length}`,
+    `- **${ctx.t("export.meta.project")}** : ${projectPath}`,
+    `- **${ctx.t("export.meta.session")}** : \`${session.id}\``,
+    `- **${ctx.t("export.meta.messages")}** : ${session.events.length}`,
   ];
-  if (session.gitBranch) lines.splice(2, 0, `- **Branche** : ${session.gitBranch}`);
-  if (session.version) lines.push(`- **Version** : ${session.version}`);
+  if (session.gitBranch)
+    lines.splice(2, 0, `- **${ctx.t("export.meta.branch")}** : ${session.gitBranch}`);
+  if (session.version) lines.push(`- **${ctx.t("export.meta.version")}** : ${session.version}`);
   return lines;
 }
 
-export function sessionToMarkdown(session: Session, projectPath: string): string {
+export function sessionToMarkdown(
+  session: Session,
+  projectPath: string,
+  i18n: ServerI18n
+): string {
+  const ctx = makeCtx(i18n);
   const header = [
     `# ${session.title}`,
     "",
-    `> Export claudeboard · ${fmtDate(new Date().toISOString())}`,
+    `> ${ctx.t("export.generated", { date: ctx.fmtDate(new Date().toISOString()) })}`,
     "",
-    ...sessionMetaLines(session, projectPath),
+    ...sessionMetaLines(session, projectPath, ctx),
     "",
     "---",
     "",
   ].join("\n");
-  return `${header}${sessionBodyMarkdown(session)}\n`;
+  return `${header}${sessionBodyMarkdown(session, ctx)}\n`;
 }
 
 /** Bloc « statistiques » du projet en Markdown (KPI + modèles + top outils). */
-function projectStatsMarkdown(stats: ProjectStats): string {
+function projectStatsMarkdown(stats: ProjectStats, ctx: ExportCtx): string {
   const t = stats.totals;
   const kpi = [
-    "## Statistiques",
+    `## ${ctx.t("export.stats.title")}`,
     "",
-    `- **Sessions** : ${fmtNum(t.sessions)} · ${fmtNum(t.messages)} messages (${fmtNum(
-      t.userMessages
-    )} ↑ / ${fmtNum(t.assistantMessages)} ↓)`,
-    `- **Tokens** : ${fmtNum(t.tokensIn + t.tokensOut)} (${fmtNum(t.tokensIn)} in / ${fmtNum(
-      t.tokensOut
-    )} out)`,
-    `- **Coût estimé** : ${fmtUSD(t.costUSD)} _(tarifs indicatifs)_`,
-    `- **Outils appelés** : ${fmtNum(t.toolUses)}`,
+    `- **${ctx.t("export.stats.sessions")}** : ${ctx.fmtNum(t.sessions)} · ${ctx.fmtNum(
+      t.messages
+    )} ${ctx.t("export.stats.messagesInline")} (${ctx.fmtNum(t.userMessages)} ↑ / ${ctx.fmtNum(
+      t.assistantMessages
+    )} ↓)`,
+    `- **${ctx.t("export.stats.tokens")}** : ${ctx.fmtNum(t.tokensIn + t.tokensOut)} (${ctx.fmtNum(
+      t.tokensIn
+    )} ${ctx.t("export.stats.in")} / ${ctx.fmtNum(t.tokensOut)} ${ctx.t("export.stats.out")})`,
+    `- **${ctx.t("export.stats.cost")}** : ${ctx.fmtUSD(t.costUSD)} _(${ctx.t(
+      "export.stats.costHint"
+    )})_`,
+    `- **${ctx.t("export.stats.tools")}** : ${ctx.fmtNum(t.toolUses)}`,
   ];
   if (stats.totalDurationMs > 0) {
     kpi.push(
-      `- **Activité** : ${fmtDuration(stats.totalDurationMs)}${
-        stats.firstActivity ? ` (depuis le ${fmtDateMs(stats.firstActivity)})` : ""
+      `- **${ctx.t("export.stats.activity")}** : ${ctx.fmtDuration(stats.totalDurationMs)}${
+        stats.firstActivity
+          ? ` (${ctx.t("export.stats.since", { date: ctx.fmtDateMs(stats.firstActivity) })})`
+          : ""
       }`
     );
   }
@@ -165,20 +213,26 @@ function projectStatsMarkdown(stats: ProjectStats): string {
   if (stats.models.length > 0) {
     const rows = stats.models.map(
       (m) =>
-        `| ${m.label} | ${fmtNum(m.messages)} | ${fmtNum(m.tokensIn)} | ${fmtNum(
+        `| ${m.label} | ${ctx.fmtNum(m.messages)} | ${ctx.fmtNum(m.tokensIn)} | ${ctx.fmtNum(
           m.tokensOut
-        )} | ${fmtNum(m.cacheRead + m.cacheWrite)} | ${fmtUSD(m.costUSD)} |`
+        )} | ${ctx.fmtNum(m.cacheRead + m.cacheWrite)} | ${ctx.fmtUSD(m.costUSD)} |`
     );
     parts.push(
       [
-        "### Modèles utilisés",
+        `### ${ctx.t("export.stats.models")}`,
         "",
-        "| Modèle | Msg | In | Out | Cache | Coût |",
+        `| ${ctx.t("export.table.model")} | ${ctx.t("export.table.msg")} | ${ctx.t(
+          "export.table.in"
+        )} | ${ctx.t("export.table.out")} | ${ctx.t("export.table.cache")} | ${ctx.t(
+          "export.table.cost"
+        )} |`,
         "| --- | ---: | ---: | ---: | ---: | ---: |",
         ...rows,
-        `| **Total** | ${fmtNum(t.assistantMessages)} | ${fmtNum(t.tokensIn)} | ${fmtNum(
-          t.tokensOut
-        )} | ${fmtNum(t.cacheRead + t.cacheWrite)} | ${fmtUSD(t.costUSD)} |`,
+        `| **${ctx.t("export.table.total")}** | ${ctx.fmtNum(t.assistantMessages)} | ${ctx.fmtNum(
+          t.tokensIn
+        )} | ${ctx.fmtNum(t.tokensOut)} | ${ctx.fmtNum(t.cacheRead + t.cacheWrite)} | ${ctx.fmtUSD(
+          t.costUSD
+        )} |`,
       ].join("\n")
     );
   }
@@ -186,9 +240,9 @@ function projectStatsMarkdown(stats: ProjectStats): string {
   if (stats.topTools.length > 0) {
     parts.push(
       [
-        "### Outils & skills les plus utilisés",
+        `### ${ctx.t("export.stats.toolsTop")}`,
         "",
-        ...stats.topTools.map((tool) => `- \`${tool.name}\` — ${fmtNum(tool.count)}`),
+        ...stats.topTools.map((tool) => `- \`${tool.name}\` — ${ctx.fmtNum(tool.count)}`),
       ].join("\n")
     );
   }
@@ -202,31 +256,36 @@ export function projectToMarkdown(
   sessions: Session[],
   stats: ProjectStats,
   metas: SessionMeta[],
+  i18n: ServerI18n,
   includeStats = true
 ): string {
+  const ctx = makeCtx(i18n);
   const metaById = new Map(metas.map((m) => [m.id, m]));
   const totalMessages = sessions.reduce((n, s) => n + s.events.length, 0);
   const header = [
     `# ${projectLabel}`,
     "",
-    `> Export claudeboard · ${fmtDate(new Date().toISOString())}`,
+    `> ${ctx.t("export.generated", { date: ctx.fmtDate(new Date().toISOString()) })}`,
     "",
-    `- **Projet** : ${projectPath}`,
+    `- **${ctx.t("export.meta.project")}** : ${projectPath}`,
     // Sessions/Messages sont déjà dans les KPI → on ne les répète dans l'en-tête
     // que si les statistiques ne sont pas incluses.
     ...(includeStats
       ? []
-      : [`- **Sessions** : ${sessions.length}`, `- **Messages** : ${totalMessages}`]),
+      : [
+          `- **${ctx.t("export.meta.sessions")}** : ${sessions.length}`,
+          `- **${ctx.t("export.meta.messages")}** : ${totalMessages}`,
+        ]),
     "",
   ].join("\n");
 
   const toc = [
-    "## Sessions",
+    `## ${ctx.t("export.toc.sessions")}`,
     "",
     ...sessions.map((s, i) => {
       const m = metaById.get(s.id);
-      const bits = [`${s.events.length} messages`];
-      if (m?.lastModified) bits.push(fmtDateMs(m.lastModified));
+      const bits = [`${s.events.length} ${ctx.t("export.toc.messages")}`];
+      if (m?.lastModified) bits.push(ctx.fmtDateMs(m.lastModified));
       if (m) bits.push(formatSize(m.size));
       return `${i + 1}. [${s.title}](#session-${i + 1}) — ${bits.join(" · ")}`;
     }),
@@ -236,14 +295,14 @@ export function projectToMarkdown(
   const body = sessions
     .map((s, i) => {
       const stamp = `<a id="session-${i + 1}"></a>`;
-      const meta = sessionMetaLines(s, projectPath).join("\n");
-      return `${stamp}\n\n## ${i + 1}. ${s.title}\n\n[↑ Retour au sommaire](#sessions)\n\n${meta}\n\n${sessionBodyMarkdown(
-        s
-      )}`;
+      const meta = sessionMetaLines(s, projectPath, ctx).join("\n");
+      return `${stamp}\n\n## ${i + 1}. ${s.title}\n\n[↑ ${ctx.t(
+        "export.toc.back"
+      )}](#sessions)\n\n${meta}\n\n${sessionBodyMarkdown(s, ctx)}`;
     })
     .join("\n\n---\n\n");
 
-  const statsBlock = includeStats ? `${projectStatsMarkdown(stats)}\n\n` : "";
+  const statsBlock = includeStats ? `${projectStatsMarkdown(stats, ctx)}\n\n` : "";
   return `${header}\n${statsBlock}${toc}\n---\n\n${body}\n`;
 }
 
@@ -270,20 +329,22 @@ async function mdToHtml(text: string): Promise<string> {
   );
 }
 
-async function blockToHtml(block: Block): Promise<string> {
+async function blockToHtml(block: Block, ctx: ExportCtx): Promise<string> {
   switch (block.kind) {
     case "text":
       return `<div class="md">${await mdToHtml(block.text)}</div>`;
     case "thinking":
-      return `<details class="thinking"><summary>💭 Réflexion</summary><pre>${esc(
-        block.text
-      )}</pre></details>`;
+      return `<details class="thinking"><summary>💭 ${esc(
+        ctx.t("export.block.thinking")
+      )}</summary><pre>${esc(block.text)}</pre></details>`;
     case "tool_use":
-      return `<details class="tool"><summary>🔧 Outil : ${esc(
+      return `<details class="tool"><summary>🔧 ${esc(ctx.t("export.block.tool"))} ${esc(
         block.name
       )}</summary><pre>${esc(JSON.stringify(block.input, null, 2))}</pre></details>`;
     case "tool_result": {
-      const label = block.isError ? "⚠️ Résultat outil (erreur)" : "📤 Résultat outil";
+      const label = block.isError
+        ? `⚠️ ${esc(ctx.t("export.block.toolResultError"))}`
+        : `📤 ${esc(ctx.t("export.block.toolResult"))}`;
       return `<details class="tool${block.isError ? " error" : ""}"><summary>${label}</summary><pre>${esc(
         block.text
       )}</pre></details>`;
@@ -291,15 +352,15 @@ async function blockToHtml(block: Block): Promise<string> {
   }
 }
 
-async function sessionEventsHtml(session: Session): Promise<string> {
+async function sessionEventsHtml(session: Session, ctx: ExportCtx): Promise<string> {
   const events = await Promise.all(
     session.events.map(async (ev) => {
-      const stamp = fmtDate(ev.timestamp);
+      const stamp = ctx.fmtDate(ev.timestamp);
       const cls = ev.role === "user" ? "user" : "assistant";
       const icon = ev.role === "user" ? "🧑" : "🤖";
-      const blocks = (await Promise.all(ev.blocks.map(blockToHtml))).join("\n");
+      const blocks = (await Promise.all(ev.blocks.map((b) => blockToHtml(b, ctx)))).join("\n");
       return `<article class="msg ${cls}">
-  <header><span class="who">${icon} ${ROLE_LABEL[ev.role]}</span>${
+  <header><span class="who">${icon} ${esc(ctx.role(ev.role))}</span>${
         stamp ? `<span class="ts">${stamp}</span>` : ""
       }</header>
   <div class="content">${blocks}</div>
@@ -398,9 +459,9 @@ const PAGE_SCRIPT = `
 })();
 `;
 
-function htmlDocument(title: string, bodyInner: string, script?: string): string {
+function htmlDocument(title: string, bodyInner: string, lang: Language, script?: string): string {
   return `<!doctype html>
-<html lang="fr">
+<html lang="${lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -424,28 +485,32 @@ function statCardHtml(label: string, value: string, sub?: string): string {
 }
 
 /** Bloc « statistiques » du projet en HTML (KPI + modèles + top outils). */
-function projectStatsHtml(stats: ProjectStats): string {
+function projectStatsHtml(stats: ProjectStats, ctx: ExportCtx): string {
   const t = stats.totals;
   const kpis = [
     statCardHtml(
-      "Sessions",
-      fmtNum(t.sessions),
-      `${fmtNum(t.messages)} msg · ${fmtNum(t.userMessages)} ↑ / ${fmtNum(t.assistantMessages)} ↓`
+      ctx.t("export.stats.sessions"),
+      ctx.fmtNum(t.sessions),
+      `${ctx.fmtNum(t.messages)} ${ctx.t("export.stats.messagesInline")} · ${ctx.fmtNum(
+        t.userMessages
+      )} ↑ / ${ctx.fmtNum(t.assistantMessages)} ↓`
     ),
     statCardHtml(
-      "Tokens (in / out)",
-      fmtNum(t.tokensIn + t.tokensOut),
-      `${fmtNum(t.tokensIn)} ↑ · ${fmtNum(t.tokensOut)} ↓`
+      ctx.t("export.stats.tokensInOut"),
+      ctx.fmtNum(t.tokensIn + t.tokensOut),
+      `${ctx.fmtNum(t.tokensIn)} ↑ · ${ctx.fmtNum(t.tokensOut)} ↓`
     ),
-    statCardHtml("Coût estimé", fmtUSD(t.costUSD), "tarifs indicatifs"),
-    statCardHtml("Outils appelés", fmtNum(t.toolUses)),
+    statCardHtml(ctx.t("export.stats.cost"), ctx.fmtUSD(t.costUSD), ctx.t("export.stats.costHint")),
+    statCardHtml(ctx.t("export.stats.tools"), ctx.fmtNum(t.toolUses)),
   ];
   if (stats.totalDurationMs > 0) {
     kpis.push(
       statCardHtml(
-        "Activité",
-        fmtDuration(stats.totalDurationMs),
-        stats.firstActivity ? `depuis le ${fmtDateMs(stats.firstActivity)}` : undefined
+        ctx.t("export.stats.activity"),
+        ctx.fmtDuration(stats.totalDurationMs),
+        stats.firstActivity
+          ? ctx.t("export.stats.since", { date: ctx.fmtDateMs(stats.firstActivity) })
+          : undefined
       )
     );
   }
@@ -457,20 +522,26 @@ function projectStatsHtml(stats: ProjectStats): string {
       .map(
         (m) => `<tr>
   <td><span class="swatch" style="background:${m.color}"></span>${esc(m.label)}</td>
-  <td>${fmtNum(m.messages)}</td><td>${fmtNum(m.tokensIn)}</td><td>${fmtNum(m.tokensOut)}</td>
-  <td>${fmtNum(m.cacheRead + m.cacheWrite)}</td><td>${fmtUSD(m.costUSD)}</td>
+  <td>${ctx.fmtNum(m.messages)}</td><td>${ctx.fmtNum(m.tokensIn)}</td><td>${ctx.fmtNum(m.tokensOut)}</td>
+  <td>${ctx.fmtNum(m.cacheRead + m.cacheWrite)}</td><td>${ctx.fmtUSD(m.costUSD)}</td>
 </tr>`
       )
       .join("");
-    modelsCard = `<section class="card"><h2>Modèles utilisés</h2>
+    modelsCard = `<section class="card"><h2>${esc(ctx.t("export.stats.models"))}</h2>
 <table class="stats">
-<thead><tr><th>Modèle</th><th>Msg</th><th>In</th><th>Out</th><th>Cache</th><th>Coût</th></tr></thead>
+<thead><tr><th>${esc(ctx.t("export.table.model"))}</th><th>${esc(
+      ctx.t("export.table.msg")
+    )}</th><th>${esc(ctx.t("export.table.in"))}</th><th>${esc(
+      ctx.t("export.table.out")
+    )}</th><th>${esc(ctx.t("export.table.cache"))}</th><th>${esc(
+      ctx.t("export.table.cost")
+    )}</th></tr></thead>
 <tbody>${rows}
-<tr class="total"><td>Total</td><td>${fmtNum(t.assistantMessages)}</td><td>${fmtNum(
-      t.tokensIn
-    )}</td><td>${fmtNum(t.tokensOut)}</td><td>${fmtNum(t.cacheRead + t.cacheWrite)}</td><td>${fmtUSD(
-      t.costUSD
-    )}</td></tr>
+<tr class="total"><td>${esc(ctx.t("export.table.total"))}</td><td>${ctx.fmtNum(
+      t.assistantMessages
+    )}</td><td>${ctx.fmtNum(t.tokensIn)}</td><td>${ctx.fmtNum(t.tokensOut)}</td><td>${ctx.fmtNum(
+      t.cacheRead + t.cacheWrite
+    )}</td><td>${ctx.fmtUSD(t.costUSD)}</td></tr>
 </tbody></table></section>`;
   }
 
@@ -481,37 +552,44 @@ function projectStatsHtml(stats: ProjectStats): string {
       .map(
         (tool) => `<div class="tool-row"><span class="name" title="${esc(tool.name)}">${esc(
           tool.name
-        )}</span><span class="bar"><span style="width:${(tool.count / max) * 100}%"></span></span><span class="cnt">${fmtNum(
+        )}</span><span class="bar"><span style="width:${(tool.count / max) * 100}%"></span></span><span class="cnt">${ctx.fmtNum(
           tool.count
         )}</span></div>`
       )
       .join("");
-    toolsCard = `<section class="card"><h2>Outils &amp; skills les plus utilisés</h2><div class="tools">${rows}</div></section>`;
+    toolsCard = `<section class="card"><h2>${esc(
+      ctx.t("export.stats.toolsTop")
+    )}</h2><div class="tools">${rows}</div></section>`;
   }
 
   return `${grid}${modelsCard}${toolsCard}`;
 }
 
-function metaBlockHtml(lines: [string, string][]): string {
+function metaBlockHtml(lines: [string, string][], ctx: ExportCtx): string {
   const items = lines
     .map(([k, v]) => `<li><strong>${esc(k)}</strong> ${v}</li>`)
     .join("");
-  return `<div class="meta"><div>Export claudeboard · ${fmtDate(
-    new Date().toISOString()
+  return `<div class="meta"><div>${esc(
+    ctx.t("export.generated", { date: ctx.fmtDate(new Date().toISOString()) })
   )}</div><ul>${items}</ul></div>`;
 }
 
-export async function sessionToHtml(session: Session, projectPath: string): Promise<string> {
-  const meta: [string, string][] = [["Projet :", esc(projectPath)]];
-  if (session.gitBranch) meta.push(["Branche :", esc(session.gitBranch)]);
-  if (session.version) meta.push(["Version :", esc(session.version)]);
-  meta.push(["Session :", `<code>${esc(session.id)}</code>`]);
-  meta.push(["Messages :", String(session.events.length)]);
+export async function sessionToHtml(
+  session: Session,
+  projectPath: string,
+  i18n: ServerI18n
+): Promise<string> {
+  const ctx = makeCtx(i18n);
+  const meta: [string, string][] = [[`${ctx.t("export.meta.project")} :`, esc(projectPath)]];
+  if (session.gitBranch) meta.push([`${ctx.t("export.meta.branch")} :`, esc(session.gitBranch)]);
+  if (session.version) meta.push([`${ctx.t("export.meta.version")} :`, esc(session.version)]);
+  meta.push([`${ctx.t("export.meta.session")} :`, `<code>${esc(session.id)}</code>`]);
+  meta.push([`${ctx.t("export.meta.messages")} :`, String(session.events.length)]);
 
   const inner = `<h1>${esc(session.title)}</h1>
-${metaBlockHtml(meta)}
-${await sessionEventsHtml(session)}`;
-  return htmlDocument(session.title, inner);
+${metaBlockHtml(meta, ctx)}
+${await sessionEventsHtml(session, ctx)}`;
+  return htmlDocument(session.title, inner, ctx.locale);
 }
 
 export async function projectToHtml(
@@ -520,23 +598,28 @@ export async function projectToHtml(
   sessions: Session[],
   stats: ProjectStats,
   metas: SessionMeta[],
+  i18n: ServerI18n,
   includeStats = true
 ): Promise<string> {
+  const ctx = makeCtx(i18n);
   const metaById = new Map(metas.map((m) => [m.id, m]));
   const totalMessages = sessions.reduce((n, s) => n + s.events.length, 0);
   // Sessions/Messages sont déjà dans les KPI → on ne les répète dans l'en-tête que
   // si les statistiques ne sont pas incluses (sinon doublon au-dessus des KPI).
-  const meta: [string, string][] = [["Projet :", esc(projectPath)]];
+  const meta: [string, string][] = [[`${ctx.t("export.meta.project")} :`, esc(projectPath)]];
   if (!includeStats) {
-    meta.push(["Sessions :", String(sessions.length)], ["Messages :", String(totalMessages)]);
+    meta.push(
+      [`${ctx.t("export.meta.sessions")} :`, String(sessions.length)],
+      [`${ctx.t("export.meta.messages")} :`, String(totalMessages)]
+    );
   }
 
   // Liste de sessions : cartes cliquables qui « ouvrent » leur sous-page (#session-n).
   const sessionCards = sessions
     .map((s, i) => {
       const m = metaById.get(s.id);
-      const bits = [`${s.events.length} messages`];
-      if (m?.lastModified) bits.push(fmtDateMs(m.lastModified));
+      const bits = [`${s.events.length} ${ctx.t("export.toc.messages")}`];
+      if (m?.lastModified) bits.push(ctx.fmtDateMs(m.lastModified));
       if (m) bits.push(formatSize(m.size));
       return `<a class="session-card" href="#session-${i + 1}">
   <span class="st">${i + 1}. ${esc(s.title)}</span>
@@ -547,27 +630,31 @@ export async function projectToHtml(
 
   const overview = `<section class="page" id="overview">
 <h1>${esc(projectLabel)}</h1>
-${metaBlockHtml(meta)}
-${includeStats ? projectStatsHtml(stats) : ""}
-<section class="card"><h2>Sessions · ${sessions.length}</h2><div class="session-list">${sessionCards}</div></section>
+${metaBlockHtml(meta, ctx)}
+${includeStats ? projectStatsHtml(stats, ctx) : ""}
+<section class="card"><h2>${esc(ctx.t("export.toc.sessions"))} · ${
+    sessions.length
+  }</h2><div class="session-list">${sessionCards}</div></section>
 </section>`;
 
   // Sous-pages : une par session, masquées par défaut (routeur hash), avec lien retour.
   const pages = (
     await Promise.all(
       sessions.map(async (s, i) => {
-        const sMeta: [string, string][] = [["Session :", `<code>${esc(s.id)}</code>`]];
-        if (s.gitBranch) sMeta.push(["Branche :", esc(s.gitBranch)]);
-        sMeta.push(["Messages :", String(s.events.length)]);
+        const sMeta: [string, string][] = [
+          [`${ctx.t("export.meta.session")} :`, `<code>${esc(s.id)}</code>`],
+        ];
+        if (s.gitBranch) sMeta.push([`${ctx.t("export.meta.branch")} :`, esc(s.gitBranch)]);
+        sMeta.push([`${ctx.t("export.meta.messages")} :`, String(s.events.length)]);
         return `<section class="page session-page" id="session-${i + 1}" hidden>
 <a class="back" href="#overview">← ${esc(projectLabel)}</a>
 <h1>${esc(s.title)}</h1>
-${metaBlockHtml(sMeta)}
-${await sessionEventsHtml(s)}
+${metaBlockHtml(sMeta, ctx)}
+${await sessionEventsHtml(s, ctx)}
 </section>`;
       })
     )
   ).join("\n");
 
-  return htmlDocument(projectLabel, `${overview}\n${pages}`, PAGE_SCRIPT);
+  return htmlDocument(projectLabel, `${overview}\n${pages}`, ctx.locale, PAGE_SCRIPT);
 }

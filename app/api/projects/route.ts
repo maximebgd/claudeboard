@@ -12,20 +12,20 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { op, scope, projectId, sessionId } = body;
   if (op !== "delete") {
-    return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown op" }, { status: 400 });
   }
   if (typeof projectId !== "string" || !projectId || projectId.includes("/") || projectId.includes("..")) {
-    return NextResponse.json({ error: "projet invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
   }
 
   if (!(await isAllowed("projects", "delete"))) {
     return NextResponse.json(
-      { error: "Suppression non autorisée — activez-la dans Préférences." },
+      { error: "Deleting is not allowed — enable it in Preferences." },
       { status: 403 }
     );
   }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         sessionId.includes("/") ||
         sessionId.includes("..")
       ) {
-        return NextResponse.json({ error: "session invalide" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid session" }, { status: 400 });
       }
       const trashPath = await deleteSession(projectId, sessionId);
       return NextResponse.json({ ok: true, trashPath });
@@ -47,9 +47,9 @@ export async function POST(req: Request) {
       const trashPath = await deleteProject(projectId);
       return NextResponse.json({ ok: true, trashPath });
     }
-    return NextResponse.json({ error: "scope inconnu" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown scope" }, { status: 400 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Échec de la suppression";
+    const msg = e instanceof Error ? e.message : "Delete failed";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

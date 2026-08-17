@@ -6,6 +6,7 @@ import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
 import ResetButton from "@/components/ResetButton";
 import DeleteButton from "@/components/DeleteButton";
+import { getT } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -19,25 +20,26 @@ const TEMPLATE = `{
 export default async function KeybindingsPage() {
   const file = await readConfigFile("keybindings");
   const bindings = parseKeybindings(file.data);
-  const [canWrite, canReset, canDelete] = await Promise.all([
+  const [canWrite, canReset, canDelete, { t, locale }] = await Promise.all([
     isAllowed("keybindings", file.exists ? "modify" : "create"),
     isAllowed("keybindings", "reset"),
     isAllowed("keybindings", "delete"),
+    getT(),
   ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
         <Keyboard size={22} className="text-[var(--color-accent)]" />
-        Keybindings
+        {t("sidebar.keybindings")}
       </h1>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Raccourcis clavier custom (~/.claude/keybindings.json).
-        {!file.exists && " Le fichier n'existe pas encore."}
+        {t("keybindings.subtitle")}
+        {!file.exists && ` ${t("cfg.fileNotYet")}`}
       </p>
       <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
         {file.path}
-        {file.updatedAt ? ` · modifié le ${formatDate(file.updatedAt)}` : ""}
+        {file.updatedAt ? ` · ${t("common.modifiedOn", { date: formatDate(file.updatedAt, locale) })}` : ""}
       </p>
 
       {bindings.length > 0 && (
@@ -45,9 +47,9 @@ export default async function KeybindingsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[var(--color-code)] text-left text-xs text-[var(--color-muted)]">
-                <th className="px-4 py-2 font-medium">Touche</th>
-                <th className="px-4 py-2 font-medium">Commande</th>
-                <th className="px-4 py-2 font-medium">Contexte</th>
+                <th className="px-4 py-2 font-medium">{t("keybindings.key")}</th>
+                <th className="px-4 py-2 font-medium">{t("keybindings.command")}</th>
+                <th className="px-4 py-2 font-medium">{t("keybindings.context")}</th>
               </tr>
             </thead>
             <tbody>
@@ -85,17 +87,17 @@ export default async function KeybindingsPage() {
             <ResetButton
               endpoint="/api/config-file"
               body={{ target: "keybindings" }}
-              title="Réinitialiser keybindings.json ?"
-              description="Le fichier est ramené à une liste de keybindings vide. Un backup horodaté (.bak) est créé au préalable."
+              title={t("keybindings.resetTitle")}
+              description={t("keybindings.resetDesc")}
               locked={!canReset}
             />
             <DeleteButton
               endpoint="/api/config-file"
               body={{ target: "keybindings" }}
-              label="Supprimer"
-              title="Supprimer keybindings.json ?"
-              description="Le fichier est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
-              confirmLabel="Supprimer"
+              label={t("common.delete")}
+              title={t("keybindings.deleteTitle")}
+              description={t("cfg.deleteFileDesc")}
+              confirmLabel={t("common.delete")}
               locked={!canDelete}
             />
           </div>

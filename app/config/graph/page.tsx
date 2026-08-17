@@ -1,37 +1,36 @@
 import { Share2, Sparkles, Bot, SquareSlash } from "lucide-react";
 import { getDependencyGraph } from "@/lib/graph";
 import DependencyGraph from "@/components/DependencyGraph";
+import { getT } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
 
 export const dynamic = "force-dynamic";
 
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
-
 export default async function GraphPage() {
-  const graph = await getDependencyGraph();
+  const [graph, { t }] = await Promise.all([getDependencyGraph(), getT()]);
   const total = graph.nodes.length;
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-10">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
         <Share2 size={22} className="text-[var(--color-accent)]" />
-        Graphe de dépendances
+        {t("sidebar.graph")}
       </h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Qui référence qui, entre vos skills, agents et commandes de ~/.claude. Une référence
-        est détectée quand une entrée en nomme une autre (appel <code>/commande</code>, mention{" "}
-        <code>@agent</code>, nom d&apos;un skill cité).
-      </p>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">{t("graph.subtitle")}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Sparkles} color="var(--color-accent)" label="Skills" value={graph.counts.skill} />
-        <StatCard icon={Bot} color="#6366f1" label="Agents" value={graph.counts.agent} />
-        <StatCard icon={SquareSlash} color="#10b981" label="Commandes" value={graph.counts.command} />
+        <StatCard icon={Sparkles} color="var(--color-accent)" label={t("sidebar.skills")} value={graph.counts.skill} />
+        <StatCard icon={Bot} color="#6366f1" label={t("sidebar.agents")} value={graph.counts.agent} />
+        <StatCard icon={SquareSlash} color="#10b981" label={t("sidebar.commands")} value={graph.counts.command} />
         <StatCard
           icon={Share2}
           color="var(--color-accent)"
-          label="Total"
+          label={t("common.total")}
           value={total}
-          sub={`dont ${plural(graph.edges.length, "lien")} et ${plural(graph.orphans, "isolé")}`}
+          sub={t("graph.sub", {
+            links: tPlural(t, "graph.link", graph.edges.length),
+            orphans: tPlural(t, "graph.orphan", graph.orphans),
+          })}
         />
       </div>
 

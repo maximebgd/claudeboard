@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -13,6 +13,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { SearchResults, SearchMatch, MatchKind } from "@/lib/search";
+import { useTranslation } from "@/components/I18nProvider";
+import { tPlural } from "@/lib/i18n/core";
+import type { TranslationKey } from "@/lib/i18n/core";
+import { makeFormatters } from "@/lib/format";
 
 const MIN_QUERY_LENGTH = 2;
 
@@ -57,13 +61,14 @@ function highlight(snippet: string, query: string): React.ReactNode[] {
   return out;
 }
 
-const KIND_META: Record<MatchKind, { label: string; icon: typeof Brain }> = {
-  text: { label: "Message", icon: MessagesSquare },
-  thinking: { label: "Réflexion", icon: Brain },
-  tool_result: { label: "Résultat d'outil", icon: Wrench },
+const KIND_META: Record<MatchKind, { labelKey: TranslationKey; icon: typeof Brain }> = {
+  text: { labelKey: "search.kind.text", icon: MessagesSquare },
+  thinking: { labelKey: "block.thinking", icon: Brain },
+  tool_result: { labelKey: "search.kind.toolResult", icon: Wrench },
 };
 
 function MatchRow({ match, query }: { match: SearchMatch; query: string }) {
+  const { t } = useTranslation();
   const meta = KIND_META[match.kind];
   const RoleIcon = match.role === "user" ? User : Bot;
   return (
@@ -73,10 +78,10 @@ function MatchRow({ match, query }: { match: SearchMatch; query: string }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--color-faint)]">
-          <span>{match.role === "user" ? "Vous" : "Assistant"}</span>
+          <span>{match.role === "user" ? t("session.you") : t("search.assistant")}</span>
           <span>·</span>
           <meta.icon size={11} />
-          <span>{meta.label}</span>
+          <span>{t(meta.labelKey)}</span>
         </div>
         <p className="leading-relaxed text-[var(--color-muted)]">
           {highlight(match.snippet, query)}
@@ -87,6 +92,8 @@ function MatchRow({ match, query }: { match: SearchMatch; query: string }) {
 }
 
 export default function SearchView() {
+  const { t, locale } = useTranslation();
+  const fmt = useMemo(() => makeFormatters(locale), [locale]);
   const [query, setQuery] = useState("");
   const [thinking, setThinking] = useState(false);
   const [tools, setTools] = useState(false);
@@ -118,7 +125,7 @@ export default function SearchView() {
         setData(json);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
-        setError(e instanceof Error ? e.message : "Échec de la recherche");
+        setError(e instanceof Error ? e.message : t("search.failed"));
         setData(null);
       } finally {
         setLoading(false);
@@ -129,8 +136,8 @@ export default function SearchView() {
 
   // Débounce sur la saisie et les filtres.
   useEffect(() => {
-    const t = setTimeout(() => run(query, { thinking, tools }), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => run(query, { thinking, tools }), 250);
+    return () => clearTimeout(timer);
   }, [query, thinking, tools, run]);
 
   const showEmpty =
@@ -149,7 +156,7 @@ export default function SearchView() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher dans tous les transcripts…"
+            placeholder={t("search.placeholder")}
             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] py-3 pl-11 pr-11 text-base text-[var(--color-fg)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           {loading && (
@@ -162,17 +169,16 @@ export default function SearchView() {
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Toggle active={thinking} onClick={() => setThinking((v) => !v)} icon={Brain}>
-            Réflexions
+            {t("search.thinkingToggle")}
           </Toggle>
           <Toggle active={tools} onClick={() => setTools((v) => !v)} icon={Wrench}>
-            Résultats d'outils
+            {t("search.toolsToggle")}
           </Toggle>
           {data && query.trim().length >= MIN_QUERY_LENGTH && (
             <span className="ml-auto text-xs text-[var(--color-faint)]">
-              {data.totalMatches.toLocaleString("fr-FR")} correspondance
-              {data.totalMatches > 1 ? "s" : ""} · {data.totalSessions} session
-              {data.totalSessions > 1 ? "s" : ""} · {data.scannedFiles} fichiers scannés ·{" "}
-              {data.elapsedMs} ms
+              {tPlural(t, "search.match", data.totalMatches, { count: fmt.int(data.totalMatches) })} ·{" "}
+              {tPlural(t, "dash.session", data.totalSessions)} ·{" "}
+              {t("search.scannedFiles", { count: data.scannedFiles })} · {data.elapsedMs} ms
             </span>
           )}
         </div>
@@ -186,13 +192,13 @@ export default function SearchView() {
 
       {query.trim().length < MIN_QUERY_LENGTH && !loading && (
         <p className="mt-16 text-center text-sm text-[var(--color-muted)]">
-          Saisissez au moins {MIN_QUERY_LENGTH} caractères pour lancer la recherche.
+          {t("search.minChars", { n: MIN_QUERY_LENGTH })}
         </p>
       )}
 
       {showEmpty && (
         <p className="mt-16 text-center text-sm text-[var(--color-muted)]">
-          Aucun résultat pour «&nbsp;{query.trim()}&nbsp;».
+          {t("search.noResults", { q: query.trim() })}
         </p>
       )}
 
@@ -227,8 +233,7 @@ export default function SearchView() {
             ))}
             {r.matchCount > r.matches.length && (
               <div className="border-t border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-faint)]">
-                + {r.matchCount - r.matches.length} autre
-                {r.matchCount - r.matches.length > 1 ? "s" : ""} dans cette session
+                {tPlural(t, "search.more", r.matchCount - r.matches.length)}
               </div>
             )}
           </div>
@@ -237,8 +242,7 @@ export default function SearchView() {
 
       {data?.truncated && (
         <p className="mt-4 text-center text-xs text-[var(--color-faint)]">
-          Affichage des {data.results.length} sessions les plus récentes. Affinez votre
-          recherche pour réduire les résultats.
+          {t("search.truncated", { count: data.results.length })}
         </p>
       )}
     </div>

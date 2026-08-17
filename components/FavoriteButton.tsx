@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 /**
  * Bouton d'épinglage d'une session. Optimiste (bascule tout de suite, revert si
@@ -27,6 +28,7 @@ export default function FavoriteButton({
   section?: "favorites" | "projects";
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +47,7 @@ export default function FavoriteButton({
         body: JSON.stringify({ section, op: "toggle", key: favoriteKey }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec");
+      if (!res.ok) throw new Error(data.error || t("common.failed"));
       setOn(data.favorited);
       if (refresh) router.refresh();
     } catch {
@@ -61,8 +63,11 @@ export default function FavoriteButton({
       className={on ? "fill-[var(--color-accent)] text-[var(--color-accent)]" : ""}
     />
   );
-  const target = section === "projects" ? "ce projet" : "cette session";
-  const title = on ? "Retirer des favoris" : `Épingler ${target}`;
+  const title = on
+    ? t("fav.remove")
+    : section === "projects"
+      ? t("fav.pinProject")
+      : t("fav.pinSession");
 
   if (variant === "labeled") {
     return (
@@ -78,7 +83,7 @@ export default function FavoriteButton({
         }`}
       >
         {star}
-        {on ? "Épinglé" : "Épingler"}
+        {on ? t("fav.pinned") : t("fav.pin")}
       </button>
     );
   }
