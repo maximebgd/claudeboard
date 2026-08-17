@@ -6,135 +6,76 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 
 ## Ce que fait l'app
 
-- **Dashboard / analytics** (page d'accueil) : agrège tous les transcripts JSONL en
-  un seul passage (`lib/analytics.ts` → `getAnalytics`) pour afficher KPI (projets,
-  sessions, messages, tokens, coût estimé), panneau d'activité (`ActivityPanel` : bascule
-  entre heatmap façon GitHub et courbe des messages par jour, avec streak de jours
-  consécutifs et panneau de détail du jour partagé `DayDetail`),
-  répartition des modèles (camembert `ModelDonut`), tokens & coût par modèle, coût par
-  projet (`ProjectCostList`, recherche/tri côté client), distribution horaire des débuts
-  de session (`HourlyDistribution` : 24 barres, heure **locale**, comptage brut par heure
-  — pas une moyenne), outils/skills les plus utilisés (`ToolUsageList`), stats de session
-  (moyennes, durées, ratio thinking/texte) et projets récents. Une carte d'abonnement (`SubscriptionCard`) compare le coût estimé de l'usage
-  au prix du plan Claude (via `lib/subscription.ts`) pour afficher l'économie nette
-  (les détails du plan se révèlent au survol de la carte). La carte KPI « Coût estimé »
-  est un `CostStatCard` **cliquable** qui bascule entre le coût d'usage estimé et
-  l'économie nette réalisée grâce à l'abonnement ; la valeur affichée **par défaut** suit
-  la préférence `costCardMode` du store (cf. Préférences).
-  Un sélecteur de fenêtre (`RangeSelector`) filtre les stats — `Tout` / `30 j` / `7 j`,
-  un mois précis (`?range=month&month=YYYY-MM`) ou une plage libre
-  (`?range=custom&from=…&to=…`) ; `getAnalytics(sinceMs, untilMs)` prend les deux bornes.
-  Les deux vues du panneau d'activité montrent toujours l'historique complet (la fenêtre
-  active y est surlignée). Chaque carte KPI concernée (Messages, Tokens, Coût estimé)
-  affiche un delta de **vélocité** sous ses chiffres : la variation vs la période
-  précédente de même durée (N vs N-1, `+/-% vs du … au …` avec les dates réelles de la
-  période N-1) — masqué pour la fenêtre « Tout » (pas de période de comparaison). Le
-  dashboard liste aussi les **sessions épinglées** (favoris, cf. store local), chacune
-  reliée à son transcript.
-- **Skills** : liste, aperçu, **édition**, **création** (template pré-rempli) et
-  **suppression** des `~/.claude/skills/*/SKILL.md` (frontmatter YAML + corps markdown).
-  Toute écriture crée d'abord un backup horodaté `SKILL.md.bak.<timestamp>` à côté du
-  fichier ; une suppression déplace le dossier en corbeille (`lib/trash.ts`). Chaque action
-  (create/modify/delete) est **conditionnée par une permission** du store (cf. Préférences) —
-  par défaut tout est verrouillé.
-- **Projets & Sessions** : navigation **en lecture seule** dans
-  `~/.claude/projects/*/*.jsonl` (transcripts de conversations). Chaque ligne JSONL
-  est normalisée en blocs (`text`, `thinking`, `tool_use`, `tool_result`). La page d'un
-  projet affiche aussi ses statistiques agrégées (`getProjectStats` dans `lib/analytics.ts` :
-  modèles, tokens, coût estimé, top outils) au-dessus de la liste des sessions. Projets et
-  sessions sont **épinglables** (`FavoriteButton` → store local) ; les projets épinglés
-  remontent en tête de liste. La page d'une session propose un `ResumeButton` qui copie la
-  commande `claude --resume <sessionId>` (l'app n'exécute rien, elle ne fait que la copier).
-  Chaque page (session ou projet) propose aussi un `ExportButton` (menu Markdown/HTML) qui
-  télécharge le transcript en **Markdown** ou **HTML autonome** propre (partage/archive) via
-  `GET /api/export` → `lib/export.ts`. **Lecture seule** : rien n'est écrit dans `~/.claude`,
-  donc hors du modèle de permissions.
-  La **suppression** d'un projet ou d'une session (déplacement en corbeille, via
-  `/api/projects`) est possible si la permission `projects.delete` est activée.
-- **Recherche** (`/search`, ouverte par le bouton flottant `SearchFab` en bas à droite de
-  l'écran, visible **uniquement** sur `/projects` et ses sous-pages) : recherche **full-text lecture seule**
-  à travers tous les transcripts (`lib/search.ts` → `searchTranscripts`, servie par
-  `GET /api/search`). Chaque
-  `.jsonl` est lu en **streaming** (ligne par ligne via `readline`, sans charger tout le
-  fichier), la casse et les accents sont ignorés (repli `fold` **préservant la longueur** →
-  index alignés pour découper les extraits). Scanne par défaut les prompts & réponses (blocs
-  `text`) ; toggles pour inclure les `thinking` et les `tool_result`. Résultats regroupés par
-  session (triés du plus récent au plus ancien, plafonnés à 100), chacun avec un compteur de
-  correspondances et quelques extraits surlignés reliés à leur transcript. UI cliente
-  `SearchView` (débounce + `AbortController`). **Hors du modèle de permissions.**
+Chaque fichier `lib/` et route `app/` est décrit dans **Structure** ci-dessous ; cette
+section ne donne que le panorama fonctionnel.
+
+- **Dashboard / analytics** (page d'accueil) : `getAnalytics` agrège tous les transcripts
+  JSONL en un seul passage → KPI (projets, sessions, messages, tokens, coût estimé),
+  panneau d'activité (heatmap GitHub ⇆ courbe des messages/jour + streak), répartition et
+  coût par modèle, coût par projet, distribution horaire des débuts de session (heure
+  **locale**), top outils/skills, stats de session et projets récents. Un `RangeSelector`
+  filtre les stats (`Tout` / `30 j` / `7 j`, un mois `?range=month&month=YYYY-MM`, ou une
+  plage libre `?range=custom&from&to`) ; les cartes Messages/Tokens/Coût affichent un delta
+  de **vélocité** vs la période précédente de même durée (masqué en fenêtre « Tout »). La
+  `SubscriptionCard` compare le coût d'usage au prix du plan pour estimer l'économie ; la
+  carte KPI « Coût estimé » (`CostStatCard`) est **cliquable** (coût d'usage ⇆ économie),
+  sa valeur par défaut suivant la préférence `costCardMode`. Le dashboard liste aussi les
+  **sessions épinglées** (favoris).
+- **Skills** : liste/aperçu/**édition**/**création** (template)/**suppression** des
+  `~/.claude/skills/*/SKILL.md`. Écriture → backup `.bak.<timestamp>` ; suppression →
+  corbeille. Chaque action est gated par une permission (cf. Préférences).
+- **Projets & Sessions** : navigation **lecture seule** dans `~/.claude/projects/*/*.jsonl`
+  (chaque ligne normalisée en blocs `text`/`thinking`/`tool_use`/`tool_result`). La page
+  projet affiche ses stats agrégées (`getProjectStats`). Projets/sessions **épinglables**
+  (les projets épinglés remontent). `ResumeButton` copie `claude --resume <sessionId>`
+  (l'app n'exécute rien). `ExportButton` télécharge la session ou le projet en Markdown /
+  HTML autonome (`/api/export`, hors permissions). La **suppression** projet/session
+  (→ corbeille) est gated par `projects.delete`.
+- **Recherche** (`/search`, ouverte par le `SearchFab` visible seulement sur `/projects`) :
+  full-text **lecture seule** sur tous les transcripts, scan streamé ligne par ligne, casse
+  et accents ignorés. Scanne les blocs `text` par défaut (toggles thinking / tool_result) ;
+  résultats groupés par session, extraits surlignés. Hors permissions.
 - **Config Claude** (section « Config » de la Sidebar) :
-  - **Préférences** (`/config/preferences`) : réglages **propres à claudeboard** (stockés
-    dans `data/claudeboard.json`), regroupés en une page :
-    - **Autorisations d'écriture** (`PermissionsMatrix`) : matrice ressource × action
-      (create/modify/delete/reset) pilotant ce que l'app a le droit de faire dans `~/.claude`.
-      **Tout `false` par défaut** (verrou opt-in intégral). Plugins & marketplaces en sont
-      exclus (restent read-only). Cf. `PERMISSION_SCHEMA` dans `lib/store.ts`.
-    - **Tarifs d'estimation** (`PricingEditor` → overrides par famille dans le store, défauts
-      `PRICING` de `lib/analytics.ts`) + convention IN/OUT et formule de coût.
-    - **Abonnement** (`SubscriptionSelector` : auto-détection depuis `~/.claude.json` ou plan
-      manuel Pro / Max 5× / Max 20× / aucun) qui pilote l'estimation d'économie de la
-      `SubscriptionCard`.
-    - **Affichage** (`CostModeSelector` → préférence `costCardMode` du store) : choisit la
-      valeur affichée **par défaut** par la carte KPI « Coût estimé » du dashboard — coût
-      d'usage ou économie d'abonnement (la carte reste cliquable pour basculer).
-  - **Settings Claude** : édition de `settings.json` et `settings.local.json` (JSON validé
-    live + backup, création de `.local` à la demande) → `lib/configFiles.ts`. Édition gated
-    par `settings.modify` ; **réinitialisation** (`ResetButton`) par `settings.reset`.
-  - **Hooks** : visualiseur groupé par event (fusion des deux fichiers settings) →
-    `lib/hooks.ts`. **Édition** du bloc `hooks` de `settings.json` (`/api/hooks`,
-    `getHooksRaw`/`writeHooks`) si `hooks.modify` est activé — create/modify/delete d'un
-    hook = éditer ce JSON (une seule permission). `settings.local.json` n'est pas touché.
-  - **Agents** (`~/.claude/agents/*`) et **Commandes** (`~/.claude/commands/**`) :
-    liste/aperçu/édition/**création**/**suppression** sur le modèle des skills
-    (`lib/mdEntries.ts` ; les sous-dossiers de commands = namespaces). Gated par
-    `agents|commands.{create,modify,delete}`.
-  - **Graphe de dépendances** (`/config/graph`) : visualise **qui référence qui**
-    entre skills, agents et commandes. `lib/graph.ts` (`getDependencyGraph`) charge le
-    contenu de chaque entrée et détecte les références textuelles (appel `/commande`,
-    mention `@agent`, nom d'un skill en backticks ou cité si l'identifiant est distinctif) ;
-    le rendu est un layout **force-dirigé** client (`DependencyGraph`, Fruchterman-Reingold
-    déterministe en `useMemo`) avec survol/sélection, panneau des références entrantes/
-    sortantes et KPI (entrées par type, liens, isolées). **Lecture seule** (aucune écriture,
-    hors du modèle de permissions).
-  - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création si absent,
-    **réinitialisation** et **suppression** (gated par `claudeMd.{create,modify,delete,reset}`).
-  - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux +
-    par projet) + statut d'auth (`lib/mcp.ts`) ; valeurs d'`env` masquées.
-  - **Plugins & Marketplaces** : **lecture seule** des marketplaces connues et de leurs
-    catalogues de plugins (`lib/plugins.ts`), avec KPI (marketplaces, plugins disponibles,
-    installés, bloqués, total d'installs uniques communauté), plugins bloqués et compteurs
-    d'usage. Affichage via `PluginCatalog`, qui propose sous chaque plugin la commande
-    CLI `/plugin install|uninstall <nom>@<marketplace>` (copiable dans le presse-papier) ;
-    l'installation elle-même reste du ressort du CLI (aucune écriture depuis l'app). **Pas
-    de permission d'install/suppression** : volontairement hors du modèle d'autorisations.
+  - **Préférences** (`/config/preferences`) : réglages **propres à claudeboard**
+    (`data/claudeboard.json`) — **Autorisations d'écriture** (`PermissionsMatrix`, tout
+    `false` par défaut ; plugins/marketplaces exclus), **Tarifs d'estimation**
+    (`PricingEditor`), **Abonnement** (`SubscriptionSelector` : auto depuis `~/.claude.json`
+    ou plan manuel), **Affichage** (`CostModeSelector` → `costCardMode`).
+  - **Settings Claude** : édition de `settings.json` / `settings.local.json` (JSON validé
+    live + backup, création `.local` à la demande). Gated par `settings.modify` ; reset par
+    `settings.reset`.
+  - **Hooks** : visualiseur groupé par event (fusion des deux settings). Édition du bloc
+    `hooks` de `settings.json` gated par `hooks.modify` (`settings.local.json` non touché).
+  - **Agents** (`~/.claude/agents/*`) & **Commandes** (`~/.claude/commands/**`, sous-dossiers
+    = namespaces) : liste/aperçu/édition/création/suppression sur le modèle des skills. Gated
+    par `agents|commands.{create,modify,delete}`.
+  - **Graphe de dépendances** (`/config/graph`) : qui référence qui entre skills/agents/
+    commandes (détection textuelle : `/commande`, `@agent`, nom en backticks) ; layout
+    force-dirigé client. **Lecture seule**.
+  - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création/reset/
+    suppression gated par `claudeMd.{create,modify,delete,reset}`.
+  - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux + par
+    projet) + statut d'auth ; `env` masqué.
+  - **Plugins & Marketplaces** : **lecture seule** des marketplaces et catalogues + KPI ;
+    la commande CLI `/plugin install|uninstall` est copiable mais jamais exécutée. **Hors
+    permissions** (l'install reste du ressort du CLI).
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
-    création si absent, **réinitialisation** et **suppression** (gated par
-    `keybindings.{create,modify,delete,reset}`).
-  - **Corbeille** (`/config/trash`) : liste les éléments supprimés depuis l'app (skills,
-    agents, commandes, projets, sessions, fichiers de config) stockés **hors** de `~/.claude`
-    dans `data/trash/` (cf. `lib/trash.ts`, `TrashList`). Chaque entrée peut être
-    **restaurée** à son emplacement d'origine (refus si la cible existe déjà — aucun
-    écrasement) ou supprimée définitivement, et la corbeille peut être **vidée**. La
-    restauration est gated par la permission `delete` de la ressource d'origine (« si tu
-    pouvais le supprimer, tu peux annuler la suppression ») ; le vidage et la suppression
-    définitive par la nouvelle permission `trash.empty`.
-  - **Structure du dossier** (`/docs/structure`, rattachée à la section Documentation) :
-    arbre pédagogique (`DirectoryExplorer`) du contenu de `.claude/` (projet) et `~/.claude`
-    (rôle, chargement, exemple par fichier) ; contenu statique, reproduit d'après la doc officielle.
-- **Documentation** (`/docs`) : rend les fichiers `.md` du dossier `docs/` (source unique,
-  lisible aussi sur GitHub) avec un sommaire latéral (`DocsNav`) et le rendu markdown
-  partagé (`Markdown`). Pour ajouter une page : créer `docs/<slug>.md` avec un frontmatter
-  `title` / `description` / `order` (`lib/docs.ts` → `listDocs`/`getDoc`).
-- **Thème** : bascule clair/sombre (`ThemeToggle` dans la Sidebar), persistée dans
-  `localStorage` et appliquée avant le premier rendu par un script inline dans
-  `layout.tsx` (pas de flash).
+    création/reset/suppression gated par `keybindings.{create,modify,delete,reset}`.
+  - **Corbeille** (`/config/trash`) : éléments supprimés depuis l'app, stockés **hors** de
+    `~/.claude` (`data/trash/`). Restaurable (refus si la cible existe) ou supprimable
+    définitivement ; la corbeille peut être vidée. Restauration gated par le `delete` de la
+    ressource d'origine ; vidage/suppression définitive par `trash.empty`.
+  - **Structure du dossier** (`/docs/structure`) : arbre pédagogique statique de `.claude/`
+    et `~/.claude` (rôle, chargement, exemple par fichier).
+- **Documentation** (`/docs`) : rend les `.md` du dossier `docs/` (frontmatter
+  `title`/`description`/`order`) avec sommaire latéral.
+- **Thème** : bascule clair/sombre persistée dans `localStorage`, appliquée avant le
+  premier rendu par un script inline dans `layout.tsx` (pas de flash).
 
 ## Stack
 
-- Next.js 16 — App Router, React Server Components par défaut
-- React 19, TypeScript (strict), alias d'import `@/*` → racine du repo
-- Tailwind CSS v4 (via `@tailwindcss/postcss`, config dans `postcss.config.mjs` +
-  `app/globals.css`, pas de `tailwind.config`)
+- Next.js 16 (App Router, RSC par défaut), React 19, TypeScript strict, alias `@/*` → racine
+- Tailwind CSS v4 (via `@tailwindcss/postcss` + `app/globals.css`, pas de `tailwind.config`)
 - `gray-matter` (frontmatter), `react-markdown` + `remark-gfm` (rendu), `lucide-react` (icônes)
 - UI en français
 
@@ -142,180 +83,123 @@ destiné à être déployé : pas de télémétrie, pas d'auth, tourne uniquemen
 
 ```
 lib/
-  claude.ts    CLAUDE_DIR (override via env CLAUDE_DIR) · safeResolve (garde anti-
-               traversée, tout doit rester dans CLAUDE_DIR) · formatDate/formatSize
-  skills.ts    listSkills · getSkill · writeSkill (backup .bak avant écrasement)
-  projects.ts  listProjects · listSessions · getSession · projectLabel ·
-               normalisation des blocs JSONL
-  analytics.ts getAnalytics(sinceMs, untilMs, prevSinceMs?, prevUntilMs?) : scan unique
-               des JSONL → totaux, jours (heatmap), stats par modèle, top outils, coût
-               par projet, durées, débuts de session par heure locale (`hours`, 24 seaux),
-               streak de jours consécutifs (`streak`), totaux de la période précédente
-               (`trend`, vélocité N vs N-1) ; getProjectStats(id) pour un projet ;
-               getEffectivePricing() = PRICING fusionné avec les overrides du store ;
-               parseModel + PRICING/MODEL_LABEL/MODEL_COLOR exportés (pages pricing & donut)
-  store.ts     état applicatif **de claudeboard** (favoris de sessions/projets, overrides
-               de tarifs, plan d'abonnement, **permissions**, préférences d'affichage) dans
-               `data/claudeboard.json` — **hors** de CLAUDE_DIR (racine du projet, gitignored,
-               override STORE_DIR) ; read/writeStore (écriture atomique, normalisation défensive),
-               toggleFavorite, toggleFavoriteProject, setPricingOverrides, setSubscription,
-               getPreferences/setPreferences (`costCardMode`) ; `PERMISSION_SCHEMA`
-               (ressource → actions), `getPermissions`/`setPermissions` (patch partiel) et
-               `isAllowed(resource, action)` (garde serveur), migration de l'ancien `unlockedFields`
-  trash.ts     corbeille **de claudeboard**, hors de CLAUDE_DIR : `data/trash/<id>/`
-               (`meta.json` + `payload`), override TRASH_DIR sinon dérivé de STORE_DIR.
-               moveToTrash(absPath, {resource,scope,label}) : suppression **réversible**
-               (payload + manifest) utilisée par tous les delete ; listTrash / restoreTrash
-               (refus si la cible existe déjà) / deleteTrashEntry / emptyTrash ; déplacement
-               robuste inter-volumes (rename, repli copie+rm sur EXDEV)
-  favorites.ts getFavoriteSessions : résout les clés de favoris « <projectId>/<sessionId> »
-               en métadonnées de session (marque les favoris orphelins `exists: false`)
-  plugins.ts   getPlugins : LECTURE SEULE des marketplaces/plugins (~/.claude/plugins/ +
-               catalogues à leur installLocation, usage dans ~/.claude.json, installs du
-               plugin-catalog-cache.json) — jamais d'écriture, installation = CLI
-  subscription.ts getSubscription : LECTURE SEULE du plan Claude via l'`oauthAccount` de
-               ~/.claude.json (champs non sensibles only : type d'orga, facturation, date) ;
-               getEffectiveSubscription() applique le choix manuel du store sinon l'auto ;
-               PLANS / isManualPlan (validation des plans manuels) exportés
-  configFiles.ts read/writeConfigFile : fichiers uniques (settings, settings.local,
-               CLAUDE.md, keybindings) — JSON validé, backup si existant, création explicite ;
-               resetConfigFile (restaure un défaut) · deleteConfigFile (→ corbeille)
-  skills.ts    (rappel) listSkills · getSkill · writeSkill · createSkill · deleteSkill ·
-               skillTemplate · isValidSkillSlug
-  mdEntries.ts list/get/writeMdEntry(kind) : agents & commandes (.md à frontmatter,
-               slugs imbriqués = namespaces) ; même modèle que skills + createMdEntry ·
-               deleteMdEntry · mdTemplate · isValidMdSlug
-  graph.ts     getDependencyGraph : LECTURE SEULE — charge skills/agents/commandes et
-               détecte les références textuelles croisées (slash / @agent / code /
-               mention distinctive) → nœuds + liens dirigés + compteurs (pour /config/graph)
+  claude.ts    CLAUDE_DIR (override env CLAUDE_DIR) · safeResolve (garde anti-traversée,
+               tout reste dans CLAUDE_DIR) · formatDate/formatSize
+  projects.ts  listProjects · listSessions · getSession · projectLabel · normalisation JSONL
+  analytics.ts getAnalytics(sinceMs, untilMs, prevSinceMs?, prevUntilMs?) : scan unique des
+               JSONL → totaux, jours (heatmap), stats/modèle, top outils, coût/projet,
+               durées, débuts de session par heure locale, streak, période précédente
+               (vélocité N vs N-1) ; getProjectStats(id) ; getEffectivePricing() = PRICING +
+               overrides du store ; parseModel + PRICING/MODEL_LABEL/MODEL_COLOR exportés
+  store.ts     état **de claudeboard** (favoris, overrides de tarifs, plan d'abonnement,
+               permissions, préférences) dans `data/claudeboard.json` — **hors** de
+               CLAUDE_DIR (override STORE_DIR) ; read/writeStore atomique · toggleFavorite(
+               Project) · setPricingOverrides · setSubscription · get/setPreferences ;
+               PERMISSION_SCHEMA (ressource → actions) · getPermissions/setPermissions ·
+               isAllowed(resource, action) (garde serveur)
+  trash.ts     corbeille **de claudeboard** hors de CLAUDE_DIR (`data/trash/<id>/`, override
+               TRASH_DIR) : moveToTrash (suppression réversible, utilisée par tous les
+               delete) · listTrash · restoreTrash (refus si la cible existe) · deleteTrashEntry
+               · emptyTrash ; déplacement inter-volumes robuste (rename, repli copie+rm)
+  favorites.ts getFavoriteSessions : résout « <projectId>/<sessionId> » en métadonnées
+               (favoris orphelins marqués `exists: false`)
+  skills.ts    listSkills · getSkill · writeSkill (backup avant écrasement) · createSkill ·
+               deleteSkill · skillTemplate · isValidSkillSlug
+  mdEntries.ts list/get/writeMdEntry(kind) + create/deleteMdEntry · mdTemplate ·
+               isValidMdSlug : agents & commandes (.md à frontmatter, slugs imbriqués =
+               namespaces), même modèle que skills
+  configFiles.ts read/writeConfigFile (settings, settings.local, CLAUDE.md, keybindings :
+               JSON validé, backup si existant, création explicite) · resetConfigFile ·
+               deleteConfigFile (→ corbeille)
+  hooks.ts     getHooks (normalise/groupe les hooks des deux settings) · getHooksRaw/
+               writeHooks (bloc hooks de settings.json)
+  graph.ts     getDependencyGraph : LECTURE SEULE — références croisées skills/agents/
+               commandes → nœuds + liens dirigés + compteurs (pour /config/graph)
   export.ts    sessionToMarkdown/Html · projectToMarkdown/Html · exportFilename : rendu
-               **lecture seule** d'une session ou d'un projet entier en Markdown ou HTML
-               autonome (CSS embarqué) pour partage/archive ; le HTML convertit les blocs
-               texte via react-markdown (import dynamique de react-dom/server, interdit en
-               statique par Next). L'export **projet** reprend le rendu du site : KPI
-               (sessions, tokens in/out, coût, outils, activité via getProjectStats),
-               tableau des modèles, top outils, et une liste de sessions cliquable — le HTML
-               est un mini-site autonome (sous-pages masquées + routeur hash JS : chaque
-               carte de session « ouvre » sa sous-page, lien retour vers l'overview). Servi
-               en téléchargement par /api/export — aucune écriture
-  hooks.ts     getHooks : normalise les hooks des deux settings, groupés par event ;
-               getHooksRaw/writeHooks : lecture/écriture du bloc hooks de settings.json
-  mcp.ts       getMcpServers : LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR), MCP
-               globaux + par projet, statut via mcp-needs-auth-cache.json, env masqué
+               LECTURE SEULE en Markdown ou HTML autonome (CSS embarqué). L'export projet
+               reprend le rendu du site (KPI, modèles, top outils, liste de sessions) en
+               mini-site autonome (routeur hash JS). Servi par /api/export
+  search.ts    searchTranscripts : full-text LECTURE SEULE, scan streamé (readline) ; `fold`
+               (minuscule + accents ôtés, longueur préservée → index alignés) + extraits
+               surlignables, groupés par session (récents d'abord, plafonnés à 100)
+  docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (hors CLAUDE_DIR, garde-fou dédié)
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
-  docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (dans le repo, hors CLAUDE_DIR)
-               pour la page /docs ; garde-fou de slug dédié (pas safeResolve)
-  search.ts    searchTranscripts : recherche full-text LECTURE SEULE, scan streamé
-               (readline, ligne par ligne) de tous les .jsonl ; `fold` (minuscule +
-               accents ôtés, longueur préservée → index alignés) + extraits surlignables,
-               résultats groupés par session (récents d'abord, plafonnés à 100)
+  --- LECTURE SEULE de ~/.claude.json (hors CLAUDE_DIR, champs ciblés — cf. Conventions) ---
+  mcp.ts          getMcpServers : MCP globaux + par projet, statut d'auth, env masqué
+  subscription.ts getSubscription (champs non sensibles d'oauthAccount) ·
+               getEffectiveSubscription (choix manuel du store sinon auto) · PLANS/isManualPlan
+  plugins.ts   getPlugins : marketplaces/plugins + catalogues (installLocation) + usage —
+               jamais d'écriture, installation = CLI
 app/
-  page.tsx                       Dashboard analytics (KPI, heatmap, modèles, coût par
-                                 projet, outils, sessions, abonnement) + RangeSelector
-  skills/page.tsx                Liste des skills
-  skills/[name]/page.tsx         Détail + éditeur d'un skill
-  projects/page.tsx              Liste des projets
-  projects/[id]/page.tsx         Sessions d'un projet
-  projects/[id]/[session]/page.tsx   Transcript d'une session
-  search/page.tsx                Recherche full-text (coquille + `SearchView` client)
-  config/preferences/page.tsx    Préférences claudeboard : permissions + tarifs + abonnement
-  config/pricing/page.tsx        Redirection → /config/preferences (compat ancien lien)
-  config/settings/page.tsx       Éditeur settings.json + settings.local.json (+ reset)
-  config/hooks/page.tsx          Visualiseur de hooks + éditeur du bloc hooks (si autorisé)
-  config/agents/page.tsx · [...slug]/page.tsx   Liste (+ création) + détail/éditeur/suppression d'agents
-  config/commands/page.tsx · [...slug]/page.tsx Liste (+ création) + détail/éditeur/suppression de commandes
-  config/graph/page.tsx          Graphe de dépendances skills/agents/commandes (lecture seule)
-  config/claude-md/page.tsx      Éditeur du CLAUDE.md global (+ reset/suppression)
-  config/mcp/page.tsx            MCP servers (lecture seule)
-  config/plugins/page.tsx        Plugins & Marketplaces (lecture seule)
-  config/keybindings/page.tsx    Aperçu + éditeur des keybindings (+ reset/suppression)
-  config/trash/page.tsx          Corbeille de claudeboard (liste, restaurer, vider)
-  docs/layout.tsx · page.tsx · [slug]/page.tsx   Documentation (rend les `.md` de docs/)
-  docs/structure/page.tsx        Structure du dossier .claude (arbre pédagogique)
-  api/skills/route.ts            POST { op, slug, raw } → SKILL.md : write/create/delete (gated)
-  api/config-file/route.ts       POST { op, target, raw } → fichiers uniques : write/reset/delete (gated)
-  api/md/route.ts                POST { op, kind, slug, raw } → agents/commandes : write/create/delete (gated)
-  api/projects/route.ts          POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
-  api/trash/route.ts             GET → listTrash ; POST { op:restore|delete|empty, id? } →
-                                 restaurer (gated <resource>.delete) / supprimer / vider (gated trash.empty)
-  api/export/route.ts            GET ?scope&projectId&sessionId?&format=md|html&stats=0? → export
-                                 Markdown/HTML en téléchargement (lecture seule, hors permissions ;
-                                 `stats=0` = projet sans le bloc de statistiques)
-  api/search/route.ts            GET ?q&projectId?&thinking=1?&tools=1? → recherche full-text
-                                 (lecture seule, hors permissions)
-  api/hooks/route.ts             POST { raw } → écrit le bloc hooks de settings.json (gated)
-  api/store/route.ts             POST { section, … } → état claudeboard (favoris, tarifs,
-                                 abonnement, permissions, preferences) ; dispatch par section whitelistée → lib/store.ts
+  page.tsx                             Dashboard analytics + RangeSelector
+  skills/page.tsx · [name]/page.tsx    Liste · détail/éditeur d'un skill
+  projects/page.tsx · [id]/page.tsx · [id]/[session]/page.tsx  Liste · sessions · transcript
+  search/page.tsx                      Recherche full-text (coquille + SearchView client)
+  config/preferences/page.tsx          Permissions + tarifs + abonnement + affichage
+  config/pricing/page.tsx              Redirection → /config/preferences (compat)
+  config/settings/page.tsx             Éditeur settings.json + settings.local.json (+ reset)
+  config/hooks/page.tsx                Visualiseur + éditeur du bloc hooks
+  config/agents|commands/page.tsx · [...slug]/page.tsx   Liste (+ création) · détail/éditeur/suppression
+  config/graph/page.tsx                Graphe de dépendances (lecture seule)
+  config/claude-md/page.tsx            Éditeur du CLAUDE.md global (+ reset/suppression)
+  config/mcp|plugins/page.tsx          MCP servers · Plugins & Marketplaces (lecture seule)
+  config/keybindings/page.tsx          Aperçu + éditeur (+ reset/suppression)
+  config/trash/page.tsx                Corbeille (liste, restaurer, vider)
+  docs/layout.tsx · page.tsx · [slug]/page.tsx · structure/page.tsx   Documentation + arbre .claude
+  api/skills/route.ts                  POST { op, slug, raw } → SKILL.md write/create/delete (gated)
+  api/config-file/route.ts             POST { op, target, raw } → fichiers uniques write/reset/delete (gated)
+  api/md/route.ts                      POST { op, kind, slug, raw } → agents/commandes (gated)
+  api/projects/route.ts                POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
+  api/trash/route.ts                   GET listTrash ; POST restore (gated <resource>.delete) / delete / empty (gated trash.empty)
+  api/hooks/route.ts                   POST { raw } → bloc hooks de settings.json (gated)
+  api/export/route.ts                  GET ?scope&projectId&sessionId?&format&stats=0? (lecture seule)
+  api/search/route.ts                  GET ?q&projectId?&thinking=1?&tools=1? (lecture seule)
+  api/store/route.ts                   POST { section, … } → état claudeboard (dispatch par section whitelistée)
   layout.tsx · globals.css · icon.svg
 components/
-  Sidebar · Markdown · Collapsible · ConfirmDialog · SkillEditor ·
-  ConfigEditor (éditeur générique JSON/markdown : validation live, backup au save, mode
-  lecture seule via `canWrite` + bannière) ·
-  PermissionsMatrix (matrice d'autorisations) · PermissionNotice (bannière « lecture seule ») ·
-  DeleteButton · ResetButton · CreateEntryButton (actions gated, avec confirmation ;
-  verrouillées → bouton grisé/inopérant + tooltip `LOCKED_HINT` de `lockedHint.ts`) ·
-  MdEntryList · MdEntryDetail (liste/détail partagés agents & commandes) ·
-  ActivityPanel (bascule heatmap/courbe + streak) · ActivityHeatmap (heatmap façon GitHub) ·
-  TrendChart (courbe des messages par jour) · DayDetail (détail d'un jour, partagé) ·
-  ThemeToggle (clair/sombre) · ModelDonut (camembert modèles) · RangeSelector (fenêtre
-  temporelle) · SubscriptionCard (coût usage vs plan, détails au survol) · SubscriptionSelector (choix de plan) ·
-  CostStatCard (carte KPI « Coût estimé » cliquable : coût d'usage ⇆ économie abo.) ·
-  CostModeSelector (préférence d'affichage par défaut de cette carte) ·
-  PricingEditor (édition des overrides de tarifs) · ProjectCostList · ToolUsageList ·
-  HourlyDistribution (débuts de session par heure, heure locale) ·
-  FavoriteButton (épinglage session/projet) · ResumeButton (copie `claude --resume`) ·
-  ExportButton (menu de téléchargement Markdown/HTML d'une session ou d'un projet) ·
-  SearchView (recherche full-text : saisie débouncée, toggles thinking/outils, extraits surlignés) ·
-  SearchFab (bouton flottant bas-droite ouvrant /search, visible seulement sur /projects) ·
-  DependencyGraph (graphe force-dirigé skills/agents/commandes, survol + panneau de références) ·
-  PluginCatalog (liste de plugins d'une marketplace) · DirectoryExplorer (arbre .claude) ·
-  TrashList (corbeille : entrées, restaurer/supprimer/vider, boutons gated + ConfirmDialog) ·
-  DocsNav (sommaire latéral des pages /docs) · ReadOnlyBadge (marqueur « lecture seule »)
+  Sidebar · Markdown · Collapsible · ConfirmDialog · ThemeToggle · ReadOnlyBadge
+  Écriture gated : ConfigEditor (JSON/markdown, validation live, backup au save, mode
+    lecture seule via `canWrite`) · SkillEditor · PermissionsMatrix · PermissionNotice ·
+    DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
+    LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList
+  Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
+    RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
+    PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution
+  Divers : FavoriteButton · ResumeButton · ExportButton · SearchView · SearchFab ·
+    DependencyGraph · PluginCatalog · DirectoryExplorer · DocsNav
 ```
 
 ## Conventions importantes
 
-- **Next 16** : dans les pages, `params` est une **Promise** — il faut `await params`
-  avant de lire `id`/`name`/`session`. Consulte les guides dans
-  `node_modules/next/dist/docs/` avant d'écrire du code (voir le bloc ci-dessous).
-- Toutes les pages qui lisent le FS déclarent `export const dynamic = "force-dynamic"`
-  (les données changent hors du cycle de build).
-- **Sécurité** : tout accès fichier passe par `safeResolve(...)` pour empêcher une
-  traversée de répertoire (`../`) via un slug/id d'URL. Les API `/api/skills` et
-  `/api/md` refusent en plus les slugs de traversée et valident le frontmatter avant
-  d'écrire ; `/api/config-file` n'accepte que des cibles whitelistées.
-  - **Exceptions documentées** : `lib/mcp.ts`, `lib/subscription.ts` et `lib/plugins.ts`
-    lisent `~/.claude.json`, qui est **hors de CLAUDE_DIR** et contient des secrets. Ce
-    sont donc des accès **lecture seule** et **ciblés** — `mcp.ts` ne lit que `mcpServers`
-    (valeurs d'`env` masquées), `subscription.ts` que des champs non sensibles de
-    `oauthAccount`, `plugins.ts` que `pluginUsage`. De même, `plugins.ts` lit les
-    `marketplace.json` à leur `installLocation`, qui peut pointer **hors de CLAUDE_DIR**
-    (marketplace de type `directory`) — accès lecture seule, aucune écriture.
-- L'écriture n'est jamais silencieuse : `writeSkill`/`writeMdEntry` vérifient que le
-  fichier existe déjà (pas de création) et créent toujours un backup. Les créations de
-  fichiers de config (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) via
-  `writeConfigFile` sont explicites (flux « Créer » dans `ConfigEditor`). Les
-  **suppressions ne sont jamais destructives** : elles passent par `moveToTrash`
-  (`lib/trash.ts`) qui déplace vers la corbeille de claudeboard `data/trash/` (**hors**
-  de CLAUDE_DIR), restaurable/videable depuis la page `/config/trash`.
-- **Autorisations d'écriture (permissions)** : toute mutation de `~/.claude` est
-  **conditionnée** par une permission du store (`PERMISSION_SCHEMA` dans `lib/store.ts`,
-  ressource × action). Le contrôle d'accès est fait **côté serveur** dans chaque route API
-  via `isAllowed(resource, action)` (403 sinon) — l'UI ne fait que refléter l'état (bouton
-  grisé et inopérant avec tooltip `LOCKED_HINT`, bannière `PermissionNotice`). Ajouter une
-  nouvelle action d'écriture ⇒ l'ajouter
-  au schéma **et** la garder derrière `isAllowed`. Défaut : tout `false`.
-- **État propre à claudeboard vs config Claude** : les données qui n'appartiennent pas à
-  Claude Code (favoris, overrides de tarifs, choix d'abonnement, `permissions`, préférences
-  d'affichage) vivent
-  dans `data/claudeboard.json` — **hors** de CLAUDE_DIR et de `~/.claude`, à la racine du
-  projet (gitignored, écriture atomique via `lib/store.ts`). Ne jamais mélanger ces
-  préférences d'UI avec les fichiers de `~/.claude`. L'API `/api/store` valide et dispatche
-  par `section` whitelistée.
-- **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs
-  par famille de modèle dans `lib/analytics.ts`, en USD/million de tokens), pas une
-  facturation réelle. `getAnalytics` fait un seul passage sur tous les JSONL — garder
-  l'agrégation dans cette fonction plutôt que de multiplier les scans du FS.
+- **Next 16** : dans les pages, `params` est une **Promise** (`await params` avant de lire
+  `id`/`name`/`session`). Consulte les guides `node_modules/next/dist/docs/` avant d'écrire
+  du code (voir le bloc en fin de fichier).
+- Toute page qui lit le FS déclare `export const dynamic = "force-dynamic"`.
+- **Sécurité** : tout accès fichier passe par `safeResolve(...)` (anti-traversée `../`).
+  `/api/skills` et `/api/md` refusent en plus les slugs de traversée et valident le
+  frontmatter ; `/api/config-file` n'accepte que des cibles whitelistées.
+  - **Exceptions** : `mcp.ts`, `subscription.ts`, `plugins.ts` lisent `~/.claude.json`
+    (**hors** de CLAUDE_DIR, contient des secrets) → accès **lecture seule** et **ciblés**
+    (`mcpServers` env masqué / champs non sensibles d'`oauthAccount` / `pluginUsage`).
+    `plugins.ts` lit aussi les `marketplace.json` à leur `installLocation` (peut pointer hors
+    de CLAUDE_DIR) — lecture seule.
+- **L'écriture n'est jamais silencieuse** : `writeSkill`/`writeMdEntry` exigent un fichier
+  existant (pas de création) et créent toujours un backup ; les créations de config
+  (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) sont explicites. Les
+  **suppressions ne sont jamais destructives** : elles passent par `moveToTrash` vers
+  `data/trash/` (**hors** de CLAUDE_DIR), restaurable depuis `/config/trash`.
+- **Permissions** : toute mutation de `~/.claude` est gated par une permission
+  (`PERMISSION_SCHEMA`, ressource × action). Le contrôle est fait **côté serveur** dans
+  chaque route via `isAllowed(resource, action)` (403 sinon) ; l'UI ne fait que refléter
+  l'état. Ajouter une action d'écriture ⇒ l'ajouter au schéma **et** la garder derrière
+  `isAllowed`. Défaut : tout `false`.
+- **État claudeboard vs config Claude** : les données qui n'appartiennent pas à Claude Code
+  (favoris, tarifs, abonnement, permissions, préférences) vivent dans `data/claudeboard.json`
+  (**hors** de CLAUDE_DIR, gitignored, écriture atomique). Ne jamais les mélanger avec les
+  fichiers de `~/.claude`. `/api/store` valide et dispatche par `section` whitelistée.
+- **Analytics** : le coût est une **estimation locale** (tarifs `PRICING` indicatifs en
+  USD/million de tokens), pas une facturation réelle. `getAnalytics` fait un **seul passage**
+  sur les JSONL — garder l'agrégation là plutôt que multiplier les scans du FS.
 
 ## Développement
 
@@ -325,8 +209,7 @@ npm run build   # build de production
 npm run lint    # ESLint (next lint)
 ```
 
-Pour pointer vers un répertoire Claude non standard (ou pour des tests) :
-`CLAUDE_DIR=/chemin/.claude npm run dev`.
+Répertoire Claude non standard (ou tests) : `CLAUDE_DIR=/chemin/.claude npm run dev`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
