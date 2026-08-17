@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, Wallet } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 export interface SubscriptionCardProps {
   known: boolean;
@@ -38,14 +39,15 @@ export default function SubscriptionCard({
   netPositive,
   netAbs,
 }: SubscriptionCardProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const netNote = netPositive ? "gagné grâce à l'abonnement" : "l'abonnement coûte plus que l'usage";
+  const netNote = netPositive ? t("subCard.netGain") : t("subCard.netLoss");
 
   const title = (
     <span className="flex items-center gap-2">
       <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
       <Wallet size={13} className="text-[var(--color-accent)]" />
-      <span className="eyebrow text-[var(--color-muted)]">Abonnement</span>
+      <span className="eyebrow text-[var(--color-muted)]">{t("common.subscription")}</span>
     </span>
   );
 
@@ -55,7 +57,7 @@ export default function SubscriptionCard({
       <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
         {title}
         <p className="mt-4 text-sm text-[var(--color-muted)]">
-          Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
+          {t("dash.noSubDetected")} <code className="font-mono">~/.claude.json</code>.
         </p>
       </section>
     );
@@ -75,14 +77,14 @@ export default function SubscriptionCard({
           {label}
         </span>
         {sinceLabel && (
-          <span className="font-mono text-xs text-[var(--color-faint)]">depuis le {sinceLabel}</span>
+          <span className="font-mono text-xs text-[var(--color-faint)]">{t("dash.since", { date: sinceLabel })}</span>
         )}
-        <span className="font-mono text-xs text-[var(--color-faint)]">{monthlyPrice}/mois</span>
+        <span className="font-mono text-xs text-[var(--color-faint)]">{monthlyPrice}{t("dash.perMonth")}</span>
 
         {/* Résumé de l'économie nette : seulement en aperçu replié (repris dans la grille). */}
         {!open && (
           <span className="flex items-center gap-1.5 text-sm">
-            <span className="eyebrow text-[var(--color-muted)]">Économie nette</span>
+            <span className="eyebrow text-[var(--color-muted)]">{t("subCard.netSavings")}</span>
             <NetSavings positive={netPositive} abs={netAbs} />
             <span className="font-mono text-[11px] text-[var(--color-faint)]">{netNote}</span>
           </span>
@@ -99,19 +101,19 @@ export default function SubscriptionCard({
       {open && (
         <div className="grid grid-cols-1 gap-4 border-t border-[var(--color-border)] px-5 pb-5 pt-4 sm:grid-cols-3">
           <div>
-            <div className="eyebrow">Coût usage estimé</div>
+            <div className="eyebrow">{t("subCard.usageCost")}</div>
             <div className="mt-1 font-mono text-xl font-medium tabular-nums">{usageCost}</div>
-            <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">sans abonnement (tarifs indicatifs)</div>
+            <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">{t("subCard.withoutSub")}</div>
           </div>
           <div>
-            <div className="eyebrow">Coût abonnement</div>
+            <div className="eyebrow">{t("subCard.subCost")}</div>
             <div className="mt-1 font-mono text-xl font-medium tabular-nums">{subCost}</div>
             <div className="mt-1 font-mono text-[11px] text-[var(--color-faint)]">
-              {months} mois × {monthlyPrice}
+              {t("dash.subMonths", { count: months })} × {monthlyPrice}
             </div>
           </div>
           <div>
-            <div className="eyebrow">Économie nette</div>
+            <div className="eyebrow">{t("subCard.netSavings")}</div>
             <div className="mt-1 text-xl">
               <NetSavings positive={netPositive} abs={netAbs} />
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { DetailCell } from "./DayDetail";
+import { useTranslation } from "@/components/I18nProvider";
 
 export interface HeatDay {
   date: string; // YYYY-MM-DD (UTC)
@@ -15,6 +16,7 @@ export interface HeatDay {
 const DAY_MS = 86400000;
 const WEEKS = 53; // ~12 mois, taille fixe (indépendante du filtre)
 const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const LEVEL_ALPHA = [0, 0.22, 0.42, 0.68, 1];
 
 function heatLevel(msgs: number, max: number): number {
@@ -50,6 +52,8 @@ export default function ActivityHeatmap({
   onHover: (cell: DetailCell | null) => void;
   onSelect: (cell: DetailCell) => void;
 }) {
+  const { t, locale } = useTranslation();
+  const MONTHS = locale === "en" ? MONTHS_EN : MONTHS_FR;
   const hasWindow = !!windowFrom && !!windowTo;
 
   const map = new Map(days.map((d) => [d.date, d]));
@@ -72,7 +76,7 @@ export default function ActivityHeatmap({
     }
     const firstMonth = new Date(gridStart + c * 7 * DAY_MS).getUTCMonth();
     if (firstMonth !== prevMonth) {
-      monthLabels.push(MONTHS_FR[firstMonth]);
+      monthLabels.push(MONTHS[firstMonth]);
       prevMonth = firstMonth;
     } else {
       monthLabels.push(null);
@@ -126,7 +130,7 @@ export default function ActivityHeatmap({
           ))}
         </div>
         <div className="flex items-center gap-1 text-[10px] text-[var(--color-faint)] mt-1">
-          <span>Moins</span>
+          <span>{t("heatmap.less")}</span>
           {LEVEL_ALPHA.map((a, i) => (
             <span
               key={i}
@@ -137,7 +141,7 @@ export default function ActivityHeatmap({
               }}
             />
           ))}
-          <span>Plus</span>
+          <span>{t("heatmap.more")}</span>
         </div>
       </div>
     </div>

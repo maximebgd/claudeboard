@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "@/components/I18nProvider";
+import { tPlural } from "@/lib/i18n/core";
 
 /**
  * Distribution horaire des débuts de session (24 barres, une par heure locale).
@@ -15,6 +17,7 @@ function fmtHour(h: number): string {
 }
 
 export default function HourlyDistribution({ hours }: { hours: number[] }) {
+  const { t } = useTranslation();
   const [hover, setHover] = useState<number | null>(null);
 
   const max = useMemo(() => Math.max(1, ...hours), [hours]);
@@ -28,26 +31,26 @@ export default function HourlyDistribution({ hours }: { hours: number[] }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
-            <h2 className="eyebrow text-[var(--color-muted)]">Distribution horaire</h2>
+            <h2 className="eyebrow text-[var(--color-muted)]">{t("hourly.title")}</h2>
           </div>
-          <p className="mt-1.5 ml-[11px] text-xs text-[var(--color-faint)]">Débuts de session par heure de la journée</p>
+          <p className="mt-1.5 ml-[11px] text-xs text-[var(--color-faint)]">{t("hourly.subtitle")}</p>
         </div>
         {peak >= 0 && (
           <div className="text-right">
             <div className="font-mono text-sm tabular-nums text-[var(--color-fg)]">
-              {hover !== null ? fmtHour(hover) : `Pic ${fmtHour(peak)}`}
+              {hover !== null ? fmtHour(hover) : t("hourly.peak", { hour: fmtHour(peak) })}
             </div>
             <div className="font-mono text-[11px] tabular-nums text-[var(--color-faint)]">
               {hover !== null
-                ? `${hours[hover]} session${hours[hover] > 1 ? "s" : ""}`
-                : `${total} au total`}
+                ? tPlural(t, "dash.session", hours[hover])
+                : t("hourly.total", { count: total })}
             </div>
           </div>
         )}
       </div>
 
       {total === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">Aucune session sur cette période.</p>
+        <p className="text-sm text-[var(--color-muted)]">{t("hourly.empty")}</p>
       ) : (
         <>
           <div className="flex h-32 items-end gap-[3px]" onMouseLeave={() => setHover(null)}>
@@ -58,7 +61,7 @@ export default function HourlyDistribution({ hours }: { hours: number[] }) {
                   key={h}
                   onMouseEnter={() => setHover(h)}
                   className="flex h-full flex-1 cursor-pointer flex-col justify-end"
-                  title={`${fmtHour(h)} · ${count} session${count > 1 ? "s" : ""}`}
+                  title={`${fmtHour(h)} · ${tPlural(t, "dash.session", count)}`}
                 >
                   <div
                     className="w-full rounded-sm bg-[var(--color-accent)] transition-opacity"

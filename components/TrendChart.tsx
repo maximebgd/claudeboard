@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "@/components/I18nProvider";
 
 /**
  * Courbe temporelle (aire) alignée sur une grille journalière **continue** : les
@@ -12,6 +13,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 const DAY_MS = 86400000;
 const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export interface TrendPoint {
   date: string; // YYYY-MM-DD
@@ -35,7 +37,7 @@ export default function TrendChart({
   selectedDate,
   onHoverDate,
   onSelectDate,
-  emptyLabel = "Aucune donnée sur cette période.",
+  emptyLabel,
   fill = false,
 }: {
   points: TrendPoint[];
@@ -51,6 +53,8 @@ export default function TrendChart({
    *  lieu d'une hauteur fixe — permet de la caler sur une autre vue (heatmap). */
   fill?: boolean;
 }) {
+  const { t, locale } = useTranslation();
+  const MONTHS = locale === "en" ? MONTHS_EN : MONTHS_FR;
   const [hover, setHover] = useState<number | null>(null);
   const stacked = series.length > 1;
 
@@ -124,7 +128,7 @@ export default function TrendChart({
     for (let i = 0; i < n; i++) {
       const mo = Number(days[i].date.slice(5, 7)) - 1;
       if (mo !== prev) {
-        out.push({ pct: (i / w) * 100, label: MONTHS_FR[mo] });
+        out.push({ pct: (i / w) * 100, label: MONTHS[mo] });
         prev = mo;
       }
     }
@@ -137,7 +141,7 @@ export default function TrendChart({
   );
 
   if (n === 0) {
-    return <p className="text-sm text-[var(--color-muted)]">{emptyLabel}</p>;
+    return <p className="text-sm text-[var(--color-muted)]">{emptyLabel ?? t("trend.empty")}</p>;
   }
 
   const setHoverIndex = (i: number | null) => {

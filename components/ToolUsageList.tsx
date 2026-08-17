@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, Wrench } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
+import { makeFormatters } from "@/lib/format";
 
 /**
  * Section « Outils & skills les plus utilisés » du dashboard : titre + bouton de
@@ -11,19 +13,14 @@ import { ArrowDownWideNarrow, ArrowUpNarrowWide, Wrench } from "lucide-react";
  * l'outil le plus appelé, toutes lignes confondues).
  */
 
-const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
-const full = new Intl.NumberFormat("fr-FR");
-
-function fmtNum(n: number): string {
-  return n >= 10000 ? compact.format(n) : full.format(n);
-}
-
 export interface ToolUsage {
   name: string;
   count: number;
 }
 
 export default function ToolUsageList({ tools }: { tools: ToolUsage[] }) {
+  const { t, locale } = useTranslation();
+  const fmt = useMemo(() => makeFormatters(locale), [locale]);
   const [desc, setDesc] = useState(true);
 
   const maxCount = useMemo(() => Math.max(1, ...tools.map((t) => t.count)), [tools]);
@@ -38,14 +35,14 @@ export default function ToolUsageList({ tools }: { tools: ToolUsage[] }) {
       <div className="mb-4 flex items-center gap-2">
         <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-[var(--color-accent)]" />
         <Wrench size={13} className="text-[var(--color-accent)]" />
-        <h2 className="eyebrow text-[var(--color-muted)]">Outils &amp; skills les plus utilisés</h2>
+        <h2 className="eyebrow text-[var(--color-muted)]">{t("toolUsage.title")}</h2>
         {tools.length > 0 && (
           <button
             type="button"
             onClick={() => setDesc((d) => !d)}
             className="ml-auto flex shrink-0 items-center rounded-md border border-[var(--color-border)] bg-[var(--color-inset)] p-1.5 text-[var(--color-muted)] transition-colors hover:text-[var(--color-fg)]"
-            title={desc ? "Appels décroissants" : "Appels croissants"}
-            aria-label={desc ? "Appels décroissants" : "Appels croissants"}
+            title={desc ? t("toolUsage.sortDesc") : t("toolUsage.sortAsc")}
+            aria-label={desc ? t("toolUsage.sortDesc") : t("toolUsage.sortAsc")}
           >
             {desc ? <ArrowDownWideNarrow size={16} /> : <ArrowUpNarrowWide size={16} />}
           </button>
@@ -53,22 +50,22 @@ export default function ToolUsageList({ tools }: { tools: ToolUsage[] }) {
       </div>
 
       {tools.length === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">Aucun appel d&apos;outil.</p>
+        <p className="text-sm text-[var(--color-muted)]">{t("toolUsage.empty")}</p>
       ) : (
         <div className="flex max-h-[13rem] flex-col gap-2 overflow-y-auto pr-1">
-          {visible.map((t) => (
-            <div key={t.name} className="flex items-center gap-3">
-              <span className="w-40 shrink-0 truncate font-mono text-sm" title={t.name}>
-                {t.name}
+          {visible.map((tool) => (
+            <div key={tool.name} className="flex items-center gap-3">
+              <span className="w-40 shrink-0 truncate font-mono text-sm" title={tool.name}>
+                {tool.name}
               </span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-inset)]">
                 <div
                   className="h-full rounded-full bg-[var(--color-accent)]"
-                  style={{ width: `${(t.count / maxCount) * 100}%` }}
+                  style={{ width: `${(tool.count / maxCount) * 100}%` }}
                 />
               </div>
               <span className="w-12 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                {fmtNum(t.count)}
+                {fmt.num(tool.count)}
               </span>
             </div>
           ))}

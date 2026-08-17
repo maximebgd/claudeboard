@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
+import { makeFormatters } from "@/lib/format";
 
 /** Sous-ensemble de `ModelStat` (lib/analytics) nécessaire au camembert.
  *  Défini localement pour garder ce composant client indépendant de `lib`
@@ -16,16 +18,12 @@ export interface DonutModel {
   tokensOut: number;
 }
 
-const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
-const full = new Intl.NumberFormat("fr-FR");
-
-function fmtNum(n: number): string {
-  return n >= 10000 ? compact.format(n) : full.format(n);
-}
-
 const R = 15.9155; // circonférence ≈ 100 → dasharray en %
 
 export default function ModelDonut({ models }: { models: DonutModel[] }) {
+  const { t, locale } = useTranslation();
+  const fmt = useMemo(() => makeFormatters(locale), [locale]);
+  const fmtNum = fmt.num;
   const [active, setActive] = useState<string | null>(null);
   const total = models.reduce((n, m) => n + m.messages, 0);
   const hovered = active ? models.find((m) => m.key === active) ?? null : null;
@@ -64,7 +62,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-mono text-xl font-medium tabular-nums">{fmtNum(hovered ? hovered.messages : total)}</span>
-          <span className="eyebrow mt-0.5">réponses</span>
+          <span className="eyebrow mt-0.5">{t("donut.replies")}</span>
         </div>
       </div>
       <div className="flex flex-col gap-2 min-w-0">
@@ -90,7 +88,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
                 // Affiché à droite du modèle.
                 <div className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-2 shadow-lg font-mono text-xs tabular-nums text-[var(--color-muted)]">
                   <div className="flex items-center gap-3">
-                    <span className="w-10 font-sans text-[var(--color-faint)]">Msg</span>
+                    <span className="w-10 font-sans text-[var(--color-faint)]">{t("donut.msg")}</span>
                     <span className="inline-flex items-center gap-1">
                       <ArrowUp size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.messagesIn)}
@@ -101,7 +99,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-3">
-                    <span className="w-10 font-sans text-[var(--color-faint)]">Tok</span>
+                    <span className="w-10 font-sans text-[var(--color-faint)]">{t("donut.tok")}</span>
                     <span className="inline-flex items-center gap-1">
                       <ArrowUp size={12} className="text-[var(--color-accent)]" />
                       {fmtNum(m.tokensIn)}

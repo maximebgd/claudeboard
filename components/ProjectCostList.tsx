@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, Search } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
+import { makeFormatters } from "@/lib/format";
 
 /**
  * Liste « Coût estimé par projet » du dashboard : recherche par nom + tri
@@ -17,12 +19,9 @@ export interface ProjectCost {
   costUSD: number;
 }
 
-function fmtUSD(n: number): string {
-  if (n > 0 && n < 0.01) return "< 0,01 $";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
-
 export default function ProjectCostList({ projects }: { projects: ProjectCost[] }) {
+  const { t, locale } = useTranslation();
+  const fmt = useMemo(() => makeFormatters(locale), [locale]);
   const [query, setQuery] = useState("");
   const [desc, setDesc] = useState(true);
 
@@ -49,7 +48,7 @@ export default function ProjectCostList({ projects }: { projects: ProjectCost[] 
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un projet…"
+            placeholder={t("projectCost.searchPlaceholder")}
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-inset)] py-1.5 pl-8 pr-2.5 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none"
           />
         </div>
@@ -57,15 +56,15 @@ export default function ProjectCostList({ projects }: { projects: ProjectCost[] 
           type="button"
           onClick={() => setDesc((d) => !d)}
           className="flex shrink-0 items-center rounded-md border border-[var(--color-border)] bg-[var(--color-inset)] p-1.5 text-[var(--color-muted)] transition-colors hover:text-[var(--color-fg)]"
-          title={desc ? "Coût décroissant" : "Coût croissant"}
-          aria-label={desc ? "Coût décroissant" : "Coût croissant"}
+          title={desc ? t("projectCost.sortDesc") : t("projectCost.sortAsc")}
+          aria-label={desc ? t("projectCost.sortDesc") : t("projectCost.sortAsc")}
         >
           {desc ? <ArrowDownWideNarrow size={16} /> : <ArrowUpNarrowWide size={16} />}
         </button>
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">Aucun projet ne correspond.</p>
+        <p className="text-sm text-[var(--color-muted)]">{t("projectCost.noMatch")}</p>
       ) : (
         <div className="flex max-h-[13rem] flex-col gap-2 overflow-y-auto pr-1">
           {visible.map((p) => (
@@ -87,7 +86,7 @@ export default function ProjectCostList({ projects }: { projects: ProjectCost[] 
                 />
               </div>
               <span className="w-20 text-right font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                {fmtUSD(p.costUSD)}
+                {fmt.usd(p.costUSD)}
               </span>
             </Link>
           ))}

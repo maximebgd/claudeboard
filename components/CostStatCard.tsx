@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Coins, Wallet } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 export interface CostStatCardProps {
   /** Coût d'usage estimé, déjà formaté (ex. « 42,00 $ »). */
@@ -38,11 +39,12 @@ export default function CostStatCard({
   trend,
   tooltip,
 }: CostStatCardProps) {
+  const { t } = useTranslation();
   const [showSavings, setShowSavings] = useState(initialSavings);
   const savings = showSavings && known;
 
   const Icon = savings ? Wallet : Coins;
-  const label = savings ? "Économie abo." : "Coût estimé";
+  const label = savings ? t("cost.savings") : t("cost.estimated");
   const value = savings ? `${netPositive ? "+" : "−"}${savingsValue}` : usageValue;
   const valueColor = savings ? (netPositive ? "text-emerald-500" : "text-red-400") : "";
   const sub = usageSub;

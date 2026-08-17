@@ -19,6 +19,9 @@ import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/cl
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getEffectiveSubscription } from "@/lib/subscription";
 import { getPreferences } from "@/lib/store";
+import { getT, type Language } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
+import { makeFormatters } from "@/lib/format";
 import { listSkills } from "@/lib/skills";
 import { type HeatDay } from "@/components/ActivityHeatmap";
 import ActivityPanel from "@/components/ActivityPanel";
@@ -36,26 +39,15 @@ export const dynamic = "force-dynamic";
 
 /* --------------------------------- helpers -------------------------------- */
 
-const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
-const full = new Intl.NumberFormat("fr-FR");
-
-function fmtNum(n: number): string {
-  return n >= 10000 ? compact.format(n) : full.format(n);
-}
-
-function fmtUSD(n: number): string {
-  if (n > 0 && n < 0.01) return "< 0,01 $";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
-
-function fmtDuration(ms: number): string {
+function fmtDuration(ms: number, locale: Language): string {
+  const dU = locale === "en" ? "d" : "j";
   if (ms <= 0) return "—";
   const s = Math.round(ms / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   if (h >= 24) {
     const d = Math.floor(h / 24);
-    return `${d}j ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
+    return `${d}${dU} ${(h % 24).toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}min`;
   }
   if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
   if (m > 0) return `${m} min`;
@@ -145,13 +137,19 @@ function previousWindow(sinceMs: number, untilMs: number): { prevSinceMs: number
 }
 
 /** Jour au format « 13 juil. » (UTC, cohérent avec les clés de jour de la heatmap). */
-function fmtDay(ms: number): string {
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+function fmtDay(ms: number, locale: Language): string {
+  const tag = locale === "en" ? "en-US" : "fr-FR";
+  return new Date(ms).toLocaleDateString(tag, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 /** Libellé « du 13 juil. au 11 août » d'une période bornée. */
-function rangeLabel(sinceMs: number, untilMs: number): string {
-  return `du ${fmtDay(sinceMs)} au ${fmtDay(untilMs)}`;
+function rangeLabel(
+  sinceMs: number,
+  untilMs: number,
+  locale: Language,
+  t: (key: "dash.rangeLabel", params: { from: string; to: string }) => string
+): string {
+  return t("dash.rangeLabel", { from: fmtDay(sinceMs, locale), to: fmtDay(untilMs, locale) });
 }
 
 /** Variation en % de `cur` vs `prev`. `null` = pas de base (période N-1 vide). */
@@ -238,12 +236,20 @@ function StatCard({
  * stable atténué) puis « vs du … au … » sur la ligne suivante. `pct = null` (période
  * précédente vide) → « nouveau ».
  */
-function TrendDelta({ pct, compareLabel }: { pct: number | null; compareLabel: string }) {
+function TrendDelta({
+  pct,
+  compareLabel,
+  newLabel,
+}: {
+  pct: number | null;
+  compareLabel: string;
+  newLabel: string;
+}) {
   const up = pct !== null && pct > 0;
   const down = pct !== null && pct < 0;
   const color = up ? "#6bbf73" : down ? "var(--color-accent)" : "var(--color-faint)";
   const Arrow = up ? ArrowUp : down ? ArrowDown : Minus;
-  const text = pct === null ? "nouveau" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)} %`;
+  const text = pct === null ? newLabel : `${pct > 0 ? "+" : ""}${pct.toFixed(0)} %`;
   return (
     <div className="mt-1.5 text-[11px] leading-tight">
       <span className="inline-flex items-center gap-0.5 font-mono font-medium tabular-nums" style={{ color }}>
@@ -285,13 +291,15 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub, favorites, preferences] = await Promise.all([
+  const [a, skills, sub, favorites, preferences, { t, locale }] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getEffectiveSubscription(),
     getFavoriteSessions(),
     getPreferences(),
+    getT(),
   ]);
+  const fmt = makeFormatters(locale);
 
   // Nombre de mois d'abonnement facturés sur la fenêtre : on compte les échéances
   // mensuelles depuis le début de l'abonnement (repli sur la 1re activité si la date
@@ -325,18 +333,20 @@ export default async function HomePage({
   // dans la carte KPI correspondante. `a.trend` est `null` pour la fenêtre « Tout »
   // (pas de période de comparaison) → aucun delta n'est rendu.
   const tr = a.trend;
-  const compareLabel = tr ? rangeLabel(prevSinceMs, prevUntilMs) : "";
+  const compareLabel = tr ? rangeLabel(prevSinceMs, prevUntilMs, locale, t) : "";
+  const newLabel = t("dash.new");
   const messagesTrend = tr && (
-    <TrendDelta pct={pctChange(totals.messages, tr.messages)} compareLabel={compareLabel} />
+    <TrendDelta pct={pctChange(totals.messages, tr.messages)} compareLabel={compareLabel} newLabel={newLabel} />
   );
   const tokensTrend = tr && (
     <TrendDelta
       pct={pctChange(totals.tokensIn + totals.tokensOut, tr.tokensIn + tr.tokensOut)}
       compareLabel={compareLabel}
+      newLabel={newLabel}
     />
   );
   const costTrend = tr && (
-    <TrendDelta pct={pctChange(totals.costUSD, tr.costUSD)} compareLabel={compareLabel} />
+    <TrendDelta pct={pctChange(totals.costUSD, tr.costUSD)} compareLabel={compareLabel} newLabel={newLabel} />
   );
 
   // Détail de l'abonnement, désormais révélé au survol de la carte « Coût estimé »
@@ -347,7 +357,7 @@ export default async function HomePage({
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-4 shadow-lg shadow-black/20">
       <div className="flex items-center gap-2">
         <Wallet size={13} className="text-[var(--color-accent)]" />
-        <span className="eyebrow text-[var(--color-muted)]">Abonnement</span>
+        <span className="eyebrow text-[var(--color-muted)]">{t("common.subscription")}</span>
       </div>
       {sub.known ? (
         <>
@@ -357,33 +367,33 @@ export default async function HomePage({
               {sub.label}
             </span>
             <span className="font-mono text-[11px] text-[var(--color-faint)]">
-              {fmtUSD(sub.monthlyPriceUSD)}/mois
+              {fmt.usd(sub.monthlyPriceUSD)}{t("dash.perMonth")}
             </span>
             {sub.since && (
               <span className="font-mono text-[11px] text-[var(--color-faint)]">
-                depuis le {formatDate(sub.since)}
+                {t("dash.since", { date: formatDate(sub.since, locale) })}
               </span>
             )}
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--color-border)] pt-3 text-center">
             <div>
-              <div className="eyebrow">Usage</div>
-              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmtUSD(totals.costUSD)}</div>
+              <div className="eyebrow">{t("dash.usage")}</div>
+              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmt.usd(totals.costUSD)}</div>
             </div>
             <div>
-              <div className="eyebrow">Abonnement</div>
-              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmtUSD(subCost)}</div>
-              <div className="mt-0.5 font-mono text-[10px] text-[var(--color-faint)]">{subMonths} mois</div>
+              <div className="eyebrow">{t("common.subscription")}</div>
+              <div className="mt-1 font-mono text-sm font-medium tabular-nums">{fmt.usd(subCost)}</div>
+              <div className="mt-0.5 font-mono text-[10px] text-[var(--color-faint)]">{t("dash.subMonths", { count: subMonths })}</div>
             </div>
             <div>
-              <div className="eyebrow">Net</div>
+              <div className="eyebrow">{t("dash.net")}</div>
               <div
                 className={`mt-1 font-mono text-sm font-medium tabular-nums ${
                   netPositive ? "text-emerald-500" : "text-red-400"
                 }`}
               >
                 {netPositive ? "+" : "−"}
-                {fmtUSD(Math.abs(netSavings))}
+                {fmt.usd(Math.abs(netSavings))}
               </div>
             </div>
           </div>
@@ -393,7 +403,7 @@ export default async function HomePage({
         </>
       ) : (
         <p className="mt-3 text-xs text-[var(--color-muted)]">
-          Aucun abonnement Pro / Max détecté dans <code className="font-mono">~/.claude.json</code>.
+          {t("dash.noSubDetected")} <code className="font-mono">~/.claude.json</code>.
         </p>
       )}
     </div>
@@ -432,7 +442,7 @@ export default async function HomePage({
             <span>readout</span>
           </div>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Vue d&apos;ensemble
+            {t("dash.title")}
           </h1>
           <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
             <span className="text-[var(--color-accent)]" aria-hidden>
@@ -456,30 +466,30 @@ export default async function HomePage({
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           icon={Sparkles}
-          label="Skills"
-          value={fmtNum(skills.length)}
+          label={t("sidebar.skills")}
+          value={fmt.num(skills.length)}
           href="/skills"
         />
         <StatCard
           icon={FolderGit2}
-          label="Projets / Sessions"
-          value={`${fmtNum(totals.projects)} / ${fmtNum(totals.sessions)}`}
+          label={t("dash.projectsSessions")}
+          value={`${fmt.num(totals.projects)} / ${fmt.num(totals.sessions)}`}
           href="/projects"
         />
         <StatCard
           icon={MessagesSquare}
-          label="Messages"
-          value={full.format(totals.messages)}
+          label={t("dash.messages")}
+          value={fmt.int(totals.messages)}
           sub={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-0.5">
                 <ArrowUp size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.userMessages)}
+                {fmt.num(totals.userMessages)}
               </span>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-0.5">
                 <ArrowDown size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.assistantMessages)}
+                {fmt.num(totals.assistantMessages)}
               </span>
             </span>
           }
@@ -487,30 +497,30 @@ export default async function HomePage({
         />
         <StatCard
           icon={Cpu}
-          label="Tokens (in/out)"
-          value={fmtNum(totals.tokensIn + totals.tokensOut)}
+          label={t("dash.tokens")}
+          value={fmt.num(totals.tokensIn + totals.tokensOut)}
           sub={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-0.5">
                 <ArrowUp size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensIn)}
+                {fmt.num(totals.tokensIn)}
               </span>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-0.5">
                 <ArrowDown size={12} className="text-[var(--color-accent)]" />
-                {fmtNum(totals.tokensOut)}
+                {fmt.num(totals.tokensOut)}
               </span>
             </span>
           }
           trend={tokensTrend}
         />
         <CostStatCard
-          usageValue={fmtUSD(totals.costUSD)}
-          savingsValue={fmtUSD(Math.abs(netSavings))}
+          usageValue={fmt.usd(totals.costUSD)}
+          savingsValue={fmt.usd(Math.abs(netSavings))}
           netPositive={netPositive}
           known={sub.known}
           initialSavings={preferences.costCardMode === "savings"}
-          usageSub="tarifs indicatifs"
+          usageSub={t("dash.indicativePricing")}
           trend={costTrend}
           tooltip={subTooltip}
         />
@@ -521,12 +531,12 @@ export default async function HomePage({
         known={sub.known}
         label={sub.label}
         sinceLabel={sub.since ? formatDate(sub.since) : null}
-        monthlyPrice={fmtUSD(sub.monthlyPriceUSD)}
-        usageCost={fmtUSD(totals.costUSD)}
-        subCost={fmtUSD(subCost)}
+        monthlyPrice={fmt.usd(sub.monthlyPriceUSD)}
+        usageCost={fmt.usd(totals.costUSD)}
+        subCost={fmt.usd(subCost)}
         months={subMonths}
         netPositive={netSavings >= 0}
-        netAbs={fmtUSD(Math.abs(netSavings))}
+        netAbs={fmt.usd(Math.abs(netSavings))}
       /> */}
 
       {/* Sessions épinglées */}
@@ -583,10 +593,10 @@ export default async function HomePage({
       {/* Modèles : camembert + tokens/coût */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle>Répartition des modèles</SectionTitle>
+          <SectionTitle>{t("dash.modelBreakdown")}</SectionTitle>
           {a.models.length === 0 ? (
             <p className="text-sm text-[var(--color-muted)]">
-              Aucune donnée de modèle.
+              {t("dash.noModelData")}
             </p>
           ) : (
             <ModelDonut models={a.models} />
@@ -594,12 +604,12 @@ export default async function HomePage({
         </section>
 
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle>Tokens &amp; coût par modèle</SectionTitle>
+          <SectionTitle>{t("dash.tokensCostByModel")}</SectionTitle>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left eyebrow">
-                  <th className="pb-2 font-normal">Modèle</th>
+                  <th className="pb-2 font-normal">{t("common.model")}</th>
                   <th className="pb-2 text-right font-normal">
                     <span className="inline-flex items-center justify-end gap-0.5">
                       <ArrowUp
@@ -618,8 +628,8 @@ export default async function HomePage({
                       Out
                     </span>
                   </th>
-                  <th className="pb-2 text-right font-normal">Cache</th>
-                  <th className="pb-2 text-right font-normal">Coût</th>
+                  <th className="pb-2 text-right font-normal">{t("dash.cache")}</th>
+                  <th className="pb-2 text-right font-normal">{t("common.cost")}</th>
                 </tr>
               </thead>
               <tbody className="font-mono tabular-nums">
@@ -637,24 +647,24 @@ export default async function HomePage({
                         {m.label}
                       </span>
                     </td>
-                    <td className="py-2 text-right">{fmtNum(m.tokensIn)}</td>
-                    <td className="py-2 text-right">{fmtNum(m.tokensOut)}</td>
+                    <td className="py-2 text-right">{fmt.num(m.tokensIn)}</td>
+                    <td className="py-2 text-right">{fmt.num(m.tokensOut)}</td>
                     <td className="py-2 text-right text-[var(--color-muted)]">
-                      {fmtNum(m.cacheRead + m.cacheWrite)}
+                      {fmt.num(m.cacheRead + m.cacheWrite)}
                     </td>
-                    <td className="py-2 text-right">{fmtUSD(m.costUSD)}</td>
+                    <td className="py-2 text-right">{fmt.usd(m.costUSD)}</td>
                   </tr>
                 ))}
                 <tr className="border-t border-[var(--color-border)] font-medium">
-                  <td className="py-2 font-sans">Total</td>
-                  <td className="py-2 text-right">{fmtNum(totals.tokensIn)}</td>
+                  <td className="py-2 font-sans">{t("common.total")}</td>
+                  <td className="py-2 text-right">{fmt.num(totals.tokensIn)}</td>
                   <td className="py-2 text-right">
-                    {fmtNum(totals.tokensOut)}
+                    {fmt.num(totals.tokensOut)}
                   </td>
                   <td className="py-2 text-right text-[var(--color-muted)]">
-                    {fmtNum(totals.cacheRead + totals.cacheWrite)}
+                    {fmt.num(totals.cacheRead + totals.cacheWrite)}
                   </td>
-                  <td className="py-2 text-right">{fmtUSD(totals.costUSD)}</td>
+                  <td className="py-2 text-right">{fmt.usd(totals.costUSD)}</td>
                 </tr>
               </tbody>
             </table>
@@ -665,7 +675,7 @@ export default async function HomePage({
       {/* Coût par projet */}
       {projectCosts.length > 0 && (
         <section className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle icon={Coins}>Coût estimé par projet</SectionTitle>
+          <SectionTitle icon={Coins}>{t("dash.costByProject")}</SectionTitle>
           <ProjectCostList projects={projectCosts} />
         </section>
       )}
@@ -677,36 +687,36 @@ export default async function HomePage({
         </section>
 
         <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
-          <SectionTitle icon={Clock}>Sessions</SectionTitle>
+          <SectionTitle icon={Clock}>{t("common.sessions")}</SectionTitle>
           <div className="grid grid-cols-2 gap-x-4 gap-y-5">
             <div>
-              <div className="eyebrow">Durée totale</div>
+              <div className="eyebrow">{t("dash.totalDuration")}</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums">
-                {fmtDuration(session.totalDurationMs)}
+                {fmtDuration(session.totalDurationMs, locale)}
               </div>
             </div>
             <div>
-              <div className="eyebrow">Durée moyenne</div>
+              <div className="eyebrow">{t("dash.avgDuration")}</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums">
-                {fmtDuration(session.avgDurationMs)}
+                {fmtDuration(session.avgDurationMs, locale)}
               </div>
             </div>
             <div>
-              <div className="eyebrow">Messages / session</div>
+              <div className="eyebrow">{t("dash.messagesPerSession")}</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums">
                 {session.avgMessages.toFixed(1)}
               </div>
             </div>
             <div>
-              <div className="eyebrow">Outils appelés</div>
+              <div className="eyebrow">{t("dash.toolsCalled")}</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums">
-                {fmtNum(totals.toolUses)}
+                {fmt.num(totals.toolUses)}
               </div>
             </div>
             <div>
-              <div className="eyebrow">Durée médiane</div>
+              <div className="eyebrow">{t("dash.medianDuration")}</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums">
-                {fmtDuration(session.medianDurationMs)}
+                {fmtDuration(session.medianDurationMs, locale)}
               </div>
             </div>
           </div>
@@ -714,10 +724,10 @@ export default async function HomePage({
             <div className="flex items-center justify-between text-xs text-[var(--color-muted)] mb-1.5">
               <span className="inline-flex items-center gap-1.5">
                 <Brain size={13} className="text-[var(--color-accent)]" />
-                Ratio thinking / texte
+                {t("dash.thinkingRatio")}
               </span>
               <span className="font-mono tabular-nums">
-                {thinkingPct.toFixed(0)}% thinking
+                {t("dash.thinkingPct", { pct: thinkingPct.toFixed(0) })}
               </span>
             </div>
             <div className="flex h-2.5 rounded-full overflow-hidden bg-[var(--color-inset)]">
@@ -745,16 +755,16 @@ export default async function HomePage({
                 href="/projects"
                 className="inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
               >
-                <FolderGit2 size={14} /> Tous les projets
+                <FolderGit2 size={14} /> {t("dash.allProjects")}
               </Link>
             }
           >
-            Projets récemment modifiés
+            {t("dash.recentProjects")}
           </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {a.recentProjects.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">
-                Aucun projet trouvé.
+                {t("dash.noProjects")}
               </div>
             )}
             {a.recentProjects.map((p) => (
@@ -772,26 +782,26 @@ export default async function HomePage({
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-faint)]">
                     <span className="flex items-center gap-1">
                       <MessagesSquare size={12} />
-                      {p.sessionCount} session{p.sessionCount > 1 ? "s" : ""}
+                      {tPlural(t, "dash.session", p.sessionCount)}
                     </span>
                     <span
                       className="flex items-center gap-1"
-                      title={`Créé le ${formatDate(p.createdAt)}`}
+                      title={t("dash.createdOn", { date: formatDate(p.createdAt, locale) })}
                     >
                       <Clock size={12} />
-                      Existe depuis {formatDuration(Date.now() - p.createdAt)}
+                      {t("dash.existsFor", { duration: formatDuration(Date.now() - p.createdAt, locale) })}
                     </span>
                     <span
                       className="flex items-center gap-1"
-                      title={formatDate(p.lastModified)}
+                      title={formatDate(p.lastModified, locale)}
                     >
                       <History size={12} />
-                      Modifié {formatRelative(p.lastModified)}
+                      {t("dash.modified", { relative: formatRelative(p.lastModified, locale) })}
                     </span>
                     {p.costUSD > 0 && (
                       <span className="flex items-center gap-1">
                         <Coins size={12} />
-                        {fmtUSD(p.costUSD)}
+                        {fmt.usd(p.costUSD)}
                       </span>
                     )}
                   </div>
@@ -814,16 +824,16 @@ export default async function HomePage({
                 href="/skills"
                 className="inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
               >
-                <Sparkles size={14} /> Voir les skills
+                <Sparkles size={14} /> {t("dash.viewSkills")}
               </Link>
             }
           >
-            Skills
+            {t("sidebar.skills")}
           </SectionTitle>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] divide-y divide-[var(--color-border)] max-h-[21rem] overflow-y-auto">
             {recentSkills.length === 0 && (
               <div className="p-4 text-sm text-[var(--color-muted)]">
-                Aucun skill trouvé.
+                {t("dash.noSkills")}
               </div>
             )}
             {recentSkills.map((s) => (
