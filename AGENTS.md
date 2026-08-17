@@ -43,10 +43,12 @@ section ne donne que le panorama fonctionnel.
     ou plan manuel), **Affichage** (`CostModeSelector` → `costCardMode`), **Langue**
     (`LanguageSelector` → `language`, FR/EN).
   - **Settings Claude** : édition de `settings.json` / `settings.local.json` (JSON validé
-    live + backup, création `.local` à la demande). Gated par `settings.modify` ; reset par
-    `settings.reset`.
+    live, création `.local` à la demande). Gated par `settings.modify` ; reset par
+    `settings.reset`. Chaque save archive la version précédente dans un panneau **Versions**
+    (`BackupsPanel`, historique restaurable, cf. `backups.ts`).
   - **Hooks** : visualiseur groupé par event (fusion des deux settings). Édition du bloc
     `hooks` de `settings.json` gated par `hooks.modify` (`settings.local.json` non touché).
+    Même panneau **Versions** de `settings.json` (restauration gated par `settings.modify`).
   - **Agents** (`~/.claude/agents/*`) & **Commandes** (`~/.claude/commands/**`, sous-dossiers
     = namespaces) : liste/aperçu/édition/création/suppression sur le modèle des skills. Gated
     par `agents|commands.{create,modify,delete}`.
@@ -54,14 +56,16 @@ section ne donne que le panorama fonctionnel.
     commandes (détection textuelle : `/commande`, `@agent`, nom en backticks) ; layout
     force-dirigé client. **Lecture seule**.
   - **CLAUDE.md global** (`~/.claude/CLAUDE.md`) : éditeur markdown, création/reset/
-    suppression gated par `claudeMd.{create,modify,delete,reset}`.
+    suppression gated par `claudeMd.{create,modify,delete,reset}`. Panneau **Versions**
+    (restauration gated par `claudeMd.modify`).
   - **MCP servers** : **lecture seule** des serveurs de `~/.claude.json` (globaux + par
     projet) + statut d'auth ; `env` masqué.
   - **Plugins & Marketplaces** : **lecture seule** des marketplaces et catalogues + KPI ;
     la commande CLI `/plugin install|uninstall` est copiable mais jamais exécutée. **Hors
     permissions** (l'install reste du ressort du CLI).
   - **Keybindings** (`~/.claude/keybindings.json`) : aperçu tabulaire + éditeur JSON,
-    création/reset/suppression gated par `keybindings.{create,modify,delete,reset}`.
+    création/reset/suppression gated par `keybindings.{create,modify,delete,reset}`. Panneau
+    **Versions** (restauration gated par `keybindings.modify`).
   - **Corbeille** (`/config/trash`) : éléments supprimés depuis l'app, stockés **hors** de
     `~/.claude` (`data/trash/`). Restaurable (refus si la cible existe) ou supprimable
     définitivement ; la corbeille peut être vidée. Restauration gated par le `delete` de la
@@ -110,8 +114,13 @@ lib/
                isValidMdSlug : agents & commandes (.md à frontmatter, slugs imbriqués =
                namespaces), même modèle que skills
   configFiles.ts read/writeConfigFile (settings, settings.local, CLAUDE.md, keybindings :
-               JSON validé, backup si existant, création explicite) · resetConfigFile ·
+               JSON validé, version précédente archivée via backups.ts si existant, création
+               explicite) · configResource (cible → ressource de permission) · resetConfigFile ·
                deleteConfigFile (→ corbeille)
+  backups.ts   historique de versions **de claudeboard** hors de CLAUDE_DIR (`data/backups/
+               <target>/<id>`, override BACKUPS_DIR) : saveBackup (appelé par writeConfigFile,
+               remplace les anciens `.bak.<ts>`) · listBackups · readBackup · plafonné aux N
+               versions récentes par cible. Restaurable depuis le panneau Versions de l'éditeur
   hooks.ts     getHooks (normalise/groupe les hooks des deux settings) · getHooksRaw/
                writeHooks (bloc hooks de settings.json)
   graph.ts     getDependencyGraph : LECTURE SEULE — références croisées skills/agents/
@@ -154,6 +163,7 @@ app/
   docs/layout.tsx · page.tsx · [slug]/page.tsx · structure/page.tsx   Documentation + arbre .claude
   api/skills/route.ts                  POST { op, slug, raw } → SKILL.md write/create/delete (gated)
   api/config-file/route.ts             POST { op, target, raw } → fichiers uniques write/reset/delete (gated)
+  api/backups/route.ts                 GET ?target(&id?) liste/aperçu ; POST { op:restore, target, id } (gated modify)
   api/md/route.ts                      POST { op, kind, slug, raw } → agents/commandes (gated)
   api/projects/route.ts                POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
   api/trash/route.ts                   GET listTrash ; POST restore (gated <resource>.delete) / delete / empty (gated trash.empty)
@@ -168,7 +178,8 @@ components/
   Écriture gated : ConfigEditor (JSON/markdown, validation live, backup au save, mode
     lecture seule via `canWrite`) · SkillEditor · PermissionsMatrix · PermissionNotice ·
     DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
-    LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList
+    LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList ·
+    BackupsPanel (panneau Versions replié : liste/aperçu/restaure les backups d'un fichier)
   Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
     RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
     PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution
@@ -191,7 +202,10 @@ components/
     `plugins.ts` lit aussi les `marketplace.json` à leur `installLocation` (peut pointer hors
     de CLAUDE_DIR) — lecture seule.
 - **L'écriture n'est jamais silencieuse** : `writeSkill`/`writeMdEntry` exigent un fichier
-  existant (pas de création) et créent toujours un backup ; les créations de config
+  existant (pas de création) et créent toujours un backup `.bak.<ts>` à côté du fichier ;
+  `writeConfigFile` (settings/hooks/CLAUDE.md/keybindings) archive plutôt la version précédente
+  **hors** de CLAUDE_DIR (`data/backups/`, cf. `backups.ts`) — restaurable depuis le panneau
+  Versions, pour ne pas polluer `~/.claude`. Les créations de config
   (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) sont explicites. Les
   **suppressions ne sont jamais destructives** : elles passent par `moveToTrash` vers
   `data/trash/` (**hors** de CLAUDE_DIR), restaurable depuis `/config/trash`.
