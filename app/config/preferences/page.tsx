@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, Calculator, Clock, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard, Languages } from "lucide-react";
+import { DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard, Languages } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -141,6 +141,9 @@ export default async function PreferencesPage() {
           defaults={defaults}
           initial={initial}
         />
+        <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px] text-[var(--color-muted)]">
+          {t("prefs.pricingWarn")}
+        </p>
       </section>
 
       <section className="mt-12">
@@ -166,57 +169,6 @@ export default async function PreferencesPage() {
         </h2>
         <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("prefs.displayDesc")}</p>
         <CostModeSelector initial={preferences.costCardMode} />
-      </section>
-
-      <section className="mt-12 text-sm text-[var(--color-muted)]">
-        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
-          <ArrowUpDown size={18} className="text-[var(--color-accent)]" />
-          {t("prefs.inoutTitle")}
-        </h2>
-        <div className="mt-4">
-          <p>{t("prefs.inoutIntro")}</p>
-          <ul className="mt-2 space-y-1">
-            <li className="inline-flex items-center gap-2">
-              <ArrowUp size={14} className="text-[var(--color-accent)]" />
-              <span>{t("prefs.inDesc")}</span>
-            </li>
-            <li className="inline-flex items-center gap-2">
-              <ArrowDown size={14} className="text-[var(--color-accent)]" />
-              <span>{t("prefs.outDesc")}</span>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section className="mt-12 text-sm text-[var(--color-muted)]">
-        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
-          <Calculator size={18} className="text-[var(--color-accent)]" />
-          {t("prefs.costTitle")}
-        </h2>
-        <div className="mt-4">
-          <p>{t("prefs.costIntro")}</p>
-          <pre className="mt-2 overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-code)] px-4 py-3 font-mono text-[12px] text-[var(--color-fg)]">
-{`coût = (input × prix_in
-      + output × prix_out
-      + cache_read × prix_cacheRead
-      + cache_write × prix_cacheWrite) / 1 000 000`}
-          </pre>
-          <p className="mt-2">{t("prefs.costNote")}</p>
-        </div>
-      </section>
-
-      <section className="mt-12 text-sm text-[var(--color-muted)]">
-        <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
-          <Clock size={18} className="text-[var(--color-accent)]" />
-          {t("prefs.cacheTitle")}
-        </h2>
-        <div className="mt-4">
-          <p>{t("prefs.cacheBody")}</p>
-        </div>
-
-        <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px]">
-          {t("prefs.pricingWarn")}
-        </p>
       </section>
     </div>
   );

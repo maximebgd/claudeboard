@@ -1,7 +1,7 @@
 ---
 title: Security
 description: Opt-in permissions, path-traversal guard, writes are never silent (with backups), reversible deletions and scoped read-only access.
-order: 4
+order: 5
 ---
 
 # Security

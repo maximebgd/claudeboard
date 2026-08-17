@@ -1,7 +1,7 @@
 ---
 title: Sécurité
 description: Autorisations opt-in, garde anti-traversée, écritures jamais silencieuses avec backups, suppressions réversibles et accès lecture seule cadrés.
-order: 4
+order: 5
 ---
 
 # Sécurité

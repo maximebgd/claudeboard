@@ -43,7 +43,8 @@ vélocité** : la variation vs la période précédente de même durée (N vs N-
 réelles de la période N-1) — masqué pour la fenêtre « Tout ».
 
 > Le **coût est une estimation locale** (tarifs indicatifs par famille de modèle), pas une
-> facturation réelle. Voir **Préférences → Tarifs d'estimation** dans la config.
+> facturation réelle. Détails du calcul dans [Coûts & estimation](./couts.md) ; tarifs
+> éditables dans **Préférences → Tarifs d'estimation**.
 
 ## Autorisations d'écriture
 

@@ -1,7 +1,7 @@
 ---
 title: Développement
 description: Scripts npm, méthode de vérification, et rappels pour contribuer au code.
-order: 5
+order: 6
 ---
 
 # Développement

@@ -1,7 +1,7 @@
 ---
 title: Development
 description: npm scripts, how to verify a change, and reminders for contributing to the code.
-order: 5
+order: 6
 ---
 
 # Development

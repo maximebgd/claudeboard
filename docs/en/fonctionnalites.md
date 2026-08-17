@@ -43,7 +43,8 @@ change vs the previous period of the same length (N vs N-1, with the real dates 
 N-1) — hidden for the "All" window.
 
 > The **cost is a local estimate** (indicative rates per model family), not real billing.
-> See **Preferences → Estimation rates** in the config.
+> Calculation details in [Costs & estimation](./couts.md); rates editable in
+> **Preferences → Estimation rates**.
 
 ## Write permissions
 
