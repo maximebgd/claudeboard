@@ -8,17 +8,17 @@
 
 Un dashboard **local** pour analyser, parcourir et éditer la configuration Claude Code stockée dans `~/.claude`.
 
-Construit avec **Next.js 16** (App Router, React Server Components) et **React 19**. Il lit directement le système de fichiers de la machine — **il n'est pas destiné à être déployé** : pas de télémétrie, pas d'auth, tourne uniquement en localhost. La page d'accueil agrège tous les transcripts de conversation en un **seul passage** (`lib/analytics.ts` → `getAnalytics`) en KPI, panneau d'activité (heatmap / courbe de messages + streak), répartition tokens/coût par modèle et coût estimé. Skills, agents, commandes, hooks et fichiers de config peuvent être édités, créés et supprimés sur place — mais **toute écriture est conditionnée par une permission opt-in** (tout est désactivé par défaut : l'app démarre en lecture seule intégrale). Chaque écriture crée d'abord un backup horodaté `.bak`, et chaque suppression est **réversible** (déplacée en corbeille, jamais effacée) ; serveurs MCP et plugins restent strictement **en lecture seule**. Tout accès fichier passe par une garde `safeResolve` qui maintient les chemins à l'intérieur de `~/.claude` pour empêcher une traversée de répertoire depuis un slug d'URL.
+<p align="center">
+  <video src="https://github.com/maximebgd/claudeboard/raw/main/public/fr/rec.mp4" controls muted></video>
+</p>
 
-> 🔒 **100 % local — rien ne quitte jamais votre machine.** claudeboard ne fait **aucun appel réseau** avec vos données : pas de télémétrie, pas d'analytics, pas de phone-home, pas d'API externe, pas de cloud. **Absolument tout reste sur votre disque.** Il ne lit et n'écrit que des fichiers locaux sous `~/.claude`, et le serveur est lié à `localhost`. Le seul accès réseau est `npm install` (récupération des dépendances) — jamais vos transcripts, votre config ni votre usage.
+> 🔒 **100 % local — rien ne quitte jamais votre machine.** claudeboard ne fait **aucun appel réseau** avec vos données : pas de télémétrie, pas d'analytics, pas d'API externe, pas de cloud. **Absolument tout reste sur votre disque.** Il n’a accès en lecture qu’à `~/.claude`, et dispose des droits de lecture et d’écriture sur le répertoire du projet.
+
+Construit avec **Next.js 16** et **React 19**, il lit directement `~/.claude` de la machine — **il n'est pas destiné à être déployé** : pas de télémétrie, tourne uniquement en localhost. La page d'accueil réunit tous vos transcripts de conversation dans un tableau de bord clair : KPI (projets, sessions, messages, tokens, coût estimé), panneau d'activité (heatmap et courbe de messages avec streak), et répartition des tokens et du coût par modèle. Skills, agents, commandes, hooks et fichiers de config peuvent être consultés, édités, créés et supprimés directement depuis l'app — mais **toute écriture est conditionnée par une permission opt-in** : tout est désactivé par défaut, l'app démarre en lecture seule intégrale. Chaque modification crée un backup horodaté et chaque suppression est **réversible** (déplacée en corbeille, jamais effacée) ; les serveurs MCP et les plugins restent strictement **en lecture seule**.
+
+📥 **Source des données :** Les transcripts affichés proviennent **uniquement** de Claude Code : le **CLI** et l'**extension VS Code**, qui écrivent tous deux dans `~/.claude/projects/`. Rien d'autre n'est inclus — ni claude.ai (web), ni l'app Claude Desktop, ni l'usage API brut.
 
 > ⚠️ **Non affilié à Anthropic.** claudeboard est un projet indépendant et communautaire. Il n'est ni approuvé par, ni lié à Anthropic d'aucune manière — « Claude » n'est mentionné que pour décrire ce que l'outil lit.
-
-> 💡 **Pourquoi ce projet ?** Claude Code éparpille sa config dans `~/.claude` — les skills en fichiers `SKILL.md`, les transcripts de conversation en `.jsonl` bruts, les settings, hooks, agents, plugins. claudeboard transforme ce dossier opaque en un dashboard navigable et éditable — avec de vraies analytics d'usage — sans jamais quitter votre machine.
-
-> 📥 **Source des données.** Les transcripts lus par claudeboard proviennent **uniquement** de Claude Code lui-même : le **CLI** (`entrypoint: cli`) et l'**extension VS Code** (`entrypoint: claude-vscode`), qui écrivent tous deux dans `~/.claude/projects/*/*.jsonl`. Rien d'autre n'est inclus — ni claude.ai (web), ni l'app Claude Desktop, ni l'usage API brut.
-
-![Capture d'écran de claudeboard](public/screenshot.png)
 
 ## Stack
 
@@ -75,8 +75,12 @@ claudeboard/
 - **Skills (`/skills`)** — liste, aperçu, **édition**, **création** et **suppression** de chaque `~/.claude/skills/*/SKILL.md` (frontmatter YAML + corps markdown). Chaque sauvegarde écrit un `SKILL.md.bak.<timestamp>` horodaté avant d'écraser ; les suppressions déplacent le dossier en corbeille.
 - **Projets & Sessions (`/projects`)** — navigation **en lecture seule** des transcripts `~/.claude/projects/*/*.jsonl`, chaque ligne normalisée en blocs `text`, `thinking`, `tool_use` et `tool_result`. La page d'un projet affiche aussi ses stats agrégées (`getProjectStats`). Projets et sessions sont **épinglables** (`FavoriteButton`) ; un `ResumeButton` copie `claude --resume <id>` ; la suppression (corbeille) est possible avec `projects.delete`.
 - **Config (`/config/*`)** — **Préférences** (réglages propres à claudeboard : autorisations d'écriture, tarifs d'estimation, abonnement, affichage de la carte de coût), **Settings** (édition de `settings.json` / `settings.local.json`, JSON validé live + backup, reset), **Hooks** (groupés par event, **édition** du bloc hooks de `settings.json`), **Agents** & **Commandes** (liste/aperçu/édition/création/suppression, sous-dossiers = namespaces), éditeur du **CLAUDE.md global** (création/reset/suppression), **serveurs MCP** (lecture seule, `env` masqué), **Plugins & Marketplaces** (lecture seule, l'installation reste dans le CLI), **Keybindings** (tableau + éditeur JSON, création/reset/suppression) et **Structure du dossier** (arbre `.claude` pédagogique).
-- **Documentation (`/docs`)** — rend les fichiers `.md` de `docs/` avec un sommaire latéral, pour que la doc projet soit lisible aussi bien sur GitHub que dans l'app.
+- **Documentation ([`/docs`](https://github.com/maximebgd/claudeboard/tree/main/docs))** — rend les fichiers `.md` de `docs/` avec un sommaire latéral, pour que la doc projet soit lisible aussi bien sur GitHub que dans l'app.
 - **Thème** — bascule clair/sombre, persistée dans `localStorage` et appliquée avant le premier rendu (pas de flash).
+
+## Sécurité
+
+claudeboard est **conçu pour ne tourner qu'en localhost**. Le serveur Next.js est lié à `localhost` (`127.0.0.1`) : le dashboard n'est donc accessible **que depuis votre propre machine** — jamais depuis votre réseau local, jamais depuis Internet. L'app **n'est pas destinée à être déployée**. Combiné aux autorisations d'écriture opt-in (toutes désactivées par défaut) et aux écritures réversibles et sauvegardées, cela garde votre configuration Claude Code entièrement sous votre contrôle et sur votre disque.
 
 ## Variables d'environnement
 
@@ -85,8 +89,6 @@ L'app n'a besoin d'aucune configuration pour tourner. Copier `.env.example` en `
 | Variable | Défaut | Description |
 |---|---|---|
 | `CLAUDE_DIR` | `~/.claude` | Racine de la config Claude Code à lire/éditer. Tout est confiné sous ce chemin. |
-
-> 🔒 **Modèle de menace.** claudeboard lit et écrit votre système de fichiers local sans authentification. C'est un outil **localhost uniquement** — ne l'exposez pas sur un réseau et ne le déployez pas. Toute écriture est conditionnée par une **permission opt-in** appliquée côté serveur (`isAllowed` → `403` ; tout désactivé par défaut), toute suppression est **réversible** (déplacée vers `CLAUDE_DIR/.claudeboard-trash/`, jamais effacée), et l'état propre à claudeboard vit dans `data/claudeboard.json`, **hors** de `CLAUDE_DIR`. La traversée de répertoire depuis un slug d'URL est bloquée par `safeResolve` (tout doit se résoudre dans `CLAUDE_DIR`), et les API d'écriture refusent en plus les slugs de traversée et valident le frontmatter/JSON avant d'écrire. `lib/mcp.ts`, `lib/subscription.ts` et `lib/plugins.ts` lisent `~/.claude.json` (qui est hors de `CLAUDE_DIR` et contient des secrets) de façon **ciblée et en lecture seule** uniquement — les valeurs d'`env` sont masquées et jamais écrites.
 
 ## Développement
 

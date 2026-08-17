@@ -8,17 +8,17 @@
 
 A **local** dashboard to analyze, browse and edit the Claude Code configuration stored in `~/.claude`.
 
-Built with **Next.js 16** (App Router, React Server Components) and **React 19**. It reads the machine's filesystem directly — **it is not meant to be deployed**: no telemetry, no auth, runs on localhost only. The home page aggregates every conversation transcript in a **single pass** (`lib/analytics.ts` → `getAnalytics`) into KPIs, an activity panel (heatmap / message curve + streak), per-model token/cost breakdowns and estimated cost. Skills, agents, commands, hooks and config files can be edited, created and deleted in place — but **every write is gated by an opt-in permission** (all off by default, so the app starts fully read-only). Every write first makes a timestamped `.bak` backup, and every delete is **reversible** (moved to a trash folder, never erased); MCP servers and plugins stay strictly **read-only**. Every filesystem access goes through a `safeResolve` guard that keeps paths inside `~/.claude` to prevent directory traversal from a URL slug.
+<p align="center">
+  <video src="https://github.com/maximebgd/claudeboard/raw/main/public/en/rec.mp4" controls muted></video>
+</p>
 
-> 🔒 **100% local — nothing ever leaves your machine.** claudeboard makes **zero network calls** with your data: no telemetry, no analytics, no phone-home, no external API, no cloud. **Absolutely everything stays on your disk.** It only reads and writes local files under `~/.claude`, and the server is bound to `localhost`. The sole network access is `npm install` (fetching dependencies) — never your transcripts, config or usage.
+> 🔒 **100% local — nothing ever leaves your machine.** claudeboard makes **zero network calls** with your data: no telemetry, no analytics, no external API, no cloud. **Absolutely everything stays on your disk.** It has read-only access to `~/.claude`, and read-write access to the project directory.
+
+Built with **Next.js 16** and **React 19**, it reads `~/.claude` on the machine directly — **it is not meant to be deployed**: no telemetry, runs on localhost only. The home page brings all your conversation transcripts together in one clear dashboard: KPIs (projects, sessions, messages, tokens, estimated cost), an activity panel (heatmap and message curve with streak), and per-model token and cost breakdowns. Skills, agents, commands, hooks and config files can be viewed, edited, created and deleted straight from the app — but **every write is gated by an opt-in permission**: everything is off by default, so the app starts fully read-only. Every change makes a timestamped backup and every delete is **reversible** (moved to the trash, never erased); MCP servers and plugins stay strictly **read-only**.
+
+📥 **Data source:** The transcripts shown come **only** from Claude Code: the **CLI** and the **VS Code extension**, both of which write to `~/.claude/projects/`. Nothing else is included — not claude.ai (web), not the Claude Desktop app, not raw API usage.
 
 > ⚠️ **Not affiliated with Anthropic.** claudeboard is an independent, community project. It is not endorsed by or connected to Anthropic in any way — "Claude" is referenced only to describe what the tool reads.
-
-> 💡 **Why this project?** Claude Code scatters its config across `~/.claude` — skills as `SKILL.md` files, conversation transcripts as raw `.jsonl`, settings, hooks, agents, plugins. claudeboard turns that opaque directory into a browsable, editable dashboard — with real usage analytics — without ever leaving your machine.
-
-> 📥 **Data source.** The transcripts read by claudeboard come **only** from Claude Code itself: the **CLI** (`entrypoint: cli`) and the **VS Code extension** (`entrypoint: claude-vscode`), both of which write to `~/.claude/projects/*/*.jsonl`. Nothing else is included — not claude.ai (web), not the Claude Desktop app, not raw API usage.
-
-![claudeboard screenshot](public/screenshot.png)
 
 ## Stack
 
@@ -75,8 +75,12 @@ claudeboard/
 - **Skills (`/skills`)** — list, preview, **edit**, **create** and **delete** each `~/.claude/skills/*/SKILL.md` (YAML frontmatter + markdown body). Every save writes a timestamped `SKILL.md.bak.<timestamp>` before overwriting; deletes move the folder to the trash.
 - **Projects & Sessions (`/projects`)** — **read-only** navigation of `~/.claude/projects/*/*.jsonl` transcripts, each line normalized into `text`, `thinking`, `tool_use` and `tool_result` blocks. A project page also shows its aggregated stats (`getProjectStats`). Projects and sessions are **pinnable** (`FavoriteButton`); a `ResumeButton` copies `claude --resume <id>`; deletion (trash) is available with `projects.delete`.
 - **Config (`/config/*`)** — **Preferences** (claudeboard's own settings: write permissions, estimation pricing, subscription, cost-card display), **Settings** (edit `settings.json` / `settings.local.json`, live-validated + backup, reset), **Hooks** (grouped by event, **editable** hooks block of `settings.json`), **Agents** & **Commands** (list/preview/edit/create/delete, nested folders = namespaces), **global CLAUDE.md** editor (create/reset/delete), **MCP servers** (read-only, `env` masked), **Plugins & Marketplaces** (read-only, install stays in the CLI), **Keybindings** (table + JSON editor, create/reset/delete) and **Directory** (educational `.claude` tree).
-- **Documentation (`/docs`)** — renders the `.md` files under `docs/` with a side table of contents, so the project docs are readable both on GitHub and in the app.
+- **Documentation ([`/docs`](https://github.com/maximebgd/claudeboard/tree/main/docs))** — renders the `.md` files under `docs/` with a side table of contents, so the project docs are readable both on GitHub and in the app.
 - **Theme** — light/dark toggle, persisted in `localStorage` and applied before first paint (no flash).
+
+## Security
+
+claudeboard is **localhost-only by design**. The Next.js server binds to `localhost` (`127.0.0.1`), so the dashboard is reachable **only from your own machine** — never from your local network, never from the internet. The app is **not meant to be deployed**. Combined with the opt-in write permissions (all off by default) and reversible, backed-up writes, this keeps your Claude Code config fully under your control and entirely on your disk.
 
 ## Environment variables
 
@@ -85,8 +89,6 @@ The app needs no configuration to run. Copy `.env.example` to `.env` if you want
 | Variable | Default | Description |
 |---|---|---|
 | `CLAUDE_DIR` | `~/.claude` | Root of the Claude Code config to read/edit. Everything is sandboxed under this path. |
-
-> 🔒 **Threat model.** claudeboard reads and writes your local filesystem with no authentication. It is a **localhost-only** tool — do not expose it on a network or deploy it. Every write is gated by an **opt-in permission** enforced server-side (`isAllowed` → `403`; all off by default), every delete is **reversible** (moved to `CLAUDE_DIR/.claudeboard-trash/`, never erased), and claudeboard's own state lives in `data/claudeboard.json`, **outside** `CLAUDE_DIR`. Path traversal from URL slugs is blocked by `safeResolve` (everything must resolve inside `CLAUDE_DIR`), and the write APIs additionally reject traversal slugs and validate frontmatter/JSON before writing. `lib/mcp.ts`, `lib/subscription.ts` and `lib/plugins.ts` read `~/.claude.json` (which lives outside `CLAUDE_DIR` and holds secrets) in a **targeted, read-only** way only — `env` values are masked and never written.
 
 ## Development
 
