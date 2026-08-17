@@ -32,7 +32,7 @@ export function makeFormatters(locale: Language): Formatters {
     usd: (n) => {
       if (n > 0 && n < 0.01) return en ? "< $0.01" : "< 0,01 $";
       const amount = n.toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      return en ? `$${amount}` : `${amount} $`;
+      return en ? `$${amount}` : `${amount}$`;
     },
   };
 }
