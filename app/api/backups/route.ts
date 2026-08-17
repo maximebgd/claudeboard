@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   isConfigTarget,
   configResource,
+  readConfigFile,
   writeConfigFile,
 } from "@/lib/configFiles";
 import { listBackups, readBackup } from "@/lib/backups";
@@ -32,7 +33,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Version not found" }, { status: 404 });
     }
   }
-  const versions = await listBackups(target);
+  const current = await readConfigFile(target);
+  const versions = await listBackups(target, current.raw);
   return NextResponse.json({ versions });
 }
 

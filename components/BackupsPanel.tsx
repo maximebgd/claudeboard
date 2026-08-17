@@ -12,6 +12,7 @@ interface Version {
   id: string;
   savedAt: number;
   size: number;
+  current?: boolean;
 }
 
 /**
@@ -161,6 +162,11 @@ export default function BackupsPanel({
                   <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
                     <span className="font-mono text-[var(--color-fg)]">{fmtDate(v.savedAt)}</span>
                     <span className="text-[var(--color-faint)]">· {fmtSize(v.size)}</span>
+                    {v.current && (
+                      <span className="rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]">
+                        {t("backups.current")}
+                      </span>
+                    )}
                     <div className="ml-auto flex items-center gap-1.5">
                       <button
                         onClick={() => showPreview(v.id)}
@@ -173,22 +179,24 @@ export default function BackupsPanel({
                         <GitCompare size={12} />
                         {t("backups.diff")}
                       </button>
-                      <button
-                        onClick={() => {
-                          if (!canRestore) return;
-                          setError(null);
-                          setConfirmId(v.id);
-                        }}
-                        aria-disabled={!canRestore || undefined}
-                        title={!canRestore ? t("lockedHint") : undefined}
-                        className={`flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 ${
-                          canRestore
-                            ? "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
-                            : "cursor-not-allowed opacity-40"
-                        }`}
-                      >
-                        <RotateCcw size={12} /> {t("backups.restore")}
-                      </button>
+                      {!v.current && (
+                        <button
+                          onClick={() => {
+                            if (!canRestore) return;
+                            setError(null);
+                            setConfirmId(v.id);
+                          }}
+                          aria-disabled={!canRestore || undefined}
+                          title={!canRestore ? t("lockedHint") : undefined}
+                          className={`flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 ${
+                            canRestore
+                              ? "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+                              : "cursor-not-allowed opacity-40"
+                          }`}
+                        >
+                          <RotateCcw size={12} /> {t("backups.restore")}
+                        </button>
+                      )}
                     </div>
                   </div>
                   {preview?.id === v.id && diff && (

@@ -119,8 +119,9 @@ lib/
                deleteConfigFile (→ corbeille)
   backups.ts   historique de versions **de claudeboard** hors de CLAUDE_DIR (`data/backups/
                <target>/<id>`, override BACKUPS_DIR) : saveBackup (appelé par writeConfigFile,
-               remplace les anciens `.bak.<ts>`) · listBackups · readBackup · plafonné aux N
-               versions récentes par cible. Restaurable depuis le panneau Versions de l'éditeur
+               remplace les anciens `.bak.<ts>`) · listBackups (marque `current` la version
+               identique au fichier actuel) · readBackup · plafonné aux N versions récentes par
+               cible. Restaurable depuis le panneau Versions de l'éditeur
   hooks.ts     getHooks (normalise/groupe les hooks des deux settings) · getHooksRaw/
                writeHooks (bloc hooks de settings.json)
   graph.ts     getDependencyGraph : LECTURE SEULE — références croisées skills/agents/
@@ -181,8 +182,8 @@ components/
     lecture seule via `canWrite`) · SkillEditor · PermissionsMatrix · PermissionNotice ·
     DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
     LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList ·
-    BackupsPanel (panneau Versions replié : liste les backups, diff `git diff` vs fichier
-    actuel via `diff.ts`, restaure)
+    BackupsPanel (panneau Versions replié : liste les backups, badge « Actuelle » sur la
+    version en place, diff `git diff` vs fichier actuel via `diff.ts`, restaure)
   Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
     RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
     PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution

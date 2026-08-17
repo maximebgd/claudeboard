@@ -40,6 +40,8 @@ export interface BackupEntry {
   savedAt: number;
   /** Taille du contenu archivé (octets). */
   size: number;
+  /** `true` si le contenu de cette version est identique au fichier actuel. */
+  current?: boolean;
 }
 
 function targetDir(target: ConfigTarget): string {
@@ -59,8 +61,16 @@ export async function saveBackup(target: ConfigTarget, content: string): Promise
   return filePath;
 }
 
-/** Liste les versions d'une cible, plus récentes d'abord. `[]` si aucune. */
-export async function listBackups(target: ConfigTarget): Promise<BackupEntry[]> {
+/**
+ * Liste les versions d'une cible, plus récentes d'abord. `[]` si aucune. Si
+ * `currentContent` est fourni, marque `current: true` les versions dont le contenu
+ * est identique (le fichier actuel correspond à cette version — p. ex. après une
+ * restauration ou un enregistrement sans changement).
+ */
+export async function listBackups(
+  target: ConfigTarget,
+  currentContent?: string
+): Promise<BackupEntry[]> {
   const dir = targetDir(target);
   let ids: string[];
   try {
@@ -71,13 +81,22 @@ export async function listBackups(target: ConfigTarget): Promise<BackupEntry[]> 
   const entries: BackupEntry[] = [];
   for (const id of ids) {
     if (!isValidId(id)) continue;
+    const filePath = path.join(dir, id);
     let size = 0;
     try {
-      size = (await fs.stat(path.join(dir, id))).size;
+      size = (await fs.stat(filePath)).size;
     } catch {
       continue;
     }
-    entries.push({ id, savedAt: Number(id.split("-")[0]), size });
+    let current: boolean | undefined;
+    if (currentContent !== undefined) {
+      try {
+        current = (await fs.readFile(filePath, "utf8")) === currentContent;
+      } catch {
+        current = false;
+      }
+    }
+    entries.push({ id, savedAt: Number(id.split("-")[0]), size, current });
   }
   return entries.sort((a, b) => b.savedAt - a.savedAt);
 }
