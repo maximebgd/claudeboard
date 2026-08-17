@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Coins, Wallet, Check, AlertCircle } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 type Mode = "usage" | "savings";
 
@@ -14,6 +15,7 @@ type Mode = "usage" | "savings";
  */
 export default function CostModeSelector({ initial }: { initial: Mode }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>(initial);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; msg: string } | null>(null);
@@ -31,20 +33,20 @@ export default function CostModeSelector({ initial }: { initial: Mode }) {
         body: JSON.stringify({ section: "preferences", op: "save", costCardMode: value }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec");
-      setStatus({ kind: "ok", msg: "Préférence enregistrée." });
+      if (!res.ok) throw new Error(data.error || t("common.failed"));
+      setStatus({ kind: "ok", msg: t("prefs.saved") });
       router.refresh();
     } catch (e) {
       setMode(prev); // revert
-      setStatus({ kind: "error", msg: e instanceof Error ? e.message : "Échec de l'écriture" });
+      setStatus({ kind: "error", msg: e instanceof Error ? e.message : t("common.writeFailed") });
     } finally {
       setBusy(false);
     }
   }
 
   const options: { value: Mode; icon: typeof Coins; label: string; hint: string }[] = [
-    { value: "usage", icon: Coins, label: "Coût d'usage", hint: "Le coût estimé de l'usage d'abord" },
-    { value: "savings", icon: Wallet, label: "Économie abonnement", hint: "L'économie réalisée d'abord" },
+    { value: "usage", icon: Coins, label: t("costMode.usage"), hint: t("costMode.usage.hint") },
+    { value: "savings", icon: Wallet, label: t("costMode.savings"), hint: t("costMode.savings.hint") },
   ];
 
   return (
@@ -90,9 +92,7 @@ export default function CostModeSelector({ initial }: { initial: Mode }) {
             {status.msg}
           </span>
         ) : (
-          <span className="text-[var(--color-faint)]">
-            La carte reste cliquable pour basculer ponctuellement entre les deux valeurs.
-          </span>
+          <span className="text-[var(--color-faint)]">{t("costMode.footer")}</span>
         )}
       </div>
     </div>

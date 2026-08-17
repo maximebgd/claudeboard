@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   /** Endpoint POST recevant `{ op: "create", ...extraBody, slug }`. */
@@ -29,11 +29,12 @@ export default function CreateEntryButton({
   extraBody = {},
   redirectBase,
   label,
-  placeholder = "nom-de-l-entree",
+  placeholder,
   hint,
   locked = false,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,10 +52,10 @@ export default function CreateEntryButton({
         body: JSON.stringify({ op: "create", ...extraBody, slug: value }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de la création");
+      if (!res.ok) throw new Error(data.error || t("common.createFailed"));
       router.push(`${redirectBase}/${data.slug ?? value}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
       setBusy(false);
     }
   }
@@ -68,7 +69,7 @@ export default function CreateEntryButton({
           setOpen(true);
         }}
         aria-disabled={locked || undefined}
-        title={locked ? LOCKED_HINT : undefined}
+        title={locked ? t("lockedHint") : undefined}
         className={`flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black ${
           locked ? "cursor-not-allowed opacity-40" : "hover:opacity-90"
         }`}
@@ -89,7 +90,7 @@ export default function CreateEntryButton({
             if (e.key === "Enter") create();
             if (e.key === "Escape") setOpen(false);
           }}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("common.slugPlaceholder")}
           spellCheck={false}
           className="w-56 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-1.5 font-mono text-[13px] outline-none focus:border-[var(--color-accent)]"
         />
@@ -98,7 +99,7 @@ export default function CreateEntryButton({
           disabled={busy || !slug.trim()}
           className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90 disabled:opacity-40"
         >
-          <Plus size={15} /> {busy ? "Création…" : "Créer"}
+          <Plus size={15} /> {busy ? t("common.creating") : t("common.create")}
         </button>
         <button
           onClick={() => setOpen(false)}

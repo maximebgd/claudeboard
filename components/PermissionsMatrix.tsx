@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, RotateCcw, Check, AlertCircle, Lock, Eraser } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 /** Valeurs d'une ressource : action → autorisée. Seules les actions applicables sont présentes. */
 export type PermRow = Record<string, boolean>;
@@ -38,6 +39,7 @@ interface Props {
  */
 export default function PermissionsMatrix({ resources, columns, initial }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [values, setValues] = useState<PermValues>(initial);
   const [saved, setSaved] = useState<PermValues>(initial);
   const [busy, setBusy] = useState(false);
@@ -114,12 +116,12 @@ export default function PermissionsMatrix({ resources, columns, initial }: Props
         body: JSON.stringify({ section: "permissions", op: "save", permissions: values }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec");
+      if (!res.ok) throw new Error(data.error || t("common.failed"));
       setSaved(values);
-      setStatus({ kind: "ok", msg: "Autorisations enregistrées." });
+      setStatus({ kind: "ok", msg: t("perm.saved") });
       router.refresh();
     } catch (e) {
-      setStatus({ kind: "error", msg: e instanceof Error ? e.message : "Échec de l'écriture" });
+      setStatus({ kind: "error", msg: e instanceof Error ? e.message : t("common.writeFailed") });
     } finally {
       setBusy(false);
     }
@@ -131,7 +133,7 @@ export default function PermissionsMatrix({ resources, columns, initial }: Props
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--color-code)] text-left text-xs text-[var(--color-muted)]">
-              <th className="px-4 py-2.5 font-medium">Ressource</th>
+              <th className="px-4 py-2.5 font-medium">{t("perm.resource")}</th>
               {columns.map((c) => {
                 const allOn = columnAllOn(c.key);
                 return (
@@ -142,8 +144,8 @@ export default function PermissionsMatrix({ resources, columns, initial }: Props
                         type="button"
                         role="switch"
                         aria-checked={allOn}
-                        aria-label={`Tout ${allOn ? "désactiver" : "activer"} — ${c.label}`}
-                        title={`Tout ${allOn ? "désactiver" : "activer"}`}
+                        aria-label={`${allOn ? t("perm.disableAll") : t("perm.enableAll")} — ${c.label}`}
+                        title={allOn ? t("perm.disableAll") : t("perm.enableAll")}
                         onClick={() => toggleColumn(c.key)}
                         className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                           allOn
@@ -217,7 +219,7 @@ export default function PermissionsMatrix({ resources, columns, initial }: Props
           className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Save size={15} />
-          {busy ? "Enregistrement…" : "Sauvegarder"}
+          {busy ? t("perm.saving") : t("perm.save")}
         </button>
         <button
           onClick={revert}
@@ -225,16 +227,16 @@ export default function PermissionsMatrix({ resources, columns, initial }: Props
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-fg)] disabled:opacity-40"
         >
           <RotateCcw size={15} />
-          Annuler
+          {t("common.cancel")}
         </button>
         <button
           onClick={resetAll}
           disabled={busy || enabledCount === 0}
-          title="Remettre toutes les autorisations à zéro"
+          title={t("perm.resetTitle")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:opacity-40"
         >
           <Eraser size={15} />
-          Réinitialiser
+          {t("reset.label")}
         </button>
         {/* <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
           <Lock size={13} />

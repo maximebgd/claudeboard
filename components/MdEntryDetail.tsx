@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { MdEntry, MdKind } from "@/lib/mdEntries";
 import { formatDate } from "@/lib/claude";
+import { getT } from "@/lib/i18n";
 import ConfigEditor from "@/components/ConfigEditor";
 import DeleteButton from "@/components/DeleteButton";
 
 /** Détail + éditeur partagé pour une entrée agents/commandes. */
-export default function MdEntryDetail({
+export default async function MdEntryDetail({
   kind,
   entry,
   backHref,
@@ -23,6 +24,8 @@ export default function MdEntryDetail({
   /** false → bouton « Supprimer » grisé (permission agents/commands.delete désactivée). */
   canDelete?: boolean;
 }) {
+  const { t, locale } = await getT();
+  const isAgent = kind === "agents";
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <Link
@@ -43,7 +46,7 @@ export default function MdEntryDetail({
           <p className="mt-2 text-sm text-[var(--color-muted)]">{entry.description}</p>
         )}
         <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">
-          {entry.path} · modifié le {formatDate(entry.updatedAt)}
+          {entry.path} · {t("common.modifiedOn", { date: formatDate(entry.updatedAt, locale) })}
         </p>
       </div>
 
@@ -59,10 +62,14 @@ export default function MdEntryDetail({
           <DeleteButton
             endpoint="/api/md"
             body={{ kind, slug: entry.slug }}
-            label={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"}`}
-            title={`Supprimer ${kind === "agents" ? "l'agent" : "la commande"} « ${entry.name} » ?`}
-            description="Le fichier est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille."
-            confirmLabel="Supprimer"
+            label={isAgent ? t("md.deleteAgent") : t("md.deleteCommand")}
+            title={
+              isAgent
+                ? t("md.deleteAgentTitle", { name: entry.name })
+                : t("md.deleteCommandTitle", { name: entry.name })
+            }
+            description={t("md.deleteDesc")}
+            confirmLabel={t("common.delete")}
             redirectTo={backHref}
             locked={!canDelete}
             detail={

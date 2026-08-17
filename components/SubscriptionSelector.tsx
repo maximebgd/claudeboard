@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wallet, Check, AlertCircle, Sparkles } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface PlanOption {
   /** Valeur envoyée au store (`pro` | `max5x` | `max20x` | `none`). */
@@ -28,6 +29,7 @@ interface Props {
  */
 export default function SubscriptionSelector({ initialSelection, detected, planOptions }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selection, setSelection] = useState(initialSelection);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; msg: string } | null>(null);
@@ -49,12 +51,12 @@ export default function SubscriptionSelector({ initialSelection, detected, planO
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec");
-      setStatus({ kind: "ok", msg: "Abonnement enregistré." });
+      if (!res.ok) throw new Error(data.error || t("common.failed"));
+      setStatus({ kind: "ok", msg: t("sub.saved") });
       router.refresh();
     } catch (e) {
       setSelection(prev); // revert
-      setStatus({ kind: "error", msg: e instanceof Error ? e.message : "Échec de l'écriture" });
+      setStatus({ kind: "error", msg: e instanceof Error ? e.message : t("common.writeFailed") });
     } finally {
       setBusy(false);
     }
@@ -89,9 +91,9 @@ export default function SubscriptionSelector({ initialSelection, detected, planO
           selection === "auto",
           <span className="inline-flex items-center gap-1.5">
             <Sparkles size={14} className="text-[var(--color-accent)]" />
-            Automatique
+            {t("sub.auto")}
           </span>,
-          detected.known ? `détecté : ${detected.label}` : "aucun plan détecté"
+          detected.known ? t("sub.detected", { label: detected.label }) : t("sub.noneDetected")
         )}
         {planOptions.map((p) =>
           tile(
@@ -118,9 +120,7 @@ export default function SubscriptionSelector({ initialSelection, detected, planO
           </span>
         ) : (
           <span className="text-[var(--color-faint)]">
-            {selection === "auto"
-              ? "Le plan est déduit de ~/.claude.json."
-              : "Choix manuel — remplace la détection automatique."}
+            {selection === "auto" ? t("sub.autoHint") : t("sub.manualHint")}
           </span>
         )}
       </div>

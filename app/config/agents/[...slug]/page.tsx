@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getMdEntry } from "@/lib/mdEntries";
 import { isAllowed } from "@/lib/store";
+import { getT } from "@/lib/i18n";
 import MdEntryDetail from "@/components/MdEntryDetail";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +13,11 @@ export default async function AgentDetailPage({
 }) {
   const { slug } = await params;
   const decoded = slug.map(decodeURIComponent).join("/");
-  const [entry, canWrite, canDelete] = await Promise.all([
+  const [entry, canWrite, canDelete, { t }] = await Promise.all([
     getMdEntry("agents", decoded),
     isAllowed("agents", "modify"),
     isAllowed("agents", "delete"),
+    getT(),
   ]);
   if (!entry) notFound();
 
@@ -24,7 +26,7 @@ export default async function AgentDetailPage({
       kind="agents"
       entry={entry}
       backHref="/config/agents"
-      backLabel="Agents"
+      backLabel={t("sidebar.agents")}
       canWrite={canWrite}
       canDelete={canDelete}
     />

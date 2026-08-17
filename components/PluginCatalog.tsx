@@ -3,11 +3,15 @@
 import { useMemo, useState } from "react";
 import { Search, CheckCircle2, Ban, ExternalLink, Copy, Check, Download } from "lucide-react";
 import type { MarketplacePluginEntry } from "@/lib/plugins";
+import { useTranslation } from "@/components/I18nProvider";
+import { tPlural } from "@/lib/i18n/core";
+import type { Language } from "@/lib/i18n/core";
 
 /** Formate un nombre d'installs (1636 → « 1 636 », 63906 → « 63,9 k »). */
-function formatInstalls(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".", ",")} k`;
-  return n.toLocaleString("fr-FR");
+function formatInstalls(n: number, locale: Language): string {
+  const dec = locale === "en" ? "." : ",";
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".", dec)} k`;
+  return n.toLocaleString(locale === "en" ? "en-US" : "fr-FR");
 }
 
 /** Commande CLI pour installer un plugin depuis sa marketplace. */
@@ -21,6 +25,7 @@ function uninstallCommand(name: string, marketplace: string) {
 }
 
 function CopyCommand({ command }: { command: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -41,11 +46,11 @@ function CopyCommand({ command }: { command: string }) {
       <button
         type="button"
         onClick={copy}
-        title="Copier la commande"
+        title={t("resume.copyCommand")}
         className="flex items-center gap-1 rounded border border-[var(--color-border)] px-1.5 py-1 text-[10px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
       >
         {copied ? <Check size={11} /> : <Copy size={11} />}
-        {copied ? "copié" : "copier"}
+        {copied ? t("resume.copied") : t("resume.copy")}
       </button>
     </div>
   );
@@ -60,6 +65,7 @@ function PluginRow({
   marketplace: string;
   showInstall: boolean;
 }) {
+  const { t, locale } = useTranslation();
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +77,7 @@ function PluginRow({
         )}
         {p.installed && (
           <span className="flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-400">
-            <CheckCircle2 size={10} /> installé
+            <CheckCircle2 size={10} /> {t("plugin.installed")}
           </span>
         )}
         {p.blocked && (
@@ -79,18 +85,18 @@ function PluginRow({
             title={p.blockReason ?? undefined}
             className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-400"
           >
-            <Ban size={10} /> bloqué
+            <Ban size={10} /> {t("plugin.blocked")}
           </span>
         )}
         {p.author && (
-          <span className="text-[11px] text-[var(--color-faint)]">par {p.author}</span>
+          <span className="text-[11px] text-[var(--color-faint)]">{t("plugin.by", { author: p.author })}</span>
         )}
         {p.uniqueInstalls != null && (
           <span
-            title={`${p.uniqueInstalls.toLocaleString("fr-FR")} installations (communauté)`}
+            title={t("plugin.installsTitle", { count: p.uniqueInstalls.toLocaleString(locale === "en" ? "en-US" : "fr-FR") })}
             className="ml-auto flex items-center gap-1 rounded bg-[var(--color-code)] px-1.5 py-0.5 text-[10px] text-[var(--color-muted)]"
           >
-            <Download size={10} /> {formatInstalls(p.uniqueInstalls)}
+            <Download size={10} /> {formatInstalls(p.uniqueInstalls, locale)}
           </span>
         )}
       </div>
@@ -136,6 +142,7 @@ export default function PluginCatalog({
   marketplace: string;
   showInstall?: boolean;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -159,13 +166,13 @@ export default function PluginCatalog({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher un plugin…"
+          placeholder={t("plugin.searchPlaceholder")}
           className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1.5 pl-8 pr-3 text-xs outline-none focus:border-[var(--color-accent)]"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <p className="px-1 py-3 text-xs text-[var(--color-faint)]">Aucun plugin ne correspond.</p>
+        <p className="px-1 py-3 text-xs text-[var(--color-faint)]">{t("plugin.noMatch")}</p>
       ) : (
         <div className="max-h-[22rem] overflow-y-auto flex flex-col gap-2 pr-1">
           {filtered.map((p) => (
@@ -175,7 +182,7 @@ export default function PluginCatalog({
       )}
 
       <div className="mt-1.5 px-1 text-[10px] text-[var(--color-faint)]">
-        {filtered.length} / {plugins.length} plugin{plugins.length > 1 ? "s" : ""}
+        {tPlural(t, "plugin.footer", plugins.length, { filtered: filtered.length, total: plugins.length })}
       </div>
     </div>
   );

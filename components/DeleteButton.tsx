@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   /** Endpoint POST recevant `body` (avec `op: "delete"`). */
@@ -33,12 +33,13 @@ export default function DeleteButton({
   title,
   description,
   detail,
-  confirmLabel = "Supprimer",
-  label = "Supprimer",
+  confirmLabel,
+  label,
   redirectTo,
   locked = false,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +54,12 @@ export default function DeleteButton({
         body: JSON.stringify({ op: "delete", ...body }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de la suppression");
+      if (!res.ok) throw new Error(data.error || t("common.deleteFailed"));
       setOpen(false);
       if (redirectTo) router.push(redirectTo);
       else router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
       setBusy(false);
     }
   }
@@ -72,12 +73,12 @@ export default function DeleteButton({
           setOpen(true);
         }}
         aria-disabled={locked || undefined}
-        title={locked ? LOCKED_HINT : undefined}
+        title={locked ? t("lockedHint") : undefined}
         className={`flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-400 ${
           locked ? "cursor-not-allowed opacity-40" : "hover:bg-red-500/10"
         }`}
       >
-        <Trash2 size={14} /> {label}
+        <Trash2 size={14} /> {label ?? t("common.delete")}
       </button>
       {error && (
         <div className="mt-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
@@ -89,7 +90,7 @@ export default function DeleteButton({
         title={title}
         description={description}
         detail={detail}
-        confirmLabel={confirmLabel}
+        confirmLabel={confirmLabel ?? t("common.delete")}
         busy={busy}
         onCancel={() => setOpen(false)}
         onConfirm={doDelete}

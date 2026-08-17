@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, Calculator, Clock, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Calculator, Clock, DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard, Languages } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -11,6 +11,9 @@ import { getPermissions, getPreferences, PERMISSION_SCHEMA, type PermissionResou
 import PricingEditor from "@/components/PricingEditor";
 import SubscriptionSelector from "@/components/SubscriptionSelector";
 import CostModeSelector from "@/components/CostModeSelector";
+import LanguageSelector from "@/components/LanguageSelector";
+import { getT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/core";
 import PermissionsMatrix, {
   type ResourceMeta,
   type ActionMeta,
@@ -22,41 +25,37 @@ export const dynamic = "force-dynamic";
 // Familles affichées/éditables (on masque « autre », dont tous les tarifs valent 0).
 const FAMILIES: ModelFamily[] = ["opus", "sonnet", "haiku", "fable"];
 
-const COLS = [
-  { key: "in", label: "Input", hint: "tokens d'entrée frais" },
-  { key: "out", label: "Output", hint: "tokens de sortie" },
-  { key: "cacheWrite", label: "Écriture cache", hint: "cache_creation (TTL 1 h)" },
-  { key: "cacheRead", label: "Lecture cache", hint: "cache_read" },
-] as const;
+const COL_KEYS = ["in", "out", "cacheWrite", "cacheRead"] as const;
 
 // Colonnes de la matrice (union ordonnée des actions ; delete/reset sont destructives).
-const ACTION_COLUMNS: ActionMeta[] = [
-  { key: "create", label: "Créer" },
-  { key: "modify", label: "Modifier" },
-  { key: "delete", label: "Supprimer", destructive: true },
-  { key: "reset", label: "Réinitialiser", destructive: true },
-  { key: "empty", label: "Vider", destructive: true },
+const ACTION_COLS: { key: string; labelKey: TranslationKey; destructive?: boolean }[] = [
+  { key: "create", labelKey: "perm.col.create" },
+  { key: "modify", labelKey: "perm.col.modify" },
+  { key: "delete", labelKey: "perm.col.delete", destructive: true },
+  { key: "reset", labelKey: "perm.col.reset", destructive: true },
+  { key: "empty", labelKey: "perm.col.empty", destructive: true },
 ];
 
-// Libellé + description par ressource (l'ordre suit PERMISSION_SCHEMA).
-const RESOURCE_META: Record<PermissionResource, { label: string; description: string }> = {
-  skills: { label: "Skills", description: "Créer, modifier ou supprimer les SKILL.md" },
-  projects: { label: "Projets & Sessions", description: "Supprimer un projet ou une session" },
-  claudeMd: { label: "CLAUDE.md", description: "Créer, modifier, supprimer ou réinitialiser le CLAUDE.md global" },
-  agents: { label: "Agents", description: "Créer, modifier ou supprimer des agents" },
-  commands: { label: "Commandes", description: "Créer, modifier ou supprimer des commandes" },
-  settings: { label: "Settings Claude", description: "Modifier ou réinitialiser settings.json" },
-  hooks: { label: "Hooks", description: "Éditer le bloc hooks de settings.json (créer/supprimer/modifier)" },
-  keybindings: { label: "Keybindings", description: "Créer, modifier, supprimer ou réinitialiser keybindings.json" },
-  trash: { label: "Corbeille", description: "Vider définitivement la corbeille de claudeboard (la restauration suit la permission de suppression d'origine)" },
+// Libellé + clé de description par ressource (l'ordre suit PERMISSION_SCHEMA).
+const RESOURCE_META: Record<PermissionResource, { labelKey: TranslationKey; descKey: TranslationKey }> = {
+  skills: { labelKey: "sidebar.skills", descKey: "perm.res.skills.desc" },
+  projects: { labelKey: "sidebar.projects", descKey: "perm.res.projects.desc" },
+  claudeMd: { labelKey: "sidebar.claudeMd", descKey: "perm.res.claudeMd.desc" },
+  agents: { labelKey: "sidebar.agents", descKey: "perm.res.agents.desc" },
+  commands: { labelKey: "sidebar.commands", descKey: "perm.res.commands.desc" },
+  settings: { labelKey: "sidebar.settings", descKey: "perm.res.settings.desc" },
+  hooks: { labelKey: "sidebar.hooks", descKey: "perm.res.hooks.desc" },
+  keybindings: { labelKey: "sidebar.keybindings", descKey: "perm.res.keybindings.desc" },
+  trash: { labelKey: "sidebar.trash", descKey: "perm.res.trash.desc" },
 };
 
 export default async function PreferencesPage() {
-  const [effective, sub, permissions, preferences] = await Promise.all([
+  const [effective, sub, permissions, preferences, { t }] = await Promise.all([
     getEffectivePricing(),
     getEffectiveSubscription(),
     getPermissions(),
     getPreferences(),
+    getT(),
   ]);
 
   const families = FAMILIES.map((fam) => ({
@@ -66,22 +65,32 @@ export default async function PreferencesPage() {
   }));
   const defaults = Object.fromEntries(FAMILIES.map((fam) => [fam, PRICING[fam]]));
   const initial = Object.fromEntries(FAMILIES.map((fam) => [fam, effective[fam]]));
+  const COLS = COL_KEYS.map((key) => ({
+    key,
+    label: t(`pricing.col.${key}` as TranslationKey),
+    hint: t(`pricing.col.${key}.hint` as TranslationKey),
+  }));
+  const ACTION_COLUMNS: ActionMeta[] = ACTION_COLS.map((c) => ({
+    key: c.key,
+    label: t(c.labelKey),
+    destructive: c.destructive,
+  }));
 
   const planOptions = [
     ...Object.entries(PLANS).map(([value, p]) => ({
       value,
       label: p.label,
-      price: `${p.monthlyPriceUSD} $/mois`,
+      price: t("prefs.planPrice", { price: p.monthlyPriceUSD }),
     })),
-    { value: "none", label: "Aucun", price: "—" },
+    { value: "none", label: t("sub.none"), price: "—" },
   ];
   const subSelection = sub.source === "manual" ? sub.type : "auto";
 
   const resources: ResourceMeta[] = (Object.keys(PERMISSION_SCHEMA) as PermissionResource[]).map(
     (key) => ({
       key,
-      label: RESOURCE_META[key].label,
-      description: RESOURCE_META[key].description,
+      label: t(RESOURCE_META[key].labelKey),
+      description: t(RESOURCE_META[key].descKey),
       actions: [...PERMISSION_SCHEMA[key]],
     })
   );
@@ -91,25 +100,31 @@ export default async function PreferencesPage() {
     <div className="max-w-4xl mx-auto px-8 py-10">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
         <SlidersHorizontal size={22} className="text-[var(--color-accent)]" />
-        Préférences
+        {t("sidebar.preferences")}
       </h1>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Réglages propres à claudeboard — stockés dans{" "}
-        <code className="font-mono text-[12px]">data/claudeboard.json</code>, jamais dans{" "}
+        {t("prefs.introA")}{" "}
+        <code className="font-mono text-[12px]">data/claudeboard.json</code>{t("prefs.introB")}{" "}
         <code className="font-mono text-[12px]">~/.claude</code>.
       </p>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Languages size={18} className="text-[var(--color-accent)]" />
+          {t("prefs.language.title")}
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("prefs.language.desc")}</p>
+        <LanguageSelector initial={preferences.language} />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
           <ShieldCheck size={18} className="text-[var(--color-accent)]" />
-          Autorisations d'écriture
+          {t("prefs.permTitle")}
         </h2>
         <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-          Ce que l'app est autorisée à créer, modifier, supprimer ou réinitialiser dans{" "}
-          <code className="font-mono text-[12px]">~/.claude</code>.{" "}
-          <strong>Tout est verrouillé par défaut</strong> : activez une case pour débloquer
-          l'action correspondante. Plugins &amp; marketplaces restent en lecture seule
-          (installation = ressort du CLI).
+          {t("prefs.permDescA")}{" "}
+          <code className="font-mono text-[12px]">~/.claude</code>. {t("prefs.permDescB")}
         </p>
         <PermissionsMatrix resources={resources} columns={ACTION_COLUMNS} initial={permValues} />
       </section>
@@ -117,12 +132,9 @@ export default async function PreferencesPage() {
       <section className="mt-12">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <DollarSign size={18} className="text-[var(--color-accent)]" />
-          Tarifs d'estimation
+          {t("prefs.pricingTitle")}
         </h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-          Tarifs appliqués pour estimer le coût affiché dans le dashboard. Valeurs en USD par
-          million de tokens — modifiables ci-dessous, puis « Sauvegarder ».
-        </p>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("prefs.pricingDesc")}</p>
         <PricingEditor
           families={families}
           cols={COLS.map((c) => ({ ...c }))}
@@ -134,13 +146,11 @@ export default async function PreferencesPage() {
       <section className="mt-12">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Wallet size={18} className="text-[var(--color-accent)]" />
-          Abonnement
+          {t("common.subscription")}
         </h2>
         <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-          Plan Claude retenu pour estimer la rentabilité (coût d'usage vs coût de l'abonnement)
-          sur le dashboard. Détecté automatiquement depuis{" "}
-          <code className="font-mono text-[12px]">~/.claude.json</code>, ou choisi manuellement
-          ci-dessous.
+          {t("prefs.subDescA")}{" "}
+          <code className="font-mono text-[12px]">~/.claude.json</code>{t("prefs.subDescB")}
         </p>
         <SubscriptionSelector
           initialSelection={subSelection}
@@ -152,36 +162,27 @@ export default async function PreferencesPage() {
       <section className="mt-12">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <LayoutDashboard size={18} className="text-[var(--color-accent)]" />
-          Affichage du dashboard
+          {t("prefs.displayTitle")}
         </h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
-          Valeur affichée <strong>en premier</strong> par la carte « Coût estimé » du dashboard :
-          le coût d'usage estimé, ou l'économie réalisée grâce à l'abonnement.
-        </p>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("prefs.displayDesc")}</p>
         <CostModeSelector initial={preferences.costCardMode} />
       </section>
 
       <section className="mt-12 text-sm text-[var(--color-muted)]">
         <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
           <ArrowUpDown size={18} className="text-[var(--color-accent)]" />
-          Convention IN / OUT
+          {t("prefs.inoutTitle")}
         </h2>
         <div className="mt-4">
-          <p>Partout dans le dashboard, l'affichage suit ce sens&nbsp;:</p>
+          <p>{t("prefs.inoutIntro")}</p>
           <ul className="mt-2 space-y-1">
             <li className="inline-flex items-center gap-2">
               <ArrowUp size={14} className="text-[var(--color-accent)]" />
-              <span>
-                <strong>IN</strong> = ce que tu envoies (ton prompt&nbsp;: instructions,
-                historique, fichiers…) — <em>flèche vers le haut</em>.
-              </span>
+              <span>{t("prefs.inDesc")}</span>
             </li>
             <li className="inline-flex items-center gap-2">
               <ArrowDown size={14} className="text-[var(--color-accent)]" />
-              <span>
-                <strong>OUT</strong> = ce que tu reçois (la réponse générée par le modèle) —{" "}
-                <em>flèche vers le bas</em>.
-              </span>
+              <span>{t("prefs.outDesc")}</span>
             </li>
           </ul>
         </div>
@@ -190,55 +191,31 @@ export default async function PreferencesPage() {
       <section className="mt-12 text-sm text-[var(--color-muted)]">
         <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
           <Calculator size={18} className="text-[var(--color-accent)]" />
-          Comment le coût est calculé
+          {t("prefs.costTitle")}
         </h2>
         <div className="mt-4">
-          <p>
-            Pour chaque réponse de l'assistant, on lit son bloc{" "}
-            <code className="rounded bg-[var(--color-code)] px-1 py-0.5 font-mono text-[12px]">
-              usage
-            </code>{" "}
-            et on applique&nbsp;:
-          </p>
+          <p>{t("prefs.costIntro")}</p>
           <pre className="mt-2 overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-code)] px-4 py-3 font-mono text-[12px] text-[var(--color-fg)]">
 {`coût = (input × prix_in
       + output × prix_out
       + cache_read × prix_cacheRead
       + cache_write × prix_cacheWrite) / 1 000 000`}
           </pre>
-          <p className="mt-2">
-            Le tarif dépend de la famille du modèle (déduite de l'id, ex.{" "}
-            <code className="rounded bg-[var(--color-code)] px-1 py-0.5 font-mono text-[12px]">
-              claude-opus-4-8
-            </code>{" "}
-            → Opus). Les modèles inconnus ou synthétiques sont facturés à 0.
-          </p>
+          <p className="mt-2">{t("prefs.costNote")}</p>
         </div>
       </section>
 
       <section className="mt-12 text-sm text-[var(--color-muted)]">
         <h2 className="text-lg font-semibold flex items-center gap-2 text-[var(--color-fg)]">
           <Clock size={18} className="text-[var(--color-accent)]" />
-          Écriture cache : TTL 1 h
+          {t("prefs.cacheTitle")}
         </h2>
         <div className="mt-4">
-          <p>
-            Le prix d'écriture cache utilise le tarif TTL 1 h (celui employé par Claude Code).
-            Les tokens{" "}
-            <code className="rounded bg-[var(--color-code)] px-1 py-0.5 font-mono text-[12px]">
-              cache_creation_input_tokens
-            </code>{" "}
-            sont tous facturés à ce tarif.
-          </p>
+          <p>{t("prefs.cacheBody")}</p>
         </div>
 
         <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[13px]">
-          ⚠️ Ce sont des <strong>tarifs indicatifs</strong> servant à une estimation locale — ce
-          n'est pas une facturation réelle. Les valeurs par défaut viennent de{" "}
-          <code className="font-mono text-[12px]">lib/analytics.ts</code> ; les modifications
-          enregistrées ici sont stockées dans{" "}
-          <code className="font-mono text-[12px]">data/claudeboard.json</code> et appliquées à
-          toutes les estimations. « Réinitialiser » restaure les défauts.
+          {t("prefs.pricingWarn")}
         </p>
       </section>
     </div>

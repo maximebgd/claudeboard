@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Bot, SquareSlash, ArrowRight, ExternalLink } from "lucide-react";
+import { useTranslation } from "@/components/I18nProvider";
+import type { TranslationKey } from "@/lib/i18n/core";
 
 /**
  * Visualisation du graphe de dépendances (skills / agents / commandes).
@@ -43,10 +45,10 @@ const TYPE_COLOR: Record<NodeType, string> = {
   agent: "#6366f1",
   command: "#10b981",
 };
-const TYPE_LABEL: Record<NodeType, string> = {
-  skill: "Skill",
-  agent: "Agent",
-  command: "Commande",
+const TYPE_LABEL_KEY: Record<NodeType, TranslationKey> = {
+  skill: "dgraph.skill",
+  agent: "dgraph.agent",
+  command: "dgraph.command",
 };
 const TYPE_ICON: Record<NodeType, typeof Sparkles> = {
   skill: Sparkles,
@@ -162,6 +164,7 @@ function computeLayout(nodes: GNode[], edges: GEdge[]): Map<string, Pos> {
 }
 
 export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edges: GEdge[] }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -222,7 +225,7 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
   if (nodes.length === 0) {
     return (
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-        Aucun skill, agent ou commande à représenter.
+        {t("dgraph.empty")}
       </div>
     );
   }
@@ -242,10 +245,10 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
           onMouseLeave={() => setHovered(null)}
         >
           <defs>
-            {(["skill", "agent", "command"] as NodeType[]).map((t) => (
+            {(["skill", "agent", "command"] as NodeType[]).map((nt) => (
               <marker
-                key={t}
-                id={`arrow-${t}`}
+                key={nt}
+                id={`arrow-${nt}`}
                 viewBox="0 0 10 10"
                 refX="9"
                 refY="5"
@@ -253,7 +256,7 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
                 markerHeight="6"
                 orient="auto-start-reverse"
               >
-                <path d="M0,0 L10,5 L0,10 z" fill={TYPE_COLOR[t]} />
+                <path d="M0,0 L10,5 L0,10 z" fill={TYPE_COLOR[nt]} />
               </marker>
             ))}
             <marker
@@ -338,7 +341,7 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
                 fill="var(--color-faint)"
                 letterSpacing="0.08em"
               >
-                SANS LIEN ({orphans.length})
+                {t("dgraph.noLink", { count: orphans.length })}
               </text>
             </g>
           )}
@@ -414,24 +417,23 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
       {/* Panneau : légende + détail du nœud sélectionné */}
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
-          <div className="eyebrow mb-3">Légende</div>
+          <div className="eyebrow mb-3">{t("dgraph.legend")}</div>
           <div className="flex flex-col gap-2">
-            {(["skill", "agent", "command"] as NodeType[]).map((t) => {
-              const Icon = TYPE_ICON[t];
-              const count = nodes.filter((n) => n.type === t).length;
+            {(["skill", "agent", "command"] as NodeType[]).map((nt) => {
+              const Icon = TYPE_ICON[nt];
+              const count = nodes.filter((n) => n.type === nt).length;
               return (
-                <div key={t} className="flex items-center gap-2 text-sm">
-                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: TYPE_COLOR[t] }} />
+                <div key={nt} className="flex items-center gap-2 text-sm">
+                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: TYPE_COLOR[nt] }} />
                   <Icon size={13} className="text-[var(--color-muted)]" />
-                  <span>{TYPE_LABEL[t]}</span>
+                  <span>{t(TYPE_LABEL_KEY[nt])}</span>
                   <span className="ml-auto font-mono text-[var(--color-faint)] tabular-nums">{count}</span>
                 </div>
               );
             })}
           </div>
           <p className="mt-3 border-t border-[var(--color-border)] pt-3 text-[11px] text-[var(--color-faint)]">
-            La flèche va de l&apos;entrée qui <strong>cite</strong> vers l&apos;entrée <strong>citée</strong>.
-            Survolez un nœud pour isoler ses liens, cliquez pour le détailler.
+            {t("dgraph.legendNote")}
           </p>
         </div>
 
@@ -442,24 +444,24 @@ export default function DependencyGraph({ nodes, edges }: { nodes: GNode[]; edge
               <div className="min-w-0">
                 <div className="font-medium truncate">{detail.node.name}</div>
                 <code className="text-[11px] text-[var(--color-muted)]">
-                  {TYPE_LABEL[detail.node.type]} · {detail.node.slug}
+                  {t(TYPE_LABEL_KEY[detail.node.type])} · {detail.node.slug}
                 </code>
               </div>
             </div>
 
-            <RefList title="Référence" items={detail.out} empty="Ne cite aucune autre entrée." onPick={setSelected} />
-            <RefList title="Cité par" items={detail.inc} empty="N'est cité par aucune entrée." onPick={setSelected} />
+            <RefList title={t("dgraph.references")} items={detail.out} empty={t("dgraph.noOut")} onPick={setSelected} />
+            <RefList title={t("dgraph.citedBy")} items={detail.inc} empty={t("dgraph.noIn")} onPick={setSelected} />
 
             <Link
               href={detail.node.href}
               className="mt-3 inline-flex items-center gap-1.5 text-sm text-[var(--color-accent)] hover:underline"
             >
-              <ExternalLink size={13} /> Ouvrir la page
+              <ExternalLink size={13} /> {t("dgraph.openPage")}
             </Link>
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
-            Cliquez sur un nœud pour voir ses références entrantes et sortantes.
+            {t("dgraph.hint")}
           </div>
         )}
       </div>

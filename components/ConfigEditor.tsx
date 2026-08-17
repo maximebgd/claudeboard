@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check, WandSparkles, Plus } from "lucide-react";
 import Markdown from "./Markdown";
 import ConfirmDialog from "./ConfirmDialog";
-import { LOCKED_HINT } from "./lockedHint";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface Props {
   /** Endpoint POST qui reçoit `{ ...payload, raw }`. */
@@ -47,6 +47,7 @@ export default function ConfigEditor({
   rightActions,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   // Un fichier absent démarre en édition — sauf si l'écriture est verrouillée.
   const [editing, setEditing] = useState(!exists && canWrite);
   const [draft, setDraft] = useState(exists ? initialRaw : emptyTemplate);
@@ -65,7 +66,7 @@ export default function ConfigEditor({
       JSON.parse(draft);
       return null;
     } catch (e) {
-      return e instanceof Error ? e.message : "JSON invalide";
+      return e instanceof Error ? e.message : t("editor.jsonInvalid");
     }
   }, [draft, mode]);
 
@@ -87,7 +88,7 @@ export default function ConfigEditor({
         body: JSON.stringify({ ...payload, raw: draft }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Échec de l'écriture");
+      if (!res.ok) throw new Error(data.error || t("common.writeFailed"));
       setSavedRaw(draft);
       setFileExists(true);
       setConfirmOpen(false);
@@ -96,7 +97,7 @@ export default function ConfigEditor({
       setTimeout(() => setFlash(false), 2500);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setBusy(false);
     }
@@ -116,7 +117,7 @@ export default function ConfigEditor({
               setEditing(true);
             }}
             aria-disabled={!canWrite || undefined}
-            title={!canWrite ? LOCKED_HINT : undefined}
+            title={!canWrite ? t("lockedHint") : undefined}
             className={
               fileExists
                 ? `flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm ${
@@ -128,7 +129,7 @@ export default function ConfigEditor({
             }
           >
             {fileExists ? <Pencil size={14} /> : <Plus size={14} />}
-            {fileExists ? "Éditer" : "Créer le fichier"}
+            {fileExists ? t("editor.edit") : t("editor.createFile")}
           </button>
         ) : (
           <>
@@ -138,16 +139,16 @@ export default function ConfigEditor({
               className="flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-black hover:opacity-90 disabled:opacity-40"
             >
               {fileExists ? <Save size={14} /> : <Plus size={14} />}
-              {fileExists ? "Enregistrer" : "Créer le fichier"}
+              {fileExists ? t("editor.save") : t("editor.createFile")}
             </button>
             {mode === "json" && (
               <button
                 onClick={formatJson}
                 disabled={!!jsonError}
                 className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)] disabled:opacity-40"
-                title="Reformater le JSON (2 espaces)"
+                title={t("editor.formatTitle")}
               >
-                <WandSparkles size={14} /> Formater
+                <WandSparkles size={14} /> {t("editor.format")}
               </button>
             )}
             {fileExists && (
@@ -159,19 +160,19 @@ export default function ConfigEditor({
                 }}
                 className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
               >
-                <X size={14} /> Annuler
+                <X size={14} /> {t("common.cancel")}
               </button>
             )}
             {jsonError ? (
-              <span className="text-xs text-red-400">JSON invalide</span>
+              <span className="text-xs text-red-400">{t("editor.jsonInvalid")}</span>
             ) : (
-              dirty && <span className="text-xs text-amber-400">Modifications non enregistrées</span>
+              dirty && <span className="text-xs text-amber-400">{t("editor.unsaved")}</span>
             )}
           </>
         )}
         {flash && (
           <span className="flex items-center gap-1 text-xs text-emerald-400">
-            <Check size={14} /> Enregistré {fileExists ? "(backup créé)" : ""}
+            <Check size={14} /> {fileExists ? t("editor.savedBackup") : t("editor.saved")}
           </span>
         )}
         </div>
@@ -202,19 +203,15 @@ export default function ConfigEditor({
         </div>
       ) : (
         <pre className="w-full overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-inset)] p-4 font-mono text-[13px] leading-relaxed text-[var(--color-fg)]">
-          {savedRaw || "(vide)"}
+          {savedRaw || t("editor.emptyContent")}
         </pre>
       )}
 
       <ConfirmDialog
         open={confirmOpen}
-        title={fileExists ? `Écrire ${label} ?` : `Créer ${label} ?`}
-        description={
-          fileExists
-            ? "Le fichier va être écrasé. Une copie de sauvegarde horodatée (.bak) sera créée automatiquement."
-            : "Le fichier n'existe pas encore et va être créé."
-        }
-        confirmLabel={fileExists ? "Écrire le fichier" : "Créer le fichier"}
+        title={fileExists ? t("editor.confirmWrite", { label }) : t("editor.confirmCreate", { label })}
+        description={fileExists ? t("editor.overwriteDesc") : t("editor.createDesc")}
+        confirmLabel={fileExists ? t("editor.writeFile") : t("editor.createFile")}
         busy={busy}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={doSave}

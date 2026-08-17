@@ -2,10 +2,12 @@ import { Plug, Lock, Terminal, Globe } from "lucide-react";
 import { getMcpServers, type McpServer } from "@/lib/mcp";
 import { projectLabel } from "@/lib/projects";
 import ReadOnlyBadge from "@/components/ReadOnlyBadge";
+import { getT, type ServerI18n } from "@/lib/i18n";
+import { tPlural } from "@/lib/i18n/core";
 
 export const dynamic = "force-dynamic";
 
-function ServerCard({ s }: { s: McpServer }) {
+function ServerCard({ s, t }: { s: McpServer; t: ServerI18n["t"] }) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-inset)] p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -36,7 +38,7 @@ function ServerCard({ s }: { s: McpServer }) {
         {s.envKeys.length > 0 && (
           <div className="text-[var(--color-faint)]">
             env: {s.envKeys.join(", ")}{" "}
-            <span className="italic">(valeurs masquées)</span>
+            <span className="italic">{t("mcp.envMasked")}</span>
           </div>
         )}
       </div>
@@ -45,42 +47,43 @@ function ServerCard({ s }: { s: McpServer }) {
 }
 
 export default async function McpPage() {
-  const { configPath, configExists, global, projects, totalCount } = await getMcpServers();
+  const [{ configPath, configExists, global, projects, totalCount }, { t }] = await Promise.all([
+    getMcpServers(),
+    getT(),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Plug size={22} className="text-[var(--color-accent)]" />
-          MCP servers
+          {t("sidebar.mcp")}
         </h1>
         <ReadOnlyBadge />
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        {totalCount} serveur{totalCount > 1 ? "s" : ""} MCP configuré
-        {totalCount > 1 ? "s" : ""}, lu{totalCount > 1 ? "s" : ""} depuis ~/.claude.json.
-        Lecture seule — les valeurs d&apos;environnement sont masquées.
+        {tPlural(t, "mcp.count", totalCount)} {t("mcp.readOnly")}
       </p>
       <p className="mt-2 text-[11px] text-[var(--color-faint)] font-mono">{configPath}</p>
 
       {!configExists && (
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-          Fichier ~/.claude.json introuvable.
+          {t("mcp.notFound")}
         </div>
       )}
 
       {configExists && totalCount === 0 && (
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
-          Aucun serveur MCP configuré (ni globalement, ni par projet).
+          {t("mcp.empty")}
         </div>
       )}
 
       {global.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-medium">Global</h2>
+          <h2 className="mb-3 text-lg font-medium">{t("mcp.global")}</h2>
           <div className="flex flex-col gap-3">
             {global.map((s) => (
-              <ServerCard key={s.name} s={s} />
+              <ServerCard key={s.name} s={s} t={t} />
             ))}
           </div>
         </section>
@@ -88,9 +91,9 @@ export default async function McpPage() {
 
       {projects.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-1 text-lg font-medium">Par projet</h2>
+          <h2 className="mb-1 text-lg font-medium">{t("mcp.perProject")}</h2>
           <p className="mb-3 text-xs text-[var(--color-muted)]">
-            Serveurs définis dans la config d&apos;un projet précis.
+            {t("mcp.perProjectDesc")}
           </p>
           <div className="flex flex-col gap-5">
             {projects.map((p) => (
@@ -103,7 +106,7 @@ export default async function McpPage() {
                 </div>
                 <div className="flex flex-col gap-3">
                   {p.servers.map((s) => (
-                    <ServerCard key={s.name} s={s} />
+                    <ServerCard key={s.name} s={s} t={t} />
                   ))}
                 </div>
               </div>

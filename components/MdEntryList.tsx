@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { MdEntryMeta } from "@/lib/mdEntries";
 import { formatDate } from "@/lib/claude";
+import { getT } from "@/lib/i18n";
 
 /**
  * Liste partagée agents/commandes. Rendu côté serveur : reçoit les entrées et
  * le préfixe de route (ex. "/config/agents"). Les slugs peuvent contenir des
  * "/" (namespaces) → encodage segment par segment pour l'URL catch-all.
  */
-export default function MdEntryList({
+export default async function MdEntryList({
   entries,
   basePath,
   emptyLabel,
@@ -17,6 +18,7 @@ export default function MdEntryList({
   basePath: string;
   emptyLabel: string;
 }) {
+  const { t, locale } = await getT();
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-muted)]">
@@ -52,7 +54,7 @@ export default function MdEntryList({
                 </p>
               )}
               <p className="mt-2 text-[11px] text-[var(--color-faint)]">
-                Modifié le {formatDate(e.updatedAt)}
+                {t("common.modifiedOn", { date: formatDate(e.updatedAt, locale) })}
               </p>
             </div>
             <ChevronRight
