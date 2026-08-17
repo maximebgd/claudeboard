@@ -25,102 +25,116 @@ export async function POST(req: Request) {
     plan?: unknown;
     permissions?: unknown;
     costCardMode?: unknown;
+    language?: unknown;
   };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { section, op, key } = body;
 
   if (section === "permissions") {
     if (op !== "save") {
-      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
     const { permissions } = body;
     if (!permissions || typeof permissions !== "object") {
-      return NextResponse.json({ error: "permissions manquantes" }, { status: 400 });
+      return NextResponse.json({ error: "Missing permissions" }, { status: 400 });
     }
     try {
       const saved = await setPermissions(permissions);
       return NextResponse.json({ ok: true, permissions: saved });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      const msg = e instanceof Error ? e.message : "Write failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
   if (section === "preferences") {
     if (op !== "save") {
-      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
-    const { costCardMode } = body;
-    if (costCardMode !== "usage" && costCardMode !== "savings") {
-      return NextResponse.json({ error: "costCardMode invalide" }, { status: 400 });
+    const { costCardMode, language } = body;
+    const patch: { costCardMode?: string; language?: string } = {};
+    if (costCardMode !== undefined) {
+      if (costCardMode !== "usage" && costCardMode !== "savings") {
+        return NextResponse.json({ error: "Invalid costCardMode" }, { status: 400 });
+      }
+      patch.costCardMode = costCardMode;
+    }
+    if (language !== undefined) {
+      if (language !== "fr" && language !== "en") {
+        return NextResponse.json({ error: "Invalid language" }, { status: 400 });
+      }
+      patch.language = language;
+    }
+    if (!patch.costCardMode && !patch.language) {
+      return NextResponse.json({ error: "No field provided" }, { status: 400 });
     }
     try {
-      const saved = await setPreferences({ costCardMode });
+      const saved = await setPreferences(patch);
       return NextResponse.json({ ok: true, preferences: saved });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      const msg = e instanceof Error ? e.message : "Write failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
   if (section === "subscription") {
     if (op !== "save") {
-      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
     const { source, plan } = body;
     if (source !== "auto" && source !== "manual") {
-      return NextResponse.json({ error: "source invalide" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid source" }, { status: 400 });
     }
     if (source === "manual" && !isManualPlan(plan)) {
-      return NextResponse.json({ error: "plan invalide" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
     try {
       const saved = await setSubscription({ source, plan: source === "manual" ? (plan as string) : null });
       return NextResponse.json({ ok: true, subscription: saved });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      const msg = e instanceof Error ? e.message : "Write failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
   if (section === "pricing") {
     if (op !== "save") {
-      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
     const { overrides } = body;
     if (!overrides || typeof overrides !== "object") {
-      return NextResponse.json({ error: "tarifs manquants" }, { status: 400 });
+      return NextResponse.json({ error: "Missing pricing" }, { status: 400 });
     }
     try {
       const saved = await setPricingOverrides(overrides as Record<string, unknown>);
       return NextResponse.json({ ok: true, overrides: saved });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      const msg = e instanceof Error ? e.message : "Write failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
   if (section === "favorites" || section === "projects") {
     if (op !== "toggle") {
-      return NextResponse.json({ error: "op inconnue" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
     if (typeof key !== "string" || !key) {
-      return NextResponse.json({ error: "clé manquante" }, { status: 400 });
+      return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
     try {
       const { favorited } =
         section === "projects" ? await toggleFavoriteProject(key) : await toggleFavorite(key);
       return NextResponse.json({ ok: true, favorited });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Échec de l'écriture";
+      const msg = e instanceof Error ? e.message : "Write failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ error: "section inconnue" }, { status: 400 });
+  return NextResponse.json({ error: "Unknown section" }, { status: 400 });
 }
