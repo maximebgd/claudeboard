@@ -21,7 +21,7 @@ const STORE_DIR = process.env.STORE_DIR || path.join(process.cwd(), "data");
 const BACKUPS_ROOT = process.env.BACKUPS_DIR || path.join(STORE_DIR, "backups");
 
 /** Nombre de versions conservées par cible (les plus anciennes sont supprimées). */
-const MAX_VERSIONS = 20;
+export const MAX_VERSIONS = 10;
 
 /** Identifiant de version : `<timestamp>-<rand>` (unique, triable). */
 function newId(): string {

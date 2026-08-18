@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, History, RotateCcw, GitCompare, Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
@@ -38,6 +38,7 @@ export default function BackupsPanel({
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
+  const [maxVersions, setMaxVersions] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; content: string } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export default function BackupsPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("common.unknownError"));
       setVersions(data.versions ?? []);
+      if (typeof data.maxVersions === "number") setMaxVersions(data.maxVersions);
       setLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknownError"));
@@ -62,10 +64,15 @@ export default function BackupsPanel({
     }
   }
 
+  // Charge la liste au montage pour afficher le nombre de versions dès l'arrivée sur
+  // la page (et le conserver après un rafraîchissement), sans attendre l'ouverture.
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+
   function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next && !loaded) load();
+    setOpen((v) => !v);
   }
 
   async function showPreview(id: string) {
@@ -163,7 +170,12 @@ export default function BackupsPanel({
 
       {open && (
         <div className="px-3 pb-3">
-          <p className="mb-2 text-[11px] text-[var(--color-muted)]">{t("backups.subtitle")}</p>
+          <p className="text-[11px] text-[var(--color-muted)]">{t("backups.subtitle")}</p>
+          {maxVersions !== null && (
+            <p className="mb-2 text-[11px] text-[var(--color-faint)]">
+              {t("backups.max", { count: maxVersions })}
+            </p>
+          )}
 
           {error && (
             <div className="mb-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">

@@ -5,7 +5,7 @@ import {
   readConfigFile,
   writeConfigFile,
 } from "@/lib/configFiles";
-import { listBackups, readBackup, deleteBackup } from "@/lib/backups";
+import { listBackups, readBackup, deleteBackup, MAX_VERSIONS } from "@/lib/backups";
 import { isAllowed } from "@/lib/store";
 
 /**
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   }
   const current = await readConfigFile(target);
   const versions = await listBackups(target, current.raw);
-  return NextResponse.json({ versions });
+  return NextResponse.json({ versions, maxVersions: MAX_VERSIONS });
 }
 
 /** POST { op: "restore", target, id } → réécrit le fichier avec la version choisie. */
