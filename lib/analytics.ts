@@ -378,6 +378,10 @@ export async function getAnalytics(
   const tools = new Map<string, number>();
   // Coût estimé (USD) accumulé par dossier de projet (clé = e.name), fenêtre incluse.
   const projCost = new Map<string, number>();
+  // Projets ayant au moins un message DANS la fenêtre (clé = e.name). Sert à filtrer
+  // « Projets récents » sur l'activité réelle de la période, pas sur leur `lastModified`
+  // global (un projet touché dans la fenêtre puis re-modifié après en sortirait à tort).
+  const activeProjects = new Set<string>();
   const durations: number[] = [];
   const msgCounts: number[] = [];
   // Débuts de session par heure locale (0–23) : incrémenté au 1er message daté de
@@ -509,6 +513,7 @@ export async function getAnalytics(
         // À partir d'ici : statistiques filtrées par la fenêtre sélectionnée.
         if (!inRange) continue;
 
+        activeProjects.add(e.name);
         totalMessages++;
         if (t === "user") {
           userMessages++;
@@ -569,9 +574,9 @@ export async function getAnalytics(
   }
 
   const allProjects = await listProjects();
-  const projects = hasBound
-    ? allProjects.filter((p) => p.lastModified >= sinceMs && (untilMs === 0 || p.lastModified <= untilMs))
-    : allProjects;
+  // Fenêtre active → on ne garde que les projets ayant eu de l'activité dans la période
+  // (messages datés in-range), pas ceux dont le seul `lastModified` y tombe.
+  const projects = hasBound ? allProjects.filter((p) => activeProjects.has(p.id)) : allProjects;
   const recentProjects = projects.map((p) => ({
     id: p.id,
     label: projectLabel(p.realPath),
