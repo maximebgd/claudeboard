@@ -236,6 +236,9 @@ export const fr = {
   "backups.restore": "Restaurer",
   "backups.confirmTitle": "Restaurer cette version ?",
   "backups.confirmDesc": "Le contenu de cette version va réécrire le fichier. La version actuelle est d'abord archivée, donc l'opération reste réversible.",
+  "backups.delete": "Supprimer",
+  "backups.confirmDeleteTitle": "Supprimer cette version ?",
+  "backups.confirmDeleteDesc": "Cette version archivée sera supprimée définitivement. Le fichier actuel n'est pas modifié. Action irréversible.",
 
   // Détail skill
   "skillDetail.delete": "Supprimer le skill",
@@ -845,6 +848,9 @@ export const en: Record<keyof typeof fr, string> = {
   "backups.restore": "Restore",
   "backups.confirmTitle": "Restore this version?",
   "backups.confirmDesc": "This version's content will overwrite the file. The current version is archived first, so the operation stays reversible.",
+  "backups.delete": "Delete",
+  "backups.confirmDeleteTitle": "Delete this version?",
+  "backups.confirmDeleteDesc": "This archived version will be permanently deleted. The current file is left untouched. This cannot be undone.",
 
   "skillDetail.delete": "Delete skill",
   "skillDetail.deleteTitle": "Delete skill “{name}”?",

@@ -107,6 +107,17 @@ export async function readBackup(target: ConfigTarget, id: string): Promise<stri
   return fs.readFile(path.join(targetDir(target), id), "utf8");
 }
 
+/**
+ * Supprime **définitivement** une version archivée. Contrairement aux fichiers de
+ * ~/.claude (qui passent par la corbeille), les backups sont déjà le filet de
+ * sécurité de claudeboard : élaguer une version est donc une suppression directe.
+ * Lève si l'id est invalide ; no-op silencieux si le fichier n'existe pas.
+ */
+export async function deleteBackup(target: ConfigTarget, id: string): Promise<void> {
+  if (!isValidId(id)) throw new Error("Version invalide.");
+  await fs.rm(path.join(targetDir(target), id), { force: true });
+}
+
 /** Supprime les versions au-delà des `MAX_VERSIONS` plus récentes. */
 async function pruneOld(target: ConfigTarget): Promise<void> {
   const entries = await listBackups(target);

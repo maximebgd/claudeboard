@@ -120,8 +120,9 @@ lib/
   backups.ts   historique de versions **de claudeboard** hors de CLAUDE_DIR (`data/backups/
                <target>/<id>`, override BACKUPS_DIR) : saveBackup (appelé par writeConfigFile,
                remplace les anciens `.bak.<ts>`) · listBackups (marque `current` la version
-               identique au fichier actuel) · readBackup · plafonné aux N versions récentes par
-               cible. Restaurable depuis le panneau Versions de l'éditeur
+               identique au fichier actuel) · readBackup · deleteBackup (suppression définitive
+               d'une version) · plafonné aux N versions récentes par cible. Restaurable ou
+               supprimable depuis le panneau Versions de l'éditeur
   hooks.ts     getHooks (normalise/groupe les hooks des deux settings) · getHooksRaw/
                writeHooks (bloc hooks de settings.json)
   graph.ts     getDependencyGraph : LECTURE SEULE — références croisées skills/agents/
@@ -166,7 +167,7 @@ app/
   docs/layout.tsx · page.tsx · [slug]/page.tsx · structure/page.tsx   Documentation + arbre .claude
   api/skills/route.ts                  POST { op, slug, raw } → SKILL.md write/create/delete (gated)
   api/config-file/route.ts             POST { op, target, raw } → fichiers uniques write/reset/delete (gated)
-  api/backups/route.ts                 GET ?target(&id?) liste/aperçu ; POST { op:restore, target, id } (gated modify)
+  api/backups/route.ts                 GET ?target(&id?) liste/aperçu ; POST { op:restore|delete, target, id } (gated modify)
   api/md/route.ts                      POST { op, kind, slug, raw } → agents/commandes (gated)
   api/projects/route.ts                POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
   api/trash/route.ts                   GET listTrash ; POST restore (gated <resource>.delete) / delete / empty (gated trash.empty)
@@ -183,7 +184,8 @@ components/
     DeleteButton · ResetButton · CreateEntryButton (verrouillés → grisés + tooltip
     LOCKED_HINT de `lockedHint.ts`) · MdEntryList · MdEntryDetail · TrashList ·
     BackupsPanel (panneau Versions replié : liste les backups, badge « Actuelle » sur la
-    version en place, diff `git diff` vs fichier actuel via `diff.ts`, restaure)
+    version en place, diff `git diff` vs fichier actuel via `diff.ts`, restaure ou supprime
+    une version — les deux gated par `modify` de la cible)
   Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
     RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
     PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution

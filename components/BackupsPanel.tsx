@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, History, RotateCcw, GitCompare } from "lucide-react";
+import { ChevronDown, ChevronRight, History, RotateCcw, GitCompare, Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import { useTranslation } from "@/components/I18nProvider";
 import { tPlural } from "@/lib/i18n/core";
@@ -41,6 +41,7 @@ export default function BackupsPanel({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; content: string } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const q = `/api/backups?target=${encodeURIComponent(target)}`;
@@ -99,6 +100,28 @@ export default function BackupsPanel({
       setPreview(null);
       await load();
       router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknownError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doDelete() {
+    if (!confirmDeleteId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/backups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "delete", target, id: confirmDeleteId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t("common.writeFailed"));
+      if (preview?.id === confirmDeleteId) setPreview(null);
+      setConfirmDeleteId(null);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
@@ -197,6 +220,22 @@ export default function BackupsPanel({
                           <RotateCcw size={12} /> {t("backups.restore")}
                         </button>
                       )}
+                      <button
+                        onClick={() => {
+                          if (!canRestore) return;
+                          setError(null);
+                          setConfirmDeleteId(v.id);
+                        }}
+                        aria-disabled={!canRestore || undefined}
+                        title={!canRestore ? t("lockedHint") : t("backups.delete")}
+                        className={`flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 ${
+                          canRestore
+                            ? "text-[var(--color-muted)] hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
+                            : "cursor-not-allowed opacity-40"
+                        }`}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                   {preview?.id === v.id && diff && (
@@ -250,6 +289,16 @@ export default function BackupsPanel({
         busy={busy}
         onCancel={() => setConfirmId(null)}
         onConfirm={doRestore}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title={t("backups.confirmDeleteTitle")}
+        description={t("backups.confirmDeleteDesc")}
+        confirmLabel={t("backups.delete")}
+        busy={busy}
+        onCancel={() => setConfirmDeleteId(null)}
+        onConfirm={doDelete}
       />
     </div>
   );
