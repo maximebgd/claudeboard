@@ -40,7 +40,7 @@ npm install
 ## Lancement
 
 ```bash
-npm run dev      # démarre le dashboard en local (http://localhost:3000)
+npm run dev      # démarre le dashboard en local (http://localhost:9400)
 ```
 
 Puis ouvrez l'URL affichée dans le terminal. Le dashboard lit `~/.claude` à chaque

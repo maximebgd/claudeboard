@@ -29,7 +29,7 @@ Requirements: **Node.js 20+** and **npm**.
 git clone https://github.com/maximebgd/claudeboard.git
 cd claudeboard
 npm install
-npm run dev        # starts the dashboard on http://127.0.0.1:3000
+npm run dev        # starts the dashboard on http://127.0.0.1:9400
 ```
 
 The app reads the real `~/.claude` on your machine. To point it at a fixture directory instead (recommended while developing):

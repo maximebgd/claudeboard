@@ -38,7 +38,7 @@ npm install
 ## Running
 
 ```bash
-npm run dev      # starts the dashboard locally (http://localhost:3000)
+npm run dev      # starts the dashboard locally (http://localhost:9400)
 ```
 
 Then open the URL shown in the terminal. The dashboard reads `~/.claude` on every request
