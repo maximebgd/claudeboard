@@ -3,6 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { saveBackup } from "./backups";
 import { translate, type Language } from "./i18n/core";
 
 /**
@@ -147,15 +148,17 @@ export async function getMdEntry(kind: MdKind, slug: string): Promise<MdEntry | 
 }
 
 /**
- * Écrit une entrée markdown. Vérifie que le fichier existe déjà (pas de création
- * silencieuse), crée un backup horodaté, puis écrit. Retourne le chemin du backup.
+ * Écrit une entrée markdown. La version précédente est archivée dans l'historique de
+ * versions (`data/backups/<kind>/<slug>/`, **hors** de ~/.claude — cf. `backups.ts`),
+ * restaurable depuis le panneau « Versions ». La lecture préalable garantit qu'on
+ * n'écrit jamais une entrée inexistante (pas de création silencieuse). Retourne le
+ * chemin de la version archivée.
  */
 export async function writeMdEntry(kind: MdKind, slug: string, raw: string): Promise<string> {
   const baseDir = DIRS[kind];
   const filePath = safeResolve(baseDir, relFromSlug(slug));
-  await fs.access(filePath); // 404 implicite si absent
-  const backupPath = `${filePath}.bak.${Date.now()}`;
-  await fs.copyFile(filePath, backupPath);
+  const prev = await fs.readFile(filePath, "utf8"); // lève si absent → pas de création
+  const backupPath = await saveBackup(`${kind}/${slug}`, prev);
   await fs.writeFile(filePath, raw, "utf8");
   return backupPath;
 }

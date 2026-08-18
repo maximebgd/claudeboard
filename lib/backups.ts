@@ -1,22 +1,44 @@
 import fs from "fs/promises";
 import path from "path";
 import { randomBytes } from "crypto";
-import type { ConfigTarget } from "./configFiles";
 
 /**
- * Historique de versions **de claudeboard** pour les fichiers de config uniques de
- * ~/.claude (settings.json, settings.local.json, CLAUDE.md global, keybindings.json).
- * À chaque enregistrement via `writeConfigFile`, la version précédente est archivée
- * **ici** plutôt qu'à côté du fichier (fini les `.bak.<ts>` qui polluaient ~/.claude).
+ * Historique de versions **de claudeboard** pour tout contenu texte éditable de
+ * ~/.claude : les fichiers de config uniques (settings.json, settings.local.json,
+ * CLAUDE.md global, keybindings.json) **et** les entrées à frontmatter (SKILL.md des
+ * skills, agents/*.md, commands/**\/*.md). À chaque enregistrement (`writeConfigFile`,
+ * `writeSkill`, `writeMdEntry`), la version précédente est archivée **ici** plutôt qu'à
+ * côté du fichier (fini les `.bak.<ts>` qui polluaient ~/.claude).
  *
  * Cohérent avec `store.ts`/`trash.ts` : les artefacts propres à claudeboard vivent
  * **hors** du sandbox CLAUDE_DIR, à la racine du projet (`data/backups/`, gitignored).
  * Surchargeable via BACKUPS_DIR (sinon dérivé de STORE_DIR, comme le store et la corbeille).
  *
- * Disposition : `data/backups/<target>/<id>` où `<id> = <timestamp>-<rand>` (triable) et
- * le contenu du fichier est stocké tel quel. L'historique est plafonné aux
+ * Disposition : `data/backups/<target>/<id>` où `<target>` est soit une cible de config
+ * (`settings`, `claudeMd`, …), soit un chemin d'entrée imbriqué (`skills/<slug>`,
+ * `agents/<slug>`, `commands/<ns>/<slug>`), et `<id> = <timestamp>-<rand>` (triable).
+ * Le contenu du fichier est stocké tel quel. L'historique est plafonné aux
  * `MAX_VERSIONS` plus récentes par cible (les plus anciennes sont élaguées).
  */
+
+/**
+ * Cible d'archivage : une chaîne dont chaque segment (séparé par `/`) est
+ * alphanumérique + tirets (les cibles de config sont camelCase, les slugs sont
+ * minuscules/tirets, les namespaces de commandes ajoutent des segments). Aucun point
+ * n'est autorisé → pas de `..`, pas d'astuce d'extension : le chemin reste **dans**
+ * `data/backups/`.
+ */
+export type BackupTarget = string;
+
+/** Garde anti-traversée : valide qu'une cible ne peut désigner que `data/backups/…`. */
+function isValidTarget(target: string): boolean {
+  if (!target) return false;
+  return target.split("/").every((seg) => /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(seg));
+}
+
+function assertValidTarget(target: string): void {
+  if (!isValidTarget(target)) throw new Error("Cible de version invalide.");
+}
 const STORE_DIR = process.env.STORE_DIR || path.join(process.cwd(), "data");
 const BACKUPS_ROOT = process.env.BACKUPS_DIR || path.join(STORE_DIR, "backups");
 
@@ -44,7 +66,8 @@ export interface BackupEntry {
   current?: boolean;
 }
 
-function targetDir(target: ConfigTarget): string {
+function targetDir(target: BackupTarget): string {
+  assertValidTarget(target);
   return path.join(BACKUPS_ROOT, target);
 }
 
@@ -52,7 +75,7 @@ function targetDir(target: ConfigTarget): string {
  * Archive `content` comme nouvelle version de `target`, puis élague l'historique
  * au-delà de `MAX_VERSIONS`. Retourne le chemin du fichier de version créé.
  */
-export async function saveBackup(target: ConfigTarget, content: string): Promise<string> {
+export async function saveBackup(target: BackupTarget, content: string): Promise<string> {
   const dir = targetDir(target);
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, newId());
@@ -68,7 +91,7 @@ export async function saveBackup(target: ConfigTarget, content: string): Promise
  * restauration ou un enregistrement sans changement).
  */
 export async function listBackups(
-  target: ConfigTarget,
+  target: BackupTarget,
   currentContent?: string
 ): Promise<BackupEntry[]> {
   const dir = targetDir(target);
@@ -102,7 +125,7 @@ export async function listBackups(
 }
 
 /** Lit le contenu d'une version. Lève si l'id est invalide ou introuvable. */
-export async function readBackup(target: ConfigTarget, id: string): Promise<string> {
+export async function readBackup(target: BackupTarget, id: string): Promise<string> {
   if (!isValidId(id)) throw new Error("Version invalide.");
   return fs.readFile(path.join(targetDir(target), id), "utf8");
 }
@@ -113,13 +136,13 @@ export async function readBackup(target: ConfigTarget, id: string): Promise<stri
  * sécurité de claudeboard : élaguer une version est donc une suppression directe.
  * Lève si l'id est invalide ; no-op silencieux si le fichier n'existe pas.
  */
-export async function deleteBackup(target: ConfigTarget, id: string): Promise<void> {
+export async function deleteBackup(target: BackupTarget, id: string): Promise<void> {
   if (!isValidId(id)) throw new Error("Version invalide.");
   await fs.rm(path.join(targetDir(target), id), { force: true });
 }
 
 /** Supprime les versions au-delà des `MAX_VERSIONS` plus récentes. */
-async function pruneOld(target: ConfigTarget): Promise<void> {
+async function pruneOld(target: BackupTarget): Promise<void> {
   const entries = await listBackups(target);
   for (const e of entries.slice(MAX_VERSIONS)) {
     await fs.rm(path.join(targetDir(target), e.id), { force: true });

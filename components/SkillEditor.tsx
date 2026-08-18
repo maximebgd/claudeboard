@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check } from "lucide-react";
 import Markdown from "./Markdown";
@@ -29,6 +29,18 @@ export default function SkillEditor({ slug, initialRaw, content, canWrite = true
   const [flash, setFlash] = useState(false);
 
   const dirty = draft !== savedRaw;
+
+  // Le SKILL.md peut changer côté serveur pendant que ce composant reste monté —
+  // typiquement après une restauration depuis le panneau Versions, qui appelle
+  // `router.refresh()` et renvoie un nouvel `initialRaw`. On resynchronise alors
+  // l'aperçu, sauf si l'utilisateur est en train d'éditer (on ne veut pas écraser son
+  // brouillon en cours).
+  useEffect(() => {
+    if (editing) return;
+    setSavedRaw(initialRaw);
+    setDraft(initialRaw);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRaw]);
 
   async function doSave() {
     setBusy(true);

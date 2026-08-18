@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/claude";
 import { getT } from "@/lib/i18n";
 import ConfigEditor from "@/components/ConfigEditor";
 import DeleteButton from "@/components/DeleteButton";
+import BackupsPanel from "@/components/BackupsPanel";
 
 /** Détail + éditeur partagé pour une entrée agents/commandes. */
 export default async function MdEntryDetail({
@@ -80,6 +81,10 @@ export default async function MdEntryDetail({
           />
         }
       />
+
+      <div className="mt-4">
+        <BackupsPanel target={`${kind}/${entry.slug}`} canRestore={canWrite} currentRaw={entry.raw} />
+      </div>
     </div>
   );
 }

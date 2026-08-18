@@ -7,6 +7,7 @@ import { isAllowed } from "@/lib/store";
 import { getT } from "@/lib/i18n";
 import SkillEditor from "@/components/SkillEditor";
 import DeleteButton from "@/components/DeleteButton";
+import BackupsPanel from "@/components/BackupsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,10 @@ export default async function SkillDetailPage({
           />
         }
       />
+
+      <div className="mt-4">
+        <BackupsPanel target={`skills/${skill.slug}`} canRestore={canWrite} currentRaw={skill.raw} />
+      </div>
     </div>
   );
 }
