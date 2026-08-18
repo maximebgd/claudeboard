@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Save, X, Check, WandSparkles, Plus } from "lucide-react";
 import Markdown from "./Markdown";
@@ -57,6 +57,20 @@ export default function ConfigEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+
+  // Le contenu du fichier peut changer côté serveur pendant que ce composant reste
+  // monté — typiquement après une restauration depuis le panneau Versions, qui
+  // appelle `router.refresh()` et renvoie un nouvel `initialRaw`. On resynchronise
+  // alors le contenu affiché pour voir la modification sans recharger la page. On ne
+  // touche à rien si l'utilisateur est en train d'éditer (on ne veut pas écraser son
+  // brouillon en cours).
+  useEffect(() => {
+    if (editing) return;
+    setSavedRaw(initialRaw);
+    setDraft(exists ? initialRaw : emptyTemplate);
+    setFileExists(exists);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRaw, exists]);
 
   const dirty = draft !== savedRaw || !fileExists;
 

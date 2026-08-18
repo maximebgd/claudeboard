@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import {
   isConfigTarget,
+  configResource,
   readConfigFile,
   writeConfigFile,
   resetConfigFile,
   deleteConfigFile,
-  type ConfigTarget,
 } from "@/lib/configFiles";
-import { isAllowed, type PermissionResource } from "@/lib/store";
+import { isAllowed } from "@/lib/store";
 import { getT } from "@/lib/i18n";
-
-/** Ressource de permission correspondant à une cible de config. */
-function resourceOf(target: ConfigTarget): PermissionResource {
-  if (target === "settings" || target === "settingsLocal") return "settings";
-  return target === "claudeMd" ? "claudeMd" : "keybindings";
-}
 
 /**
  * Gère les fichiers de config uniques de ~/.claude (settings.json,
@@ -36,7 +30,7 @@ export async function POST(req: Request) {
   if (!isConfigTarget(target)) {
     return NextResponse.json({ error: "Unknown target" }, { status: 400 });
   }
-  const resource = resourceOf(target);
+  const resource = configResource(target);
 
   if (op === "delete") {
     if (!(await isAllowed(resource, "delete"))) {

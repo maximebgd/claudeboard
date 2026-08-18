@@ -4,6 +4,7 @@ import { formatDate } from "@/lib/claude";
 import { isAllowed } from "@/lib/store";
 import ConfigEditor from "@/components/ConfigEditor";
 import ResetButton from "@/components/ResetButton";
+import BackupsPanel from "@/components/BackupsPanel";
 import { getT } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,9 @@ export default async function SettingsPage() {
                 />
               </div>
             )}
+            <div className="mt-4">
+              <BackupsPanel target={target} canRestore={canWrite} currentRaw={file.raw} />
+            </div>
           </section>
         ))}
       </div>
