@@ -89,6 +89,25 @@ claudeboard/
 - **Bilingual UI (EN/FR)** — the whole interface is available in English and French (`LanguageSelector` in Preferences); an in-house i18n layer keeps the core isomorphic so translations bundle to the client with no extra runtime.
 - **Theme** — light/dark toggle, persisted in `localStorage` and applied before first paint (no flash).
 
+## What you can do in `~/.claude`
+
+At a glance — and everything writable is **off by default** until you enable it in **Preferences → Write permissions**:
+
+| Resource | View | Edit | Create | Delete |
+|---|:-:|:-:|:-:|:-:|
+| Skills · Agents · Commands | ✅ | ✅ | ✅ | ✅ |
+| settings · settings.local · hooks · CLAUDE.md · keybindings | ✅ | ✅ | ✅¹ | ✅ |
+| Projects & sessions | ✅ | — | — | ✅ |
+| MCP · Plugins · Search · Dependency graph | ✅ | — | — | — |
+
+¹ Creation is explicit and only where it makes sense: `settings.local.json`, `keybindings.json`, the global `CLAUDE.md`.
+
+**Nothing is ever lost — two backup places + a trash:**
+
+- **Edit a skill / agent / command** → a timestamped `.bak` is dropped right next to the file, **inside** `~/.claude`.
+- **Edit a config file** (settings, hooks, CLAUDE.md, keybindings) → the previous version is archived **outside** `~/.claude`, in claudeboard's `data/backups/` — the restorable **Versions** panel (git-style diff, "Current" badge, capped at 10 per file).
+- **Any delete** (any resource above, plus projects/sessions) → moved to the **Trash** (`data/trash/`, outside `~/.claude`), restorable and never erased.
+
 ## Security
 
 claudeboard is **localhost-only by design**. The Next.js server binds to `localhost` (`127.0.0.1`), so the dashboard is reachable **only from your own machine** — never from your local network, never from the internet. The app is **not meant to be deployed**. Combined with the opt-in write permissions (all off by default) and reversible, backed-up writes, this keeps your Claude Code config fully under your control and entirely on your disk.

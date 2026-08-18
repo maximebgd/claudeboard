@@ -89,6 +89,25 @@ claudeboard/
 - **UI bilingue (EN/FR)** — toute l'interface est disponible en anglais et en français (`LanguageSelector` dans les Préférences) ; une couche i18n maison garde le cœur isomorphe pour que les traductions soient bundlées côté client sans runtime supplémentaire.
 - **Thème** — bascule clair/sombre, persistée dans `localStorage` et appliquée avant le premier rendu (pas de flash).
 
+## Ce qu'on peut faire dans `~/.claude`
+
+En un coup d'œil — et tout ce qui est modifiable est **désactivé par défaut** tant que vous ne l'activez pas dans **Préférences → Autorisations d'écriture** :
+
+| Ressource | Voir | Éditer | Créer | Supprimer |
+|---|:-:|:-:|:-:|:-:|
+| Skills · Agents · Commandes | ✅ | ✅ | ✅ | ✅ |
+| settings · settings.local · hooks · CLAUDE.md · keybindings | ✅ | ✅ | ✅¹ | ✅ |
+| Projets & sessions | ✅ | — | — | ✅ |
+| MCP · Plugins · Recherche · Graphe de dépendances | ✅ | — | — | — |
+
+¹ La création est explicite et seulement là où ça a du sens : `settings.local.json`, `keybindings.json`, le `CLAUDE.md` global.
+
+**Rien n'est jamais perdu — deux emplacements de backup + une corbeille :**
+
+- **Éditer un skill / agent / commande** → un `.bak` horodaté est déposé juste à côté du fichier, **dans** `~/.claude`.
+- **Éditer un fichier de config** (settings, hooks, CLAUDE.md, keybindings) → la version précédente est archivée **hors** de `~/.claude`, dans le `data/backups/` de claudeboard — le panneau **Versions** restaurable (diff façon git, badge « Actuelle », plafonné à 10 versions par fichier).
+- **Toute suppression** (n'importe quelle ressource ci-dessus, plus projets/sessions) → déplacée vers la **Corbeille** (`data/trash/`, hors de `~/.claude`), restaurable et jamais effacée.
+
 ## Sécurité
 
 claudeboard est **conçu pour ne tourner qu'en localhost**. Le serveur Next.js est lié à `localhost` (`127.0.0.1`) : le dashboard n'est donc accessible **que depuis votre propre machine** — jamais depuis votre réseau local, jamais depuis Internet. L'app **n'est pas destinée à être déployée**. Combiné aux autorisations d'écriture opt-in (toutes désactivées par défaut) et aux écritures réversibles et sauvegardées, cela garde votre configuration Claude Code entièrement sous votre contrôle et sur votre disque.
