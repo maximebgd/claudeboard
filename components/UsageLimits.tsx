@@ -29,11 +29,25 @@ export interface RateLimitsView {
 
 /* ------------------------------- primitives ------------------------------- */
 
-/** Couleur de la jauge selon le taux de consommation (vert → ambre → rouge). */
-function barColor(pct: number): string {
-  if (pct >= 80) return "#e5484d"; // danger
-  if (pct >= 50) return "#e0a23b"; // warn
-  return "#6bbf73"; // ok
+const GREEN = "#6bbf73";
+const YELLOW = "#e0a23b";
+const ORANGE = "#ff8700"; // xterm 256 · #208
+const RED = "#e5484d";
+const NEUTRAL = "var(--color-muted)"; // « no color » : remplissage neutre, pas d'alerte
+
+/** Couleur de la jauge 5 h (4 seuils : vert < 25 % → jaune → orange → rouge ≥ 75 %). */
+function color5h(pct: number): string {
+  if (pct >= 75) return RED;
+  if (pct >= 50) return ORANGE;
+  if (pct >= 25) return YELLOW;
+  return GREEN;
+}
+
+/** Couleur de la jauge 7 j (neutre < 60 % → orange → rouge ≥ 80 %). */
+function color7d(pct: number): string {
+  if (pct >= 80) return RED;
+  if (pct >= 60) return ORANGE;
+  return NEUTRAL;
 }
 
 /** Compte à rebours compact jusqu'au reset (« 1 h 40 » / « 2 j 4 h »). */
@@ -123,14 +137,16 @@ function BannerItem({
   label,
   win,
   now,
+  colorOf,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   win: UsageWindowView;
   now: number | null;
+  colorOf: (pct: number) => string;
 }) {
   const pct = Math.round(win.usedPct);
-  const color = barColor(pct);
+  const color = colorOf(pct);
   return (
     <span className="inline-flex min-h-4 items-center gap-2">
       <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--color-muted)]">
@@ -200,8 +216,14 @@ export function UsageBanner({ known, fiveHour, sevenDay }: RateLimitsView) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] leading-none">
-      <BannerItem icon={Clock3} label={t("usage.short5h")} win={fiveHour} now={now} />
-      <BannerItem icon={CalendarRange} label={t("usage.short7d")} win={sevenDay} now={now} />
+      <BannerItem icon={Clock3} label={t("usage.short5h")} win={fiveHour} now={now} colorOf={color5h} />
+      <BannerItem
+        icon={CalendarRange}
+        label={t("usage.short7d")}
+        win={sevenDay}
+        now={now}
+        colorOf={color7d}
+      />
     </div>
   );
 }
