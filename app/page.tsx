@@ -18,6 +18,7 @@ import {
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getEffectiveSubscription } from "@/lib/subscription";
+import { getRateLimits } from "@/lib/rateLimits";
 import { getPreferences } from "@/lib/store";
 import { getT, type Language } from "@/lib/i18n";
 import { tPlural } from "@/lib/i18n/core";
@@ -32,6 +33,7 @@ import CostStatCard from "@/components/CostStatCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
+import { UsageBanner } from "@/components/UsageLimits";
 import FavoriteButton from "@/components/FavoriteButton";
 import { getFavoriteSessions } from "@/lib/favorites";
 
@@ -291,12 +293,13 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub, favorites, preferences, { t, locale }] = await Promise.all([
+  const [a, skills, sub, favorites, preferences, rateLimits, { t, locale }] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getEffectiveSubscription(),
     getFavoriteSessions(),
     getPreferences(),
+    getRateLimits(),
     getT(),
   ]);
   const fmt = makeFormatters(locale);
@@ -431,33 +434,37 @@ export default async function HomePage({
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-10">
-      {/* Hero « status-line » : le chemin ~/.claude traité comme un vrai prompt shell. */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <div className="eyebrow flex items-center gap-2">
-            <span className="text-[var(--color-accent)]">claude board</span>
-            <span aria-hidden className="text-[var(--color-faint)]">
-              /
-            </span>
-            <span>readout</span>
+      {/* Hero « status-line » : le chemin ~/.claude traité comme un vrai prompt shell,
+          en tête de page. Sous le titre, une ligne d'instruments : limites d'usage à
+          gauche, sélecteur de période à droite. */}
+      <header>
+        <p className="flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
+          <span className="text-[var(--color-accent)]" aria-hidden>
+            $
+          </span>
+          <span className="truncate">{CLAUDE_DIR}</span>
+          <span className="cb-cursor shrink-0" aria-hidden />
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          {t("dash.title")}
+        </h1>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <UsageBanner
+            known={rateLimits.known}
+            fiveHour={rateLimits.fiveHour}
+            sevenDay={rateLimits.sevenDay}
+          />
+          {/* `ml-auto` plutôt que `justify-between` : le sélecteur reste collé à droite
+              même quand le bandeau ne rend rien (limites inconnues). */}
+          <div className="ml-auto">
+            <RangeSelector
+              activeKey={range.key}
+              month={range.month}
+              from={range.from}
+              to={range.to}
+            />
           </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {t("dash.title")}
-          </h1>
-          <p className="mt-2 flex items-center gap-2 font-mono text-sm text-[var(--color-muted)]">
-            <span className="text-[var(--color-accent)]" aria-hidden>
-              $
-            </span>
-            <span className="truncate">{CLAUDE_DIR}</span>
-            <span className="cb-cursor shrink-0" aria-hidden />
-          </p>
         </div>
-        <RangeSelector
-          activeKey={range.key}
-          month={range.month}
-          from={range.from}
-          to={range.to}
-        />
       </header>
 
       <div className="mt-6 h-px bg-gradient-to-r from-[var(--color-border)] via-[var(--color-border)] to-transparent" />

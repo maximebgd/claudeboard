@@ -72,6 +72,18 @@ export const fr = {
   "dash.subMonths": "{count} mois",
   "dash.net": "Net",
   "dash.noSubDetected": "Aucun abonnement Pro / Max détecté dans",
+  // Limites d'usage (fenêtres glissantes 5 h / 7 j)
+  "usage.resetIn": "reset dans {duration}",
+  "usage.resetNow": "réinitialisée",
+  "usage.noReset": "reset inconnu",
+  "usage.loading": "chargement…",
+  "usage.short5h": "5 h",
+  "usage.short7d": "7 j",
+  "usage.notConfigured": "statusline à configurer",
+  "usage.notConfiguredHint":
+    "Le statusline de Claude Code n'alimente pas le cache des limites — cliquez pour voir comment le configurer",
+  "usage.docsAnchor": "limites-dusage-fenetres-5-h-7-j",
+
   "dash.modelBreakdown": "Répartition des modèles",
   "dash.noModelData": "Aucune donnée de modèle.",
   "dash.tokensCostByModel": "Tokens & coût par modèle",
@@ -700,6 +712,17 @@ export const en: Record<keyof typeof fr, string> = {
   "dash.subMonths": "{count} mo",
   "dash.net": "Net",
   "dash.noSubDetected": "No Pro / Max subscription detected in",
+  "usage.resetIn": "resets in {duration}",
+  "usage.resetNow": "reset",
+  "usage.noReset": "reset unknown",
+  "usage.loading": "loading…",
+  "usage.short5h": "5h",
+  "usage.short7d": "7d",
+  "usage.notConfigured": "statusline not set up",
+  "usage.notConfiguredHint":
+    "Claude Code's statusline isn't feeding the limits cache — click to see how to set it up",
+  "usage.docsAnchor": "usage-limits-5-hour-7-day-windows",
+
   "dash.modelBreakdown": "Model breakdown",
   "dash.noModelData": "No model data.",
   "dash.tokensCostByModel": "Tokens & cost by model",

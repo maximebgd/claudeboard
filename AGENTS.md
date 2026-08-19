@@ -19,8 +19,17 @@ section ne donne que le panorama fonctionnel.
   de **vélocité** vs la période précédente de même durée (masqué en fenêtre « Tout »). La
   `SubscriptionCard` compare le coût d'usage au prix du plan pour estimer l'économie ; la
   carte KPI « Coût estimé » (`CostStatCard`) est **cliquable** (coût d'usage ⇆ économie),
-  sa valeur par défaut suivant la préférence `costCardMode`. Le dashboard liste aussi les
-  **sessions épinglées** (favoris).
+  sa valeur par défaut suivant la préférence `costCardMode`. Un `UsageBanner` (en tête,
+  à gauche du `RangeSelector`) affiche les **limites d'usage Claude.ai** (fenêtres
+  glissantes 5 h / 7 j : % consommé + compte à rebours de reset), lues **hors temps réel**
+  du cache du statusline (`rateLimits.ts`, lecture seule). ⚠️ Cette feature **suppose que le
+  statusline de Claude Code est configuré pour écrire** ces limites dans le fichier de cache
+  (`~/.claude/statusline-cache/rate-limits.env`, clés `BLOCK_PCT`/`RESET_EPOCH` +
+  `WEEK_PCT`/`WEEK_RESET_EPOCH`) : Claude Code n'expose `rate_limits` qu'au statusline, jamais
+  dans un fichier « officiel ». **Sans ce cache** (`known:false`), le bandeau reste affiché
+  mais avec des jauges **vides** + une alerte cliquable renvoyant vers la doc de configuration
+  (lien **ancré** vers la section, cf. `usage.docsAnchor` par langue). Le dashboard liste
+  aussi les **sessions épinglées** (favoris).
 - **Skills** : liste/aperçu/**édition**/**création** (template)/**suppression** des
   `~/.claude/skills/*/SKILL.md`. Écriture → version précédente archivée **hors** de
   `~/.claude` (panneau **Versions** restaurable, cf. `backups.ts`) ; suppression →
@@ -74,7 +83,8 @@ section ne donne que le panorama fonctionnel.
   - **Structure du dossier** (`/docs/structure`) : arbre pédagogique statique de `.claude/`
     et `~/.claude` (rôle, chargement, exemple par fichier).
 - **Documentation** (`/docs`) : rend les `.md` du dossier `docs/` (frontmatter
-  `title`/`description`/`order`) avec sommaire latéral.
+  `title`/`description`/`order`) avec sommaire latéral ; les titres sont
+  **auto-ancrés** (`Markdown` dérive un `id` slugifié → liens profonds vers une section).
 - **Thème** : bascule clair/sombre persistée dans `localStorage`, appliquée avant le
   premier rendu par un script inline dans `layout.tsx` (pas de flash).
 
@@ -141,6 +151,11 @@ lib/
                surlignables, groupés par session (récents d'abord, plafonnés à 100)
   docs.ts      listDocs · getDoc : lit les `.md` de `docs/` (hors CLAUDE_DIR, garde-fou dédié)
   keybindings.ts parseKeybindings : extraction défensive pour l'aperçu tabulaire
+  rateLimits.ts getRateLimits : LECTURE SEULE des limites d'usage Claude.ai (fenêtres 5 h /
+               7 j) depuis le cache du statusline (`statusline-cache/rate-limits.env` dans
+               CLAUDE_DIR → `safeResolve`). Claude Code ne persiste ces valeurs nulle part
+               d'« officiel » : seul le statusline les met en cache → valeurs de la dernière
+               session active (pas temps réel), `known:false` sans cache
   diff.ts      unifiedDiff **isomorphe** (LCS) : deux textes → lignes de diff unifié façon
                `git diff` (hunks `@@`, ajouts/retraits/contexte) pour le panneau Versions
   i18n.ts      getT() (serveur) : lit la langue du store → { locale, t } lié
@@ -193,7 +208,9 @@ components/
     une version — les deux gated par `modify` de la cible)
   Dashboard : ActivityPanel · ActivityHeatmap · TrendChart · DayDetail · ModelDonut ·
     RangeSelector · SubscriptionCard · SubscriptionSelector · CostStatCard · CostModeSelector ·
-    PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution
+    PricingEditor · ProjectCostList · ToolUsageList · HourlyDistribution · UsageBanner
+    (bandeau limites d'usage 5 h / 7 j, `components/UsageLimits.tsx` ; si cache absent :
+    jauges vides + alerte → doc de configuration)
   Divers : FavoriteButton · ResumeButton · ExportButton · SearchView · SearchFab ·
     DependencyGraph · PluginCatalog · DirectoryExplorer · DocsNav
 ```

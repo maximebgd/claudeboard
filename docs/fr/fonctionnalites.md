@@ -28,6 +28,8 @@ pour afficher :
 - **Abonnement** (`SubscriptionCard`) : compare le coût estimé de l'usage au prix du plan
   Claude (via `lib/subscription.ts`) pour afficher l'économie nette (détails du plan
   révélés au survol de la carte).
+- **Limites d'usage** : deux barres dans l'en-tête (fenêtres glissantes 5 h et 7 j) —
+  nécessite une configuration du statusline, voir plus bas.
 
 ### Carte « Coût estimé » cliquable
 
@@ -47,6 +49,63 @@ réelles de la période N-1) — masqué pour la fenêtre « Tout ».
 > facturation réelle. Détails du calcul (coût **et** durées) dans
 > [Métriques & estimation](./metriques.md) ; tarifs éditables dans
 > **Préférences → Tarifs d'estimation**.
+
+### Limites d'usage (fenêtres 5 h / 7 j)
+
+L'en-tête du dashboard affiche deux barres : la part consommée des fenêtres glissantes
+**5 heures** et **7 jours** de votre abonnement Claude.ai, et le temps restant avant leur
+réinitialisation.
+
+> ⚙️ **Ces barres demandent une configuration de votre statusline.** Sans elle, elles ne
+> s'affichent pas du tout — silencieusement, sans erreur ni message.
+
+**Pourquoi une configuration ?** Claude Code n'écrit ces pourcentages dans aucun fichier :
+il ne les transmet qu'au script de statusline, dans le JSON qu'il lui envoie sur l'entrée
+standard (champ `rate_limits`). Claudeboard ne peut donc pas les lire à la source. Il lit
+une copie que le statusline doit déposer sur le disque, dans
+`~/.claude/statusline-cache/rate-limits.env`.
+
+**Comment faire.** Ajoutez ce bloc à votre `~/.claude/statusline-command.sh`. Il suppose
+que le JSON reçu est déjà dans une variable `input` (typiquement `input=$(cat)` en tête de
+script) et il a besoin de `jq` :
+
+```bash
+# Cache des limites d'usage, lu par claudeboard.
+RATE_CACHE="$HOME/.claude/statusline-cache/rate-limits.env"
+BLOCK_PCT=$(jq -r '.rate_limits.five_hour.used_percentage // -1 | floor' <<<"$input")
+if [ "$BLOCK_PCT" -ge 0 ]; then
+  mkdir -p "$(dirname "$RATE_CACHE")"
+  jq -r '
+    "BLOCK_PCT="        + (.rate_limits.five_hour.used_percentage  // -1 | floor | tostring),
+    "RESET_EPOCH="      + (.rate_limits.five_hour.resets_at        //  0 | floor | tostring),
+    "WEEK_PCT="         + (.rate_limits.seven_day.used_percentage  // -1 | floor | tostring),
+    "WEEK_RESET_EPOCH=" + (.rate_limits.seven_day.resets_at        //  0 | floor | tostring)
+  ' <<<"$input" > "$RATE_CACHE"
+fi
+```
+
+Le `if` n'est pas décoratif : `rate_limits` n'est renseigné qu'**après le premier échange
+API** d'une session. En début de session le champ est absent, le pourcentage vaut `-1`, et
+sans ce test vous écraseriez un cache valide par des valeurs vides.
+
+Le fichier produit tient en quatre lignes `CLÉ=valeur` (les dates de reset sont des epochs
+en **secondes**) :
+
+```
+BLOCK_PCT=92
+RESET_EPOCH=1787150400
+WEEK_PCT=34
+WEEK_RESET_EPOCH=1787583600
+```
+
+Rechargez la page : les barres apparaissent. Si rien ne change, vérifiez que le fichier
+existe et que `jq` est installé.
+
+**Ce que ces barres montrent exactement.** Les pourcentages datent du **dernier relevé**
+d'une session Claude Code active, pas de l'instant présent : si vous n'avez pas ouvert
+Claude Code depuis deux heures, ils ont deux heures. Le décompte avant réinitialisation
+reste juste, lui, puisqu'il se calcule à partir de l'epoch de reset. Une fenêtre déjà
+dépassée s'affiche « réinitialisée », sa consommation repartant de zéro.
 
 ## Autorisations d'écriture
 
