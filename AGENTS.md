@@ -196,6 +196,8 @@ app/
   api/search/route.ts                  GET ?q&projectId?&thinking=1?&tools=1? (lecture seule)
   api/store/route.ts                   POST { section, … } → état claudeboard (dispatch par section whitelistée)
   layout.tsx · globals.css · icon.svg
+proxy.ts       (racine, ex-`middleware.ts`) garde réseau avant toute route : `Host` loopback
+               (anti-rebinding) + `Origin` loopback sur les méthodes mutantes (anti-CSRF)
 components/
   Sidebar · Markdown · Collapsible · ConfirmDialog · ThemeToggle · ReadOnlyBadge
   I18nProvider (contexte client, `useTranslation`) · LanguageSelector (choix FR/EN)
@@ -229,6 +231,11 @@ components/
     (`mcpServers` env masqué / champs non sensibles d'`oauthAccount` / `pluginUsage`).
     `plugins.ts` lit aussi les `marketplace.json` à leur `installLocation` (peut pointer hors
     de CLAUDE_DIR) — lecture seule.
+- **Garde réseau (`proxy.ts`)** : app **locale sans auth**, donc le proxy filtre toutes les
+  routes en amont — `Host` loopback (anti-rebinding) et, sur les méthodes mutantes, `Origin`
+  loopback (**anti-CSRF**, sans quoi un site tiers pourrait piloter l'API et écrire un hook =
+  RCE). **Ne pas retirer le check `Origin`.** La protection primaire reste le binding
+  `127.0.0.1` ; `isAllowed()` reste la garde par route.
 - **L'écriture n'est jamais silencieuse** : `writeSkill`/`writeMdEntry` exigent un fichier
   existant (pas de création) et archivent la version précédente **hors** de CLAUDE_DIR
   (`data/backups/`, clé `skills|agents|commands/<slug>`, cf. `backups.ts`) — tout comme
