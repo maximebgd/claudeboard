@@ -9,7 +9,7 @@
 Un dashboard **local** pour analyser, parcourir et éditer la configuration Claude Code stockée dans `~/.claude`.
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/a0f97ac8-da88-4f3f-ad4b-c93e733cecb8" controls muted></video>
+  <video src="https://github.com/user-attachments/assets/bfde06cb-a8ff-4347-a2dc-0f6d3e99a3c0" controls muted></video>
 </p>
 
 > 🔒 **100 % local — rien ne quitte jamais votre machine.** claudeboard ne fait **aucun appel réseau** avec vos données : pas de télémétrie, pas d'analytics, pas d'API externe, pas de cloud. **Absolument tout reste sur votre disque.** Il n’a accès en lecture qu’à `~/.claude`, et dispose des droits de lecture et d’écriture sur le répertoire du projet.
