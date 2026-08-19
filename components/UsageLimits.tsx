@@ -186,7 +186,7 @@ export function UsageBanner({ known, fiveHour, sevenDay }: RateLimitsView) {
         <UnconfiguredItem icon={Clock3} label={t("usage.short5h")} />
         <UnconfiguredItem icon={CalendarRange} label={t("usage.short7d")} />
         <a
-          href="/docs/fonctionnalites"
+          href={`/docs/fonctionnalites#${t("usage.docsAnchor")}`}
           title={t("usage.notConfiguredHint")}
           className="inline-flex items-center gap-1.5 hover:underline"
           style={{ color: "#e0a23b" }}

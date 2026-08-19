@@ -82,6 +82,7 @@ export const fr = {
   "usage.notConfigured": "statusline à configurer",
   "usage.notConfiguredHint":
     "Le statusline de Claude Code n'alimente pas le cache des limites — cliquez pour voir comment le configurer",
+  "usage.docsAnchor": "limites-dusage-fenetres-5-h-7-j",
 
   "dash.modelBreakdown": "Répartition des modèles",
   "dash.noModelData": "Aucune donnée de modèle.",
@@ -720,6 +721,7 @@ export const en: Record<keyof typeof fr, string> = {
   "usage.notConfigured": "statusline not set up",
   "usage.notConfiguredHint":
     "Claude Code's statusline isn't feeding the limits cache — click to see how to set it up",
+  "usage.docsAnchor": "usage-limits-5-hour-7-day-windows",
 
   "dash.modelBreakdown": "Model breakdown",
   "dash.noModelData": "No model data.",
