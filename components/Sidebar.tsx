@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Sparkles,
@@ -23,6 +24,23 @@ import {
 import ThemeToggle from "./ThemeToggle";
 import { useTranslation } from "@/components/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/core";
+
+// Logos « clawd » disponibles dans /public/logo — un est tiré au hasard à chaque
+// changement de page (rendu client uniquement pour éviter tout mismatch d'hydratation).
+const LOGOS = [
+  "/logo/clawd.svg",
+  "/logo/clawd-book.svg",
+  "/logo/clawd-bubble.svg",
+  "/logo/clawd-coffee.svg",
+  "/logo/clawd-dizzy.svg",
+  "/logo/clawd-happy.svg",
+  "/logo/clawd-headphones.svg",
+  "/logo/clawd-heart.svg",
+  "/logo/clawd-lightbulb.svg",
+  "/logo/clawd-magnifier.svg",
+  "/logo/clawd-red.svg",
+  "/logo/clawd-wand.svg",
+];
 
 type NavItem = {
   href: string;
@@ -64,24 +82,25 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { t } = useTranslation();
+  // Logo aléatoire, retiré à chaque navigation. Vide au premier rendu serveur
+  // (évite un mismatch d'hydratation), puis choisi côté client.
+  const [logo, setLogo] = useState<string | null>(null);
+  useEffect(() => {
+    setLogo(LOGOS[Math.floor(Math.random() * LOGOS.length)]);
+  }, [pathname]);
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col">
       <div className="py-5 pl-5 pr-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              aria-label="Claude Code"
-            >
-              <path
-                clipRule="evenodd"
-                d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"
-                fill="#D97757"
-                fillRule="evenodd"
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)]">
+            {logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logo}
+                alt="Claude Board"
+                className="h-5 w-5"
               />
-            </svg>
+            )}
           </div>
           <div>
             <div className="text-sm font-semibold leading-tight tracking-tight">
