@@ -100,7 +100,11 @@ section ne donne que le panorama fonctionnel.
 ```
 lib/
   claude.ts    CLAUDE_DIR (override env CLAUDE_DIR) · safeResolve (garde anti-traversée,
-               tout reste dans CLAUDE_DIR) · formatDate/formatSize
+               tout reste dans CLAUDE_DIR) · formatDate/formatSize (date & taille localisées)
+  format.ts    makeFormatters(locale) : fabrique de formatteurs **sensibles à la locale**
+               (`num` compact au-delà de 10 000 · `usd` · `int`) — pas de `Intl.NumberFormat`
+               en portée module (figerait la langue) : serveur = après `await getT()`, client
+               = `useMemo(makeFormatters, [locale])`. Formatage nombre/monnaie (≠ date/taille)
   projects.ts  listProjects · listSessions · getSession · projectLabel · normalisation JSONL
   analytics.ts getAnalytics(sinceMs, untilMs, prevSinceMs?, prevUntilMs?) : scan unique des
                JSONL → totaux, jours (heatmap), stats/modèle, top outils, coût/projet,
@@ -214,7 +218,8 @@ components/
     (bandeau limites d'usage 5 h / 7 j, `components/UsageLimits.tsx` ; si cache absent :
     jauges vides + alerte → doc de configuration)
   Divers : FavoriteButton · ResumeButton · ExportButton · SearchView · SearchFab ·
-    DependencyGraph · PluginCatalog · DirectoryExplorer · DocsNav
+    DependencyGraph · PluginCatalog · DirectoryExplorer (+ directoryTreeShared : type de
+    nœud, badges, helpers inline `A`/`C` ; contenus par langue directoryTree.fr/.en) · DocsNav
 ```
 
 ## Conventions importantes
