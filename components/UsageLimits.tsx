@@ -105,7 +105,7 @@ function ResetText({ st, spinner = 10 }: { st: ResetState; spinner?: number }) {
 /** Jauge horizontale nue (le `pct > 0` garantit un liseré visible à 1 %). */
 function Gauge({ pct, color, className }: { pct: number; color: string; className: string }) {
   return (
-    <span className={`block overflow-hidden rounded-full bg-[var(--color-inset)] ${className}`}>
+    <span className={`block overflow-hidden rounded-full bg-[var(--color-border)] ${className}`}>
       <span
         className="block h-full rounded-full transition-[width] duration-500"
         style={{ width: `${Math.max(pct, pct > 0 ? 2 : 0)}%`, backgroundColor: color }}
