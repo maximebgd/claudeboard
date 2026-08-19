@@ -18,6 +18,7 @@ import {
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getEffectiveSubscription } from "@/lib/subscription";
+import { getRateLimits } from "@/lib/rateLimits";
 import { getPreferences } from "@/lib/store";
 import { getT, type Language } from "@/lib/i18n";
 import { tPlural } from "@/lib/i18n/core";
@@ -32,6 +33,7 @@ import CostStatCard from "@/components/CostStatCard";
 import ProjectCostList from "@/components/ProjectCostList";
 import ToolUsageList from "@/components/ToolUsageList";
 import HourlyDistribution from "@/components/HourlyDistribution";
+import UsageLimits from "@/components/UsageLimits";
 import FavoriteButton from "@/components/FavoriteButton";
 import { getFavoriteSessions } from "@/lib/favorites";
 
@@ -291,12 +293,13 @@ export default async function HomePage({
 }) {
   const range = resolveRange(await searchParams);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub, favorites, preferences, { t, locale }] = await Promise.all([
+  const [a, skills, sub, favorites, preferences, rateLimits, { t, locale }] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
     getEffectiveSubscription(),
     getFavoriteSessions(),
     getPreferences(),
+    getRateLimits(),
     getT(),
   ]);
   const fmt = makeFormatters(locale);
@@ -525,6 +528,17 @@ export default async function HomePage({
           tooltip={subTooltip}
         />
       </div>
+
+      {/* Limites d'usage Claude.ai (fenêtres 5 h / 7 j) — lues du cache du statusline. */}
+      {rateLimits.known && (
+        <section className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+          <UsageLimits
+            known={rateLimits.known}
+            fiveHour={rateLimits.fiveHour}
+            sevenDay={rateLimits.sevenDay}
+          />
+        </section>
+      )}
 
       {/* Abonnement : désormais révélé au survol de la carte KPI « Coût estimé » ci-dessus.
       <SubscriptionCard
