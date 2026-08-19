@@ -22,7 +22,8 @@ section ne donne que le panorama fonctionnel.
   sa valeur par défaut suivant la préférence `costCardMode`. Le dashboard liste aussi les
   **sessions épinglées** (favoris).
 - **Skills** : liste/aperçu/**édition**/**création** (template)/**suppression** des
-  `~/.claude/skills/*/SKILL.md`. Écriture → backup `.bak.<timestamp>` ; suppression →
+  `~/.claude/skills/*/SKILL.md`. Écriture → version précédente archivée **hors** de
+  `~/.claude` (panneau **Versions** restaurable, cf. `backups.ts`) ; suppression →
   corbeille. Chaque action est gated par une permission (cf. Préférences).
 - **Projets & Sessions** : navigation **lecture seule** dans `~/.claude/projects/*/*.jsonl`
   (chaque ligne normalisée en blocs `text`/`thinking`/`tool_use`/`tool_result`). La page
@@ -108,20 +109,24 @@ lib/
                · emptyTrash ; déplacement inter-volumes robuste (rename, repli copie+rm)
   favorites.ts getFavoriteSessions : résout « <projectId>/<sessionId> » en métadonnées
                (favoris orphelins marqués `exists: false`)
-  skills.ts    listSkills · getSkill · writeSkill (backup avant écrasement) · createSkill ·
-               deleteSkill · skillTemplate · isValidSkillSlug
+  skills.ts    listSkills · getSkill · writeSkill (version précédente archivée via
+               backups.ts, clé `skills/<slug>`) · createSkill · deleteSkill · skillTemplate ·
+               isValidSkillSlug
   mdEntries.ts list/get/writeMdEntry(kind) + create/deleteMdEntry · mdTemplate ·
                isValidMdSlug : agents & commandes (.md à frontmatter, slugs imbriqués =
-               namespaces), même modèle que skills
+               namespaces), même modèle que skills (version archivée via backups.ts, clé
+               `<kind>/<slug>`)
   configFiles.ts read/writeConfigFile (settings, settings.local, CLAUDE.md, keybindings :
                JSON validé, version précédente archivée via backups.ts si existant, création
                explicite) · configResource (cible → ressource de permission) · resetConfigFile ·
                deleteConfigFile (→ corbeille)
   backups.ts   historique de versions **de claudeboard** hors de CLAUDE_DIR (`data/backups/
-               <target>/<id>`, override BACKUPS_DIR) : saveBackup (appelé par writeConfigFile,
-               remplace les anciens `.bak.<ts>`) · listBackups (marque `current` la version
-               identique au fichier actuel) · readBackup · deleteBackup (suppression définitive
-               d'une version) · plafonné aux N versions récentes par cible. Restaurable ou
+               <target>/<id>`, override BACKUPS_DIR ; `<target>` = cible de config OU chemin
+               d'entrée imbriqué `skills|agents|commands/<slug>`, garde anti-traversée) :
+               saveBackup (appelé par writeConfigFile/writeSkill/writeMdEntry, remplace les
+               anciens `.bak.<ts>`) · listBackups (marque `current` la version identique au
+               fichier actuel) · readBackup · deleteBackup (suppression définitive d'une
+               version) · plafonné aux N versions récentes par cible. Restaurable ou
                supprimable depuis le panneau Versions de l'éditeur
   hooks.ts     getHooks (normalise/groupe les hooks des deux settings) · getHooksRaw/
                writeHooks (bloc hooks de settings.json)
@@ -167,7 +172,7 @@ app/
   docs/layout.tsx · page.tsx · [slug]/page.tsx · structure/page.tsx   Documentation + arbre .claude
   api/skills/route.ts                  POST { op, slug, raw } → SKILL.md write/create/delete (gated)
   api/config-file/route.ts             POST { op, target, raw } → fichiers uniques write/reset/delete (gated)
-  api/backups/route.ts                 GET ?target(&id?) liste/aperçu ; POST { op:restore|delete, target, id } (gated modify)
+  api/backups/route.ts                 versions config ET skills/agents/commandes (target = cible config ou `skills|agents|commands/<slug>`) : GET ?target(&id?) liste/aperçu ; POST { op:restore|delete, target, id } (gated modify)
   api/md/route.ts                      POST { op, kind, slug, raw } → agents/commandes (gated)
   api/projects/route.ts                POST { op:delete, scope, projectId, sessionId? } → corbeille (gated)
   api/trash/route.ts                   GET listTrash ; POST restore (gated <resource>.delete) / delete / empty (gated trash.empty)
@@ -208,10 +213,10 @@ components/
     `plugins.ts` lit aussi les `marketplace.json` à leur `installLocation` (peut pointer hors
     de CLAUDE_DIR) — lecture seule.
 - **L'écriture n'est jamais silencieuse** : `writeSkill`/`writeMdEntry` exigent un fichier
-  existant (pas de création) et créent toujours un backup `.bak.<ts>` à côté du fichier ;
-  `writeConfigFile` (settings/hooks/CLAUDE.md/keybindings) archive plutôt la version précédente
-  **hors** de CLAUDE_DIR (`data/backups/`, cf. `backups.ts`) — restaurable depuis le panneau
-  Versions, pour ne pas polluer `~/.claude`. Les créations de config
+  existant (pas de création) et archivent la version précédente **hors** de CLAUDE_DIR
+  (`data/backups/`, clé `skills|agents|commands/<slug>`, cf. `backups.ts`) — tout comme
+  `writeConfigFile` (settings/hooks/CLAUDE.md/keybindings) : plus aucun `.bak.<ts>` dans
+  `~/.claude`, tout est restaurable depuis le panneau Versions. Les créations de config
   (`settings.local.json`, `keybindings.json`, `CLAUDE.md` global) sont explicites. Les
   **suppressions ne sont jamais destructives** : elles passent par `moveToTrash` vers
   `data/trash/` (**hors** de CLAUDE_DIR), restaurable depuis `/config/trash`.

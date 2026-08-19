@@ -3,6 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { safeResolve } from "./claude";
 import { moveToTrash } from "./trash";
+import { saveBackup } from "./backups";
 import { translate, type Language } from "./i18n/core";
 
 const SKILLS_DIR = "skills";
@@ -93,15 +94,16 @@ export async function getSkill(slug: string): Promise<Skill | null> {
 }
 
 /**
- * Écrit un SKILL.md. Un backup horodaté est créé à côté avant toute écriture.
- * Retourne le chemin du backup.
+ * Écrit un SKILL.md. La version précédente est archivée dans l'historique de versions
+ * (`data/backups/skills/<slug>/`, **hors** de ~/.claude — cf. `backups.ts`), restaurable
+ * depuis le panneau « Versions ». La lecture préalable garantit qu'on n'écrit jamais un
+ * skill inexistant (pas de création silencieuse ici). Retourne le chemin de la version
+ * archivée.
  */
 export async function writeSkill(slug: string, raw: string): Promise<string> {
   const skillPath = safeResolve(SKILLS_DIR, slug, "SKILL.md");
-  // Vérifie que le skill existe déjà (pas de création silencieuse ici).
-  await fs.access(skillPath);
-  const backupPath = `${skillPath}.bak.${Date.now()}`;
-  await fs.copyFile(skillPath, backupPath);
+  const prev = await fs.readFile(skillPath, "utf8"); // lève si absent → pas de création
+  const backupPath = await saveBackup(`skills/${slug}`, prev);
   await fs.writeFile(skillPath, raw, "utf8");
   return backupPath;
 }
