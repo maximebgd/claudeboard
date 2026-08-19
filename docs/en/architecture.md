@@ -39,6 +39,7 @@ order: 2
 | `subscription.ts` | `getSubscription` / `getEffectiveSubscription`: read-only view of the Claude plan (non-sensitive fields) + the store's manual choice. |
 | `plugins.ts` | `getPlugins`: read-only view of marketplaces/plugins. |
 | `keybindings.ts` | `parseKeybindings`: defensive extraction for the tabular preview. |
+| `rateLimits.ts` | `getRateLimits`: **read-only** Claude.ai usage limits (5-hour / 7-day windows) from the statusline cache (`statusline-cache/rate-limits.env`) — `known:false` without the cache, values are out of real time. |
 | `i18n.ts` | `getT()` (server): reads the store language → `{ locale, t }`. |
 | `i18n/core.ts` | `translate`/`tPlural`, **isomorphic** (client-bundlable): `{var}` interpolation, plurals. |
 | `i18n/translations.ts` | flat dotted fr/en dictionary (a missing English string is a **compile error**). |

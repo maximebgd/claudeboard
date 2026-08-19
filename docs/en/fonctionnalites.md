@@ -28,6 +28,8 @@ display:
 - **Subscription** (`SubscriptionCard`): compares the estimated usage cost to the price of
   the Claude plan (via `lib/subscription.ts`) to show the net savings (plan details revealed
   on card hover).
+- **Usage limits**: two bars in the header (rolling 5-hour and 7-day windows) — requires
+  a statusline configuration, see below.
 
 ### Clickable "Estimated cost" card
 
@@ -46,6 +48,60 @@ N-1) — hidden for the "All" window.
 > The **cost is a local estimate** (indicative rates per model family), not real billing.
 > Calculation details (cost **and** durations) in [Metrics & estimation](./metriques.md);
 > rates editable in **Preferences → Estimation rates**.
+
+### Usage limits (5-hour / 7-day windows)
+
+The dashboard header shows two bars: how much of your Claude.ai rolling **5-hour** and
+**7-day** windows you have consumed, and the time left before they reset.
+
+> ⚙️ **These bars require a statusline configuration.** Without it they simply do not
+> appear — silently, with no error or message.
+
+**Why a configuration?** Claude Code writes these percentages to no file at all: it only
+passes them to the statusline script, inside the JSON it sends on standard input (the
+`rate_limits` field). Claudeboard therefore cannot read them at the source. It reads a copy
+that the statusline must drop on disk, at `~/.claude/statusline-cache/rate-limits.env`.
+
+**How to do it.** Add this block to your `~/.claude/statusline-command.sh`. It assumes the
+incoming JSON is already in an `input` variable (typically `input=$(cat)` at the top of the
+script) and it needs `jq`:
+
+```bash
+# Usage-limits cache, read by claudeboard.
+RATE_CACHE="$HOME/.claude/statusline-cache/rate-limits.env"
+BLOCK_PCT=$(jq -r '.rate_limits.five_hour.used_percentage // -1 | floor' <<<"$input")
+if [ "$BLOCK_PCT" -ge 0 ]; then
+  mkdir -p "$(dirname "$RATE_CACHE")"
+  jq -r '
+    "BLOCK_PCT="        + (.rate_limits.five_hour.used_percentage  // -1 | floor | tostring),
+    "RESET_EPOCH="      + (.rate_limits.five_hour.resets_at        //  0 | floor | tostring),
+    "WEEK_PCT="         + (.rate_limits.seven_day.used_percentage  // -1 | floor | tostring),
+    "WEEK_RESET_EPOCH=" + (.rate_limits.seven_day.resets_at        //  0 | floor | tostring)
+  ' <<<"$input" > "$RATE_CACHE"
+fi
+```
+
+The `if` is not decorative: `rate_limits` is only populated **after the first API exchange**
+of a session. Early in a session the field is missing, the percentage is `-1`, and without
+that guard you would overwrite a valid cache with empty values.
+
+The resulting file is four `KEY=value` lines (reset dates are epochs in **seconds**):
+
+```
+BLOCK_PCT=92
+RESET_EPOCH=1787150400
+WEEK_PCT=34
+WEEK_RESET_EPOCH=1787583600
+```
+
+Reload the page and the bars appear. If nothing changes, check that the file exists and
+that `jq` is installed.
+
+**What these bars actually show.** The percentages come from the **last reading** taken by
+an active Claude Code session, not from right now: if you have not opened Claude Code for
+two hours, they are two hours old. The countdown to the reset stays accurate, though, since
+it is derived from the reset epoch. A window that has already rolled over is shown as
+"reset", its consumption starting again from zero.
 
 ## Write permissions
 
