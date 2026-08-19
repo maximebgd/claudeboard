@@ -1,4 +1,4 @@
-import { DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard, Languages } from "lucide-react";
+import { DollarSign, Wallet, SlidersHorizontal, ShieldCheck, LayoutDashboard, Languages, Sparkles } from "lucide-react";
 import {
   PRICING,
   getEffectivePricing,
@@ -12,6 +12,7 @@ import PricingEditor from "@/components/PricingEditor";
 import SubscriptionSelector from "@/components/SubscriptionSelector";
 import CostModeSelector from "@/components/CostModeSelector";
 import LanguageSelector from "@/components/LanguageSelector";
+import LogoSelector from "@/components/LogoSelector";
 import { getT } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/core";
 import PermissionsMatrix, {
@@ -169,6 +170,15 @@ export default async function PreferencesPage() {
         </h2>
         <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("prefs.displayDesc")}</p>
         <CostModeSelector initial={preferences.costCardMode} />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Sparkles size={18} className="text-[var(--color-accent)]" />
+          {t("logo.title")}
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">{t("logo.desc")}</p>
+        <LogoSelector initial={preferences.logo} />
       </section>
     </div>
   );

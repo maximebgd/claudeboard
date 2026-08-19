@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     permissions?: unknown;
     costCardMode?: unknown;
     language?: unknown;
+    logo?: unknown;
   };
   try {
     body = await req.json();
@@ -56,8 +57,8 @@ export async function POST(req: Request) {
     if (op !== "save") {
       return NextResponse.json({ error: "Unknown op" }, { status: 400 });
     }
-    const { costCardMode, language } = body;
-    const patch: { costCardMode?: string; language?: string } = {};
+    const { costCardMode, language, logo } = body;
+    const patch: { costCardMode?: string; language?: string; logo?: unknown } = {};
     if (costCardMode !== undefined) {
       if (costCardMode !== "usage" && costCardMode !== "savings") {
         return NextResponse.json({ error: "Invalid costCardMode" }, { status: 400 });
@@ -70,7 +71,20 @@ export async function POST(req: Request) {
       }
       patch.language = language;
     }
-    if (!patch.costCardMode && !patch.language) {
+    if (logo !== undefined) {
+      // Forme attendue : { mode: "off"|"on", selected: string[] }. La validation
+      // fine (noms de logo connus, dédup) est faite dans setPreferences/normalizeLogo.
+      if (
+        !logo ||
+        typeof logo !== "object" ||
+        !["off", "on"].includes((logo as { mode?: unknown }).mode as string) ||
+        !Array.isArray((logo as { selected?: unknown }).selected)
+      ) {
+        return NextResponse.json({ error: "Invalid logo" }, { status: 400 });
+      }
+      patch.logo = logo;
+    }
+    if (!patch.costCardMode && !patch.language && patch.logo === undefined) {
       return NextResponse.json({ error: "No field provided" }, { status: 400 });
     }
     try {

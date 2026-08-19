@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { LOGO_FILES, isLogoFile, type LogoFile } from "./logos";
 
 /**
  * État applicatif **propre à claudeboard** (favoris, préférences d'UI, overrides
@@ -66,12 +67,27 @@ export type CostCardMode = "usage" | "savings";
 /** Langue de l'interface claudeboard (français / anglais). */
 export type Language = "fr" | "en";
 
+/**
+ * Logo affiché à gauche de « Claude Board » dans la Sidebar.
+ * - `mode: "off"` → logo statique d'origine (l'icône Claude Code inline).
+ * - `mode: "on"` → on pioche dans `selected` : un seul logo choisi = logo fixe ;
+ *   plusieurs = tirage **aléatoire** à chaque changement de page. `selected` vide
+ *   en mode `on` retombe sur l'ensemble des logos (aléatoire complet).
+ */
+export interface LogoPreference {
+  mode: "off" | "on";
+  /** Noms de fichier de logo retenus (cf. `lib/logos.ts`). */
+  selected: LogoFile[];
+}
+
 /** Préférences d'affichage de claudeboard (réglages d'UI, pas de la config Claude). */
 export interface Preferences {
   /** `usage` = coût d'usage d'abord ; `savings` = économie d'abonnement d'abord. */
   costCardMode: CostCardMode;
   /** Langue de l'interface (`fr` par défaut). */
   language: Language;
+  /** Logo de la Sidebar (statique, fixe, ou aléatoire sur une sélection). */
+  logo: LogoPreference;
 }
 
 export interface StoreData {
@@ -109,8 +125,26 @@ function defaults(): StoreData {
     permissions: buildPermissions(false),
     pricingOverrides: {},
     subscription: { plan: null, source: "auto" },
-    preferences: { costCardMode: "usage", language: "fr" },
+    preferences: {
+      costCardMode: "usage",
+      language: "fr",
+      // Par défaut : logo aléatoire sur l'ensemble des clawd (comportement d'origine).
+      logo: { mode: "on", selected: [...LOGO_FILES] },
+    },
   };
+}
+
+/** Normalise une préférence de logo inconnue (mode + sélection dédupliquée valide). */
+function normalizeLogo(raw: unknown): LogoPreference {
+  const fallback: LogoPreference = { mode: "on", selected: [...LOGO_FILES] };
+  if (!raw || typeof raw !== "object") return fallback;
+  const o = raw as Record<string, unknown>;
+  const mode = o.mode === "off" ? "off" : "on";
+  const seen = new Set<LogoFile>();
+  if (Array.isArray(o.selected)) {
+    for (const x of o.selected) if (isLogoFile(x)) seen.add(x);
+  }
+  return { mode, selected: [...seen] };
 }
 
 /**
@@ -192,6 +226,7 @@ function normalize(raw: unknown): StoreData {
     d.preferences = {
       costCardMode: p.costCardMode === "savings" ? "savings" : "usage",
       language: p.language === "en" ? "en" : "fr",
+      logo: normalizeLogo(p.logo),
     };
   }
   return d;
@@ -291,7 +326,7 @@ export async function getPreferences(): Promise<Preferences> {
  * invalides sont ignorées (on conserve l'existant). Retourne les préférences résultantes.
  */
 export async function setPreferences(
-  patch: { costCardMode?: unknown; language?: unknown }
+  patch: { costCardMode?: unknown; language?: unknown; logo?: unknown }
 ): Promise<Preferences> {
   const current = await readStore();
   const next: Preferences = { ...current.preferences };
@@ -300,6 +335,9 @@ export async function setPreferences(
   }
   if (patch.language === "fr" || patch.language === "en") {
     next.language = patch.language;
+  }
+  if (patch.logo !== undefined) {
+    next.logo = normalizeLogo(patch.logo);
   }
   await writeStore({ preferences: next });
   return next;

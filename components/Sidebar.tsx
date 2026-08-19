@@ -24,23 +24,8 @@ import {
 import ThemeToggle from "./ThemeToggle";
 import { useTranslation } from "@/components/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/core";
-
-// Logos « clawd » disponibles dans /public/logo — un est tiré au hasard à chaque
-// changement de page (rendu client uniquement pour éviter tout mismatch d'hydratation).
-const LOGOS = [
-  "/logo/clawd.svg",
-  "/logo/clawd-book.svg",
-  "/logo/clawd-bubble.svg",
-  "/logo/clawd-coffee.svg",
-  "/logo/clawd-dizzy.svg",
-  "/logo/clawd-happy.svg",
-  "/logo/clawd-headphones.svg",
-  "/logo/clawd-heart.svg",
-  "/logo/clawd-lightbulb.svg",
-  "/logo/clawd-magnifier.svg",
-  "/logo/clawd-red.svg",
-  "/logo/clawd-wand.svg",
-];
+import { LOGO_FILES, logoSrc, type LogoFile } from "@/lib/logos";
+import type { LogoPreference } from "@/lib/store";
 
 type NavItem = {
   href: string;
@@ -77,29 +62,44 @@ const SECTIONS: { labelKey?: TranslationKey; items: NavItem[] }[] = [
 
 export default function Sidebar({
   subscription,
+  logo: logoPref,
 }: {
   subscription: { label: string; known: boolean };
+  logo: LogoPreference;
 }) {
   const pathname = usePathname();
   const { t } = useTranslation();
-  // Logo aléatoire, retiré à chaque navigation. Vide au premier rendu serveur
-  // (évite un mismatch d'hydratation), puis choisi côté client.
-  const [logo, setLogo] = useState<string | null>(null);
+
+  // Pool de logos actifs : la sélection de l'utilisateur, ou l'ensemble en repli
+  // si `on` sans rien de coché. `null` quand le logo « clawd » est désactivé.
+  const pool: LogoFile[] | null =
+    logoPref.mode === "off"
+      ? null
+      : logoPref.selected.length > 0
+        ? logoPref.selected
+        : [...LOGO_FILES];
+  const poolKey = pool ? pool.join(",") : "";
+
+  // Logo courant. Déterministe au premier rendu (1er du pool) pour que serveur et
+  // client concordent, puis tiré au hasard côté client à chaque navigation quand
+  // le pool en compte plusieurs.
+  const [logo, setLogo] = useState<LogoFile | null>(() => (pool ? pool[0] : null));
   useEffect(() => {
-    setLogo(LOGOS[Math.floor(Math.random() * LOGOS.length)]);
-  }, [pathname]);
+    if (!pool) return;
+    setLogo(pool.length > 1 ? pool[Math.floor(Math.random() * pool.length)] : pool[0]);
+    // poolKey capture le contenu du pool ; pathname redéclenche le tirage à chaque page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, poolKey]);
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col">
       <div className="py-5 pl-5 pr-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)]">
-            {logo && (
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] font-mono text-sm font-bold text-[var(--color-accent)]">
+            {pool && logo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo}
-                alt="Claude Board"
-                className="h-5 w-5"
-              />
+              <img src={logoSrc(logo)} alt="Claude Board" className="h-5 w-5" />
+            ) : (
+              "›_"
             )}
           </div>
           <div>
