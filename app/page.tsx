@@ -599,14 +599,16 @@ export default async function HomePage({
 
       {/* Modèles : camembert + tokens/coût */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
+        <section className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-5">
           <SectionTitle>{t("dash.modelBreakdown")}</SectionTitle>
           {a.models.length === 0 ? (
             <p className="text-sm text-[var(--color-muted)]">
               {t("dash.noModelData")}
             </p>
           ) : (
+            <div className="flex flex-1 items-center">
             <ModelDonut models={a.models} />
+            </div>
           )}
         </section>
 

@@ -31,7 +31,7 @@ export default function ModelDonut({ models }: { models: DonutModel[] }) {
   let acc = 0;
 
   return (
-    <div className="flex items-start gap-5">
+    <div className="flex items-center gap-5">
       <div className="relative h-36 w-36 shrink-0" onMouseLeave={() => setActive(null)}>
         <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90">
           <circle cx="21" cy="21" r={R} fill="none" stroke="var(--color-inset)" strokeWidth="5" />
