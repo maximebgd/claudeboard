@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock3, CalendarRange, Loader2 } from "lucide-react";
+import { Clock3, CalendarRange, Loader2, TriangleAlert } from "lucide-react";
 import { useTranslation } from "@/components/I18nProvider";
 import type { Language } from "@/lib/store";
 
@@ -9,7 +9,9 @@ import type { Language } from "@/lib/store";
  * Limites d'usage Claude.ai (fenêtres 5 h / 7 j), lues du cache du statusline
  * (`lib/rateLimits.ts`) et rendues en bandeau compact dans le header du dashboard,
  * à gauche de la ligne qui porte le RangeSelector.
- * Silencieux si l'info n'est pas disponible (`known: false`).
+ * Si l'info n'est pas disponible (`known: false`, cache absent car statusline non
+ * configuré), le bandeau reste affiché mais avec des jauges vides + une alerte qui
+ * renvoie vers la doc de configuration (`/docs/fonctionnalites`).
  */
 
 /** Vue sérialisable d'une fenêtre de limite (miroir de `UsageWindow` côté lib). */
@@ -151,11 +153,50 @@ function BannerItem({
   );
 }
 
+/** Item « non renseigné » : jauge vide et muette, quand le cache n'existe pas. */
+function UnconfiguredItem({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex min-h-4 items-center gap-2 opacity-60">
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--color-muted)]">
+        <Icon size={12} className="shrink-0 text-[var(--color-faint)]" />
+        {label}
+      </span>
+      <Gauge pct={0} color="transparent" className="h-1.5 w-16 shrink-0" />
+      <span className="shrink-0 tabular-nums text-[var(--color-faint)]">—</span>
+    </span>
+  );
+}
+
 /** Bandeau « status line » : une ligne, à gauche du RangeSelector dans le header. */
 export function UsageBanner({ known, fiveHour, sevenDay }: RateLimitsView) {
   const { t } = useTranslation();
   const now = useNow();
-  if (!known) return null;
+
+  // Cache absent (statusline non configuré) : on garde les deux jauges, vides, et on
+  // renvoie vers la doc de configuration via une alerte cliquable.
+  if (!known) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] leading-none">
+        <UnconfiguredItem icon={Clock3} label={t("usage.short5h")} />
+        <UnconfiguredItem icon={CalendarRange} label={t("usage.short7d")} />
+        <a
+          href="/docs/fonctionnalites"
+          title={t("usage.notConfiguredHint")}
+          className="inline-flex items-center gap-1.5 hover:underline"
+          style={{ color: "#e0a23b" }}
+        >
+          <TriangleAlert size={12} className="shrink-0" aria-hidden />
+          <span>{t("usage.notConfigured")}</span>
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] leading-none">

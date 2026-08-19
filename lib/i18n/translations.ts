@@ -79,6 +79,9 @@ export const fr = {
   "usage.loading": "chargement…",
   "usage.short5h": "5 h",
   "usage.short7d": "7 j",
+  "usage.notConfigured": "statusline à configurer",
+  "usage.notConfiguredHint":
+    "Le statusline de Claude Code n'alimente pas le cache des limites — cliquez pour voir comment le configurer",
 
   "dash.modelBreakdown": "Répartition des modèles",
   "dash.noModelData": "Aucune donnée de modèle.",
@@ -714,6 +717,9 @@ export const en: Record<keyof typeof fr, string> = {
   "usage.loading": "loading…",
   "usage.short5h": "5h",
   "usage.short7d": "7d",
+  "usage.notConfigured": "statusline not set up",
+  "usage.notConfiguredHint":
+    "Claude Code's statusline isn't feeding the limits cache — click to see how to set it up",
 
   "dash.modelBreakdown": "Model breakdown",
   "dash.noModelData": "No model data.",
