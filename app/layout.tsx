@@ -47,7 +47,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="antialiased">
         <I18nProvider locale={language}>
           <div className="flex h-screen overflow-hidden">
-            <Sidebar subscription={{ label: subscription.label, known: subscription.known }} logo={logo} />
+            <Sidebar
+              subscription={{ label: subscription.label, known: subscription.known }}
+              logo={logo}
+            />
             <main className="flex-1 overflow-y-auto">{children}</main>
           </div>
           <SearchFab />

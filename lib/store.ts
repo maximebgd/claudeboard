@@ -69,15 +69,13 @@ export type Language = "fr" | "en";
 
 /**
  * Logo affiché à gauche de « Claude Board » dans la Sidebar.
- * - `mode: "off"` → logo statique d'origine (l'icône Claude Code inline).
- * - `mode: "on"` → on pioche dans `selected` : un seul logo choisi = logo fixe ;
- *   plusieurs = tirage **aléatoire** à chaque changement de page. `selected` vide
- *   en mode `on` retombe sur l'ensemble des logos (aléatoire complet).
+ * - `mode: "off"` → invite terminal `›_` (aucun logo).
+ * - `mode: "on"` → le logo « clawd » choisi (`selected`), fixe.
  */
 export interface LogoPreference {
   mode: "off" | "on";
-  /** Noms de fichier de logo retenus (cf. `lib/logos.ts`). */
-  selected: LogoFile[];
+  /** Nom de fichier du logo affiché en mode `on` (cf. `lib/logos.ts`). */
+  selected: LogoFile;
 }
 
 /** Préférences d'affichage de claudeboard (réglages d'UI, pas de la config Claude). */
@@ -128,23 +126,21 @@ function defaults(): StoreData {
     preferences: {
       costCardMode: "usage",
       language: "fr",
-      // Par défaut : logo aléatoire sur l'ensemble des clawd (comportement d'origine).
-      logo: { mode: "on", selected: [...LOGO_FILES] },
+      // Par défaut : logo « clawd » activé, premier de la liste.
+      logo: { mode: "on", selected: LOGO_FILES[0] },
     },
   };
 }
 
-/** Normalise une préférence de logo inconnue (mode + sélection dédupliquée valide). */
+/** Normalise une préférence de logo inconnue (mode + logo sélectionné valide). */
 function normalizeLogo(raw: unknown): LogoPreference {
-  const fallback: LogoPreference = { mode: "on", selected: [...LOGO_FILES] };
+  const fallback: LogoPreference = { mode: "on", selected: LOGO_FILES[0] };
   if (!raw || typeof raw !== "object") return fallback;
   const o = raw as Record<string, unknown>;
   const mode = o.mode === "off" ? "off" : "on";
-  const seen = new Set<LogoFile>();
-  if (Array.isArray(o.selected)) {
-    for (const x of o.selected) if (isLogoFile(x)) seen.add(x);
-  }
-  return { mode, selected: [...seen] };
+  // Migration : un ancien store pouvait stocker un tableau — on prend le 1er valide.
+  const sel = Array.isArray(o.selected) ? o.selected.find(isLogoFile) : o.selected;
+  return { mode, selected: isLogoFile(sel) ? sel : LOGO_FILES[0] };
 }
 
 /**

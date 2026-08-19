@@ -532,16 +532,11 @@ export const fr = {
 
   // Logo de la Sidebar
   "logo.title": "Logo de la Sidebar",
-  "logo.desc": "Logo affiché à gauche de « Claude Board ». Désactivez-le pour revenir à l'icône Claude Code d'origine, ou choisissez un ou plusieurs logos « clawd ».",
-  "logo.on": "Logos clawd",
-  "logo.on.hint": "Choisir un ou plusieurs logos ci-dessous",
+  "logo.desc": "Logo affiché à gauche de « Claude Board ». Désactivez-le pour l'invite « ›_ », ou choisissez un logo « clawd ».",
+  "logo.on": "Logo clawd",
+  "logo.on.hint": "Choisir un logo ci-dessous",
   "logo.off": "Désactivé",
-  "logo.off.hint": "Icône Claude Code d'origine",
-  "logo.behavior.all": "Aucun sélectionné : tirage aléatoire sur tous les logos à chaque page.",
-  "logo.behavior.single": "Un seul logo : logo fixe.",
-  "logo.behavior.random": "{count} logos : tirage aléatoire à chaque changement de page.",
-  "logo.selectAll": "Tout sélectionner",
-  "logo.selectNone": "Tout désélectionner",
+  "logo.off.hint": "Invite terminal « ›_ »",
   "logo.footer": "La sélection est enregistrée automatiquement.",
 
   // Tooltip d'action verrouillée
@@ -1133,16 +1128,11 @@ export const en: Record<keyof typeof fr, string> = {
   "costMode.footer": "The card stays clickable to toggle between the two values on the fly.",
 
   "logo.title": "Sidebar logo",
-  "logo.desc": "Logo shown to the left of “Claude Board”. Turn it off to return to the original Claude Code icon, or pick one or several “clawd” logos.",
-  "logo.on": "Clawd logos",
-  "logo.on.hint": "Pick one or several logos below",
+  "logo.desc": "Logo shown to the left of “Claude Board”. Turn it off for the “›_” prompt, or pick a “clawd” logo.",
+  "logo.on": "Clawd logo",
+  "logo.on.hint": "Pick a logo below",
   "logo.off": "Disabled",
-  "logo.off.hint": "Original Claude Code icon",
-  "logo.behavior.all": "None selected: random pick from all logos on every page.",
-  "logo.behavior.single": "Single logo: fixed.",
-  "logo.behavior.random": "{count} logos: random pick on every page change.",
-  "logo.selectAll": "Select all",
-  "logo.selectNone": "Deselect all",
+  "logo.off.hint": "Terminal “›_” prompt",
   "logo.footer": "The selection is saved automatically.",
 
   "lockedHint": "Action locked — enable it in Preferences.",

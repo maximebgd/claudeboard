@@ -9,21 +9,20 @@ import type { LogoPreference } from "@/lib/store";
 
 /**
  * Réglage du logo de la Sidebar (à gauche de « Claude Board »).
- * - **Désactivé** → icône Claude Code d'origine (logo statique).
- * - **Activé** → on pioche dans la sélection : un seul logo coché = logo fixe,
- *   plusieurs cochés = tirage **aléatoire** à chaque changement de page.
+ * - **Désactivé** → invite terminal `›_` (aucun logo).
+ * - **Activé** → le logo « clawd » choisi, **un seul** (sélection unique).
  * Persisté dans le store claudeboard (section `preferences`, champ `logo`).
  */
 export default function LogoSelector({ initial }: { initial: LogoPreference }) {
   const router = useRouter();
   const { t } = useTranslation();
   const [mode, setMode] = useState<"off" | "on">(initial.mode);
-  const [selected, setSelected] = useState<Set<LogoFile>>(new Set(initial.selected));
+  const [selected, setSelected] = useState<LogoFile>(initial.selected);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; msg: string } | null>(null);
 
   // Persiste un nouvel état (optimiste) ; en cas d'échec, restaure le précédent.
-  async function persist(next: { mode: "off" | "on"; selected: Set<LogoFile> }) {
+  async function persist(next: { mode: "off" | "on"; selected: LogoFile }) {
     const prev = { mode, selected };
     setMode(next.mode);
     setSelected(next.selected);
@@ -36,7 +35,7 @@ export default function LogoSelector({ initial }: { initial: LogoPreference }) {
         body: JSON.stringify({
           section: "preferences",
           op: "save",
-          logo: { mode: next.mode, selected: [...next.selected] },
+          logo: { mode: next.mode, selected: next.selected },
         }),
       });
       const data = await res.json();
@@ -57,36 +56,16 @@ export default function LogoSelector({ initial }: { initial: LogoPreference }) {
     persist({ mode: value, selected });
   }
 
-  function toggleLogo(file: LogoFile) {
+  function selectLogo(file: LogoFile) {
     if (busy) return;
-    const next = new Set(selected);
-    if (next.has(file)) next.delete(file);
-    else next.add(file);
-    persist({ mode: "on", selected: next });
-  }
-
-  function selectAll() {
-    if (busy) return;
-    persist({ mode: "on", selected: new Set(LOGO_FILES) });
-  }
-  function selectNone() {
-    if (busy) return;
-    persist({ mode: "on", selected: new Set() });
+    if (mode === "on" && file === selected) return;
+    persist({ mode: "on", selected: file });
   }
 
   const modeOptions: { value: "off" | "on"; icon: typeof Sparkles; label: string; hint: string }[] = [
     { value: "on", icon: Sparkles, label: t("logo.on"), hint: t("logo.on.hint") },
     { value: "off", icon: ImageOff, label: t("logo.off"), hint: t("logo.off.hint") },
   ];
-
-  // Aperçu du comportement en mode activé selon le nombre de logos actifs.
-  const activeCount = selected.size === 0 ? LOGO_FILES.length : selected.size;
-  const behaviorHint =
-    selected.size === 0
-      ? t("logo.behavior.all")
-      : selected.size === 1
-        ? t("logo.behavior.single")
-        : t("logo.behavior.random", { count: activeCount });
 
   return (
     <div>
@@ -121,56 +100,33 @@ export default function LogoSelector({ initial }: { initial: LogoPreference }) {
       </div>
 
       {mode === "on" && (
-        <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[13px] text-[var(--color-muted)]">{behaviorHint}</span>
-            <div className="flex items-center gap-2 text-[12px]">
+        <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {LOGO_FILES.map((file) => {
+            const on = file === selected;
+            return (
               <button
+                key={file}
                 type="button"
-                onClick={selectAll}
+                onClick={() => selectLogo(file)}
                 disabled={busy}
-                className="rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-muted)] transition hover:border-[var(--color-accent)]/50 hover:text-[var(--color-fg)] disabled:opacity-60"
+                aria-pressed={on}
+                title={file}
+                className={`relative flex aspect-square items-center justify-center rounded-lg border transition disabled:opacity-60 ${
+                  on
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
+                    : "border-[var(--color-border)] opacity-50 hover:opacity-100 hover:border-[var(--color-accent)]/50 hover:bg-[var(--color-hover)]"
+                }`}
               >
-                {t("logo.selectAll")}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoSrc(file)} alt={file} className="h-16 w-16" />
+                {on && (
+                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-white">
+                    <Check size={11} />
+                  </span>
+                )}
               </button>
-              <button
-                type="button"
-                onClick={selectNone}
-                disabled={busy}
-                className="rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-muted)] transition hover:border-[var(--color-accent)]/50 hover:text-[var(--color-fg)] disabled:opacity-60"
-              >
-                {t("logo.selectNone")}
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-            {LOGO_FILES.map((file) => {
-              const on = selected.has(file);
-              return (
-                <button
-                  key={file}
-                  type="button"
-                  onClick={() => toggleLogo(file)}
-                  disabled={busy}
-                  aria-pressed={on}
-                  title={file}
-                  className={`relative flex aspect-square items-center justify-center rounded-lg border transition disabled:opacity-60 ${
-                    on
-                      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
-                      : "border-[var(--color-border)] opacity-50 hover:opacity-100 hover:border-[var(--color-accent)]/50 hover:bg-[var(--color-hover)]"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={logoSrc(file)} alt={file} className="h-16 w-16" />
-                  {on && (
-                    <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-white">
-                      <Check size={11} />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
       )}
 

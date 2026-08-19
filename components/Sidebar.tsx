@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Sparkles,
@@ -24,7 +23,7 @@ import {
 import ThemeToggle from "./ThemeToggle";
 import { useTranslation } from "@/components/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/core";
-import { LOGO_FILES, logoSrc, type LogoFile } from "@/lib/logos";
+import { logoSrc } from "@/lib/logos";
 import type { LogoPreference } from "@/lib/store";
 
 type NavItem = {
@@ -69,35 +68,14 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { t } = useTranslation();
-
-  // Pool de logos actifs : la sélection de l'utilisateur, ou l'ensemble en repli
-  // si `on` sans rien de coché. `null` quand le logo « clawd » est désactivé.
-  const pool: LogoFile[] | null =
-    logoPref.mode === "off"
-      ? null
-      : logoPref.selected.length > 0
-        ? logoPref.selected
-        : [...LOGO_FILES];
-  const poolKey = pool ? pool.join(",") : "";
-
-  // Logo courant. Déterministe au premier rendu (1er du pool) pour que serveur et
-  // client concordent, puis tiré au hasard côté client à chaque navigation quand
-  // le pool en compte plusieurs.
-  const [logo, setLogo] = useState<LogoFile | null>(() => (pool ? pool[0] : null));
-  useEffect(() => {
-    if (!pool) return;
-    setLogo(pool.length > 1 ? pool[Math.floor(Math.random() * pool.length)] : pool[0]);
-    // poolKey capture le contenu du pool ; pathname redéclenche le tirage à chaque page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, poolKey]);
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col">
       <div className="py-5 pl-5 pr-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] font-mono text-sm font-bold text-[var(--color-accent)]">
-            {pool && logo ? (
+            {logoPref.mode === "on" ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoSrc(logo)} alt="Claude Board" className="h-5 w-5" />
+              <img src={logoSrc(logoPref.selected)} alt="Claude Board" className="h-5 w-5" />
             ) : (
               "›_"
             )}

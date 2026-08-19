@@ -72,13 +72,13 @@ export async function POST(req: Request) {
       patch.language = language;
     }
     if (logo !== undefined) {
-      // Forme attendue : { mode: "off"|"on", selected: string[] }. La validation
-      // fine (noms de logo connus, dédup) est faite dans setPreferences/normalizeLogo.
+      // Forme attendue : { mode: "off"|"on", selected: string }. La validation fine
+      // (nom de logo connu) est faite dans setPreferences/normalizeLogo.
       if (
         !logo ||
         typeof logo !== "object" ||
         !["off", "on"].includes((logo as { mode?: unknown }).mode as string) ||
-        !Array.isArray((logo as { selected?: unknown }).selected)
+        typeof (logo as { selected?: unknown }).selected !== "string"
       ) {
         return NextResponse.json({ error: "Invalid logo" }, { status: 400 });
       }
