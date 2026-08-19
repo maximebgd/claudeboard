@@ -47,7 +47,9 @@ The `/docs` page reads `docs/` (in the repo, outside `~/.claude`): it therefore 
 ## 3. Writes are never silent — and deletions are reversible
 
 - `writeSkill` / `writeMdEntry` check that the file **already exists** (no implicit
-  creation) and **always create a backup** timestamped before overwriting.
+  creation) and **archive the previous version** before overwriting — **outside**
+  `CLAUDE_DIR`, in `data/backups/` (`lib/backups.ts`), restorable from the editor's
+  **“Versions” panel**.
 - Config file creations (`settings.local.json`, `keybindings.json`, global `CLAUDE.md`) via
   `writeConfigFile` are **explicit** (the "Create" flow in `ConfigEditor`).
 - **Deletions are never destructive**: they go through `moveToTrash` (`lib/trash.ts`), which

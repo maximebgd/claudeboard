@@ -258,7 +258,7 @@ export const fr = {
   "skillDetail.deleteTitle": "Supprimer le skill « {name} » ?",
   "skillDetail.deleteDesc": "Le dossier du skill est déplacé dans la corbeille de claudeboard — restaurable depuis la page Corbeille.",
   "skillEditor.confirmTitle": "Écrire dans SKILL.md ?",
-  "skillEditor.confirmDesc": "Le fichier du skill « {slug} » va être écrasé. Une copie de sauvegarde horodatée (.bak) sera créée automatiquement.",
+  "skillEditor.confirmDesc": "Le fichier du skill « {slug} » va être écrasé. La version précédente est archivée et restaurable depuis le panneau Versions.",
 
   // ResumeButton
   "resume.copy": "copier",
@@ -347,7 +347,7 @@ export const fr = {
   "claudeMd.title": "CLAUDE.md global",
   "claudeMd.subtitle": "Instructions globales chargées dans chaque session (~/.claude/CLAUDE.md).",
   "claudeMd.resetTitle": "Réinitialiser le CLAUDE.md global ?",
-  "claudeMd.resetDesc": "Le fichier est ramené à un modèle vide. Un backup horodaté (.bak) est créé au préalable.",
+  "claudeMd.resetDesc": "Le fichier est ramené à un modèle vide. La version précédente est archivée et restaurable depuis le panneau Versions.",
   "claudeMd.deleteTitle": "Supprimer le CLAUDE.md global ?",
   "claudeMd.template.title": "Instructions globales",
   "claudeMd.template.intro": "Ces instructions s'appliquent à toutes tes sessions Claude Code.",
@@ -356,7 +356,7 @@ export const fr = {
   "settings.subtitle": "Édition des fichiers de configuration de ~/.claude. Chaque écriture crée un backup horodaté.",
   "settings.userSubtitle": "Paramètres utilisateur : model, permissions, env, hooks, statusLine…",
   "settings.localSubtitle": "Surcharges locales (non versionnées). Créé à la demande.",
-  "settings.resetDesc": "Le fichier est ramené à un objet JSON vide. Un backup horodaté (.bak) est créé au préalable.",
+  "settings.resetDesc": "Le fichier est ramené à un objet JSON vide. La version précédente est archivée et restaurable depuis le panneau Versions.",
 
   // Keybindings
   "keybindings.subtitle": "Raccourcis clavier custom (~/.claude/keybindings.json).",
@@ -364,7 +364,7 @@ export const fr = {
   "keybindings.command": "Commande",
   "keybindings.context": "Contexte",
   "keybindings.resetTitle": "Réinitialiser keybindings.json ?",
-  "keybindings.resetDesc": "Le fichier est ramené à une liste de keybindings vide. Un backup horodaté (.bak) est créé au préalable.",
+  "keybindings.resetDesc": "Le fichier est ramené à une liste de keybindings vide. La version précédente est archivée et restaurable depuis le panneau Versions.",
   "keybindings.deleteTitle": "Supprimer keybindings.json ?",
 
   // Hooks
@@ -881,7 +881,7 @@ export const en: Record<keyof typeof fr, string> = {
   "skillDetail.deleteTitle": "Delete skill “{name}”?",
   "skillDetail.deleteDesc": "The skill folder is moved to the claudeboard trash — restorable from the Trash page.",
   "skillEditor.confirmTitle": "Write to SKILL.md?",
-  "skillEditor.confirmDesc": "The skill file “{slug}” will be overwritten. A timestamped backup copy (.bak) will be created automatically.",
+  "skillEditor.confirmDesc": "The skill file “{slug}” will be overwritten. The previous version is archived and restorable from the Versions panel.",
 
   "resume.copy": "copy",
   "resume.copied": "copied",
@@ -958,7 +958,7 @@ export const en: Record<keyof typeof fr, string> = {
   "claudeMd.title": "Global CLAUDE.md",
   "claudeMd.subtitle": "Global instructions loaded into every session (~/.claude/CLAUDE.md).",
   "claudeMd.resetTitle": "Reset the global CLAUDE.md?",
-  "claudeMd.resetDesc": "The file is reset to an empty template. A timestamped backup (.bak) is created first.",
+  "claudeMd.resetDesc": "The file is reset to an empty template. The previous version is archived and restorable from the Versions panel.",
   "claudeMd.deleteTitle": "Delete the global CLAUDE.md?",
   "claudeMd.template.title": "Global instructions",
   "claudeMd.template.intro": "These instructions apply to all your Claude Code sessions.",
@@ -966,14 +966,14 @@ export const en: Record<keyof typeof fr, string> = {
   "settings.subtitle": "Edit ~/.claude configuration files. Each write creates a timestamped backup.",
   "settings.userSubtitle": "User settings: model, permissions, env, hooks, statusLine…",
   "settings.localSubtitle": "Local overrides (not versioned). Created on demand.",
-  "settings.resetDesc": "The file is reset to an empty JSON object. A timestamped backup (.bak) is created first.",
+  "settings.resetDesc": "The file is reset to an empty JSON object. The previous version is archived and restorable from the Versions panel.",
 
   "keybindings.subtitle": "Custom keyboard shortcuts (~/.claude/keybindings.json).",
   "keybindings.key": "Key",
   "keybindings.command": "Command",
   "keybindings.context": "Context",
   "keybindings.resetTitle": "Reset keybindings.json?",
-  "keybindings.resetDesc": "The file is reset to an empty keybindings list. A timestamped backup (.bak) is created first.",
+  "keybindings.resetDesc": "The file is reset to an empty keybindings list. The previous version is archived and restorable from the Versions panel.",
   "keybindings.deleteTitle": "Delete keybindings.json?",
 
   "hooks.hook.one": "{count} hook",

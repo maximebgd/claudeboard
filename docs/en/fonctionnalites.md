@@ -54,8 +54,8 @@ N-1) — hidden for the "All" window.
 The dashboard header shows two bars: how much of your Claude.ai rolling **5-hour** and
 **7-day** windows you have consumed, and the time left before they reset.
 
-> ⚙️ **These bars require a statusline configuration.** Without it they simply do not
-> appear — silently, with no error or message.
+> ⚙️ **These bars require a statusline configuration.** Without it the banner still shows,
+> but with **empty gauges** plus a **clickable alert** pointing to the procedure below.
 
 **Why a configuration?** Claude Code writes these percentages to no file at all: it only
 passes them to the statusline script, inside the JSON it sends on standard input (the
@@ -116,9 +116,9 @@ write, from **Preferences → Write permissions** (`PermissionsMatrix`). The che
 
 List, preview, **edit**, **create** (pre-filled template) and **delete** the
 `~/.claude/skills/*/SKILL.md` files (YAML frontmatter + markdown body). Every write first
-creates a **timestamped backup** `SKILL.md.bak.<timestamp>` next to the file; a deletion
-moves the folder to the **trash** (reversible). Each action is gated by
-`skills.{create,modify,delete}`.
+archives the previous version **outside** `~/.claude` (in `data/backups/`), restorable from
+the editor's **“Versions” panel**; a deletion moves the folder to the **trash** (reversible).
+Each action is gated by `skills.{create,modify,delete}`.
 
 ## Projects & Sessions
 

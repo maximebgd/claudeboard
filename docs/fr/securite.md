@@ -47,7 +47,9 @@ La page `/docs` lit `docs/` (dans le repo, hors `~/.claude`) : elle n'utilise do
 ## 3. L'écriture n'est jamais silencieuse — et les suppressions sont réversibles
 
 - `writeSkill` / `writeMdEntry` vérifient que le fichier **existe déjà** (pas de création
-  implicite) et créent **toujours un backup** horodaté avant d'écraser.
+  implicite) et **archivent la version précédente** avant d'écraser — **hors** de
+  `CLAUDE_DIR`, dans `data/backups/` (`lib/backups.ts`), restaurable depuis le **panneau
+  « Versions »** de l'éditeur.
 - Les créations de fichiers de config (`settings.local.json`, `keybindings.json`,
   `CLAUDE.md` global) via `writeConfigFile` sont **explicites** (flux « Créer » dans
   `ConfigEditor`).

@@ -23,14 +23,16 @@ order: 2
 | Fichier | Rôle |
 | --- | --- |
 | `claude.ts` | `CLAUDE_DIR` (override via env), `safeResolve` (garde anti-traversée), helpers de format (date, taille, durée). |
-| `skills.ts` | `listSkills` · `getSkill` · `writeSkill` (backup `.bak` avant écrasement) · `createSkill` · `deleteSkill` · `skillTemplate`. |
+| `skills.ts` | `listSkills` · `getSkill` · `writeSkill` (version précédente archivée via `backups.ts`) · `createSkill` · `deleteSkill` · `skillTemplate`. |
 | `projects.ts` | `listProjects` · `listSessions` · `getSession` · normalisation des blocs JSONL. |
 | `analytics.ts` | `getAnalytics(...)` : scan **unique** des JSONL → totaux, heatmap, stats par modèle, top outils, coût par projet, durées, débuts de session par heure, streak, vélocité N vs N-1. `getProjectStats(id)`, `getEffectivePricing()`, `PRICING`/`MODEL_LABEL`/`MODEL_COLOR`. |
 | `store.ts` | État **propre à claudeboard** dans `data/claudeboard.json` (favoris, overrides de tarifs, abonnement, **permissions**, préférences dont **langue**) — hors `CLAUDE_DIR` (override `STORE_DIR`). `PERMISSION_SCHEMA`, `getPermissions`/`setPermissions`, `isAllowed(resource, action)`. |
 | `trash.ts` | Corbeille **hors** de `CLAUDE_DIR` (`data/trash/<id>/`, override `TRASH_DIR`) : `moveToTrash` (suppression réversible, utilisée par tous les delete) · `listTrash` · `restoreTrash` · `deleteTrashEntry` · `emptyTrash`. |
 | `favorites.ts` | `getFavoriteSessions` : résout les clés de favoris en métadonnées de session. |
 | `mdEntries.ts` | `list/get/write/create/deleteMdEntry(kind)` : agents & commandes (frontmatter, namespaces). |
-| `configFiles.ts` | `read/writeConfigFile` + `resetConfigFile` + `deleteConfigFile` : settings, CLAUDE.md global, keybindings (JSON validé, backup, corbeille). |
+| `configFiles.ts` | `read/writeConfigFile` + `resetConfigFile` + `deleteConfigFile` : settings, CLAUDE.md global, keybindings (JSON validé, version précédente archivée via `backups.ts`, suppression → corbeille). |
+| `backups.ts` | Historique de versions **hors** de `CLAUDE_DIR` (`data/backups/<cible>/`, override `BACKUPS_DIR`) : `saveBackup` (appelé par `writeConfigFile`/`writeSkill`/`writeMdEntry`) · `listBackups` · `readBackup` · `deleteBackup`, plafonné aux N versions récentes. Restaurable depuis le **panneau « Versions »** de l'éditeur. |
+| `diff.ts` | `unifiedDiff` **isomorphe** (LCS) : deux textes → diff unifié façon `git diff` (pour le panneau Versions). |
 | `hooks.ts` | `getHooks` (groupés par event) · `getHooksRaw`/`writeHooks` (bloc hooks de `settings.json`). |
 | `graph.ts` | `getDependencyGraph` : **lecture seule** — références croisées skills/agents/commandes → nœuds + liens dirigés (pour `/config/graph`). |
 | `export.ts` | `sessionToMarkdown/Html` · `projectToMarkdown/Html` · `exportFilename` : rendu **lecture seule** en Markdown ou HTML autonome (servi par `/api/export`). |
@@ -55,8 +57,9 @@ analytics ; `app/search` est la recherche full-text ; `app/config/*` regroupe le
 et références (dont `preferences`, qui réunit permissions, tarifs, abonnement, affichage et
 **langue** ; `graph`, le graphe de dépendances ; `trash`, la corbeille) ; `app/docs/*` rend
 cette documentation. Les API vivent sous `app/api/*` : écritures gated (`skills`, `md`,
-`config-file`, `hooks`, `projects`, `trash`), état claudeboard (`store`), et accès **lecture
-seule** hors permissions (`export`, `search`).
+`config-file`, `hooks`, `projects`, `trash`, `backups` pour restaurer/supprimer une
+version), état claudeboard (`store`), et accès **lecture seule** hors permissions
+(`export`, `search`).
 
 ### `components/` — UI partagée
 

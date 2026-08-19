@@ -23,14 +23,16 @@ order: 2
 | File | Role |
 | --- | --- |
 | `claude.ts` | `CLAUDE_DIR` (override via env), `safeResolve` (path-traversal guard), format helpers (date, size, duration). |
-| `skills.ts` | `listSkills` · `getSkill` · `writeSkill` (`.bak` backup before overwrite) · `createSkill` · `deleteSkill` · `skillTemplate`. |
+| `skills.ts` | `listSkills` · `getSkill` · `writeSkill` (previous version archived via `backups.ts`) · `createSkill` · `deleteSkill` · `skillTemplate`. |
 | `projects.ts` | `listProjects` · `listSessions` · `getSession` · normalization of JSONL blocks. |
 | `analytics.ts` | `getAnalytics(...)`: a **single** pass over the JSONL files → totals, heatmap, per-model stats, top tools, cost per project, durations, session starts per hour, streak, N vs N-1 velocity. `getProjectStats(id)`, `getEffectivePricing()`, `PRICING`/`MODEL_LABEL`/`MODEL_COLOR`. |
 | `store.ts` | State **specific to claudeboard** in `data/claudeboard.json` (favorites, pricing overrides, subscription, **permissions**, preferences incl. **language**) — outside `CLAUDE_DIR` (`STORE_DIR` override). `PERMISSION_SCHEMA`, `getPermissions`/`setPermissions`, `isAllowed(resource, action)`. |
 | `trash.ts` | Trash **outside** `CLAUDE_DIR` (`data/trash/<id>/`, `TRASH_DIR` override): `moveToTrash` (reversible deletion, used by every delete) · `listTrash` · `restoreTrash` · `deleteTrashEntry` · `emptyTrash`. |
 | `favorites.ts` | `getFavoriteSessions`: resolves favorite keys into session metadata. |
 | `mdEntries.ts` | `list/get/write/create/deleteMdEntry(kind)`: agents & commands (frontmatter, namespaces). |
-| `configFiles.ts` | `read/writeConfigFile` + `resetConfigFile` + `deleteConfigFile`: settings, global CLAUDE.md, keybindings (validated JSON, backup, trash). |
+| `configFiles.ts` | `read/writeConfigFile` + `resetConfigFile` + `deleteConfigFile`: settings, global CLAUDE.md, keybindings (validated JSON, previous version archived via `backups.ts`, deletion → trash). |
+| `backups.ts` | Version history **outside** `CLAUDE_DIR` (`data/backups/<target>/`, `BACKUPS_DIR` override): `saveBackup` (called by `writeConfigFile`/`writeSkill`/`writeMdEntry`) · `listBackups` · `readBackup` · `deleteBackup`, capped to the N most recent versions. Restorable from the editor's **“Versions” panel**. |
+| `diff.ts` | `unifiedDiff` **isomorphic** (LCS): two texts → unified `git diff`-style diff (for the Versions panel). |
 | `hooks.ts` | `getHooks` (grouped by event) · `getHooksRaw`/`writeHooks` (the `hooks` block of `settings.json`). |
 | `graph.ts` | `getDependencyGraph`: **read-only** — cross-references between skills/agents/commands → nodes + directed links (for `/config/graph`). |
 | `export.ts` | `sessionToMarkdown/Html` · `projectToMarkdown/Html` · `exportFilename`: **read-only** rendering to Markdown or standalone HTML (served by `/api/export`). |
@@ -55,8 +57,8 @@ Each screen is a route. The home page (`app/page.tsx`) is the analytics dashboar
 (including `preferences`, which bundles permissions, pricing, subscription, display and
 **language**; `graph`, the dependency graph; `trash`, the trash); `app/docs/*` renders this
 documentation. The APIs live under `app/api/*`: gated writes (`skills`, `md`, `config-file`,
-`hooks`, `projects`, `trash`), claudeboard state (`store`), and **read-only** access outside
-permissions (`export`, `search`).
+`hooks`, `projects`, `trash`, `backups` to restore/delete a version), claudeboard state
+(`store`), and **read-only** access outside permissions (`export`, `search`).
 
 ### `components/` — shared UI
 

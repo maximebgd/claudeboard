@@ -56,8 +56,9 @@ L'en-tête du dashboard affiche deux barres : la part consommée des fenêtres g
 **5 heures** et **7 jours** de votre abonnement Claude.ai, et le temps restant avant leur
 réinitialisation.
 
-> ⚙️ **Ces barres demandent une configuration de votre statusline.** Sans elle, elles ne
-> s'affichent pas du tout — silencieusement, sans erreur ni message.
+> ⚙️ **Ces barres demandent une configuration de votre statusline.** Sans elle, le bandeau
+> reste affiché mais avec des **jauges vides**, accompagnées d'une **alerte cliquable** qui
+> renvoie vers la procédure ci-dessous.
 
 **Pourquoi une configuration ?** Claude Code n'écrit ces pourcentages dans aucun fichier :
 il ne les transmet qu'au script de statusline, dans le JSON qu'il lui envoie sur l'entrée
@@ -120,10 +121,10 @@ l'état (bouton masqué, bannière « lecture seule »). Plugins & marketplaces 
 ## Skills
 
 Liste, aperçu, **édition**, **création** (template pré-rempli) et **suppression** des
-`~/.claude/skills/*/SKILL.md` (frontmatter YAML + corps markdown). Toute écriture crée
-d'abord un **backup horodaté** `SKILL.md.bak.<timestamp>` à côté du fichier ; une
-suppression déplace le dossier en **corbeille** (réversible). Chaque action est gated par
-`skills.{create,modify,delete}`.
+`~/.claude/skills/*/SKILL.md` (frontmatter YAML + corps markdown). Toute écriture archive
+d'abord la version précédente **hors** de `~/.claude` (dans `data/backups/`), restaurable
+depuis le **panneau « Versions »** de l'éditeur ; une suppression déplace le dossier en
+**corbeille** (réversible). Chaque action est gated par `skills.{create,modify,delete}`.
 
 ## Projets & Sessions
 
