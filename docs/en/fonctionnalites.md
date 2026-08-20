@@ -39,11 +39,19 @@ default follows the `costCardMode` preference (see Preferences).
 
 ### Window selector (`RangeSelector`)
 
-Filters the stats: `All` / `30 d` / `7 d`, a specific month (`?range=month&month=YYYY-MM`)
-or a free range (`?range=custom&from=…&to=…`). `getAnalytics(sinceMs, untilMs)` takes both
-bounds. Each relevant KPI card (Messages, Tokens, Cost) shows a **velocity delta**: the
-change vs the previous period of the same length (N vs N-1, with the real dates of period
-N-1) — hidden for the "All" window.
+Filters the stats: `All` / `30 d` / `7 d`, then a single **calendar button** that groups
+three modes in a tabbed popover:
+
+- **Month**: a specific calendar month (`?range=month&month=YYYY-MM`);
+- **Range**: a free range (`?range=custom&from=…&to=…`);
+- **Cycle**: a **billing cycle** of your subscription (`?range=cycle&cycle=<offset>`,
+  `0` = current cycle). Bounds are aligned to the subscription's anniversary day
+  (`sub.since`, see `lib/billingCycle.ts`) — e.g. a plan billed on the 23rd yields
+  "Jul 23 → Aug 23". The tab appears **only** when the subscription date is known.
+
+`getAnalytics(sinceMs, untilMs)` takes both bounds. Each relevant KPI card (Messages,
+Tokens, Cost) shows a **velocity delta**: the change vs the previous period of the same
+length (N vs N-1, with the real dates of period N-1) — hidden for the "All" window.
 
 > The **cost is a local estimate** (indicative rates per model family), not real billing.
 > Calculation details (cost **and** durations) in [Metrics & estimation](./metriques.md);
