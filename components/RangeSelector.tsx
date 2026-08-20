@@ -310,7 +310,7 @@ function CyclePicker({
 
   return (
     <div className="w-60">
-      <div className="mb-2 px-1 text-[11px] leading-snug text-[var(--color-muted)]">{t("range.cycleHint")}</div>
+      {/* <div className="mb-2 px-1 text-[11px] leading-snug text-[var(--color-muted)]">{t("range.cycleHint")}</div> */}
       <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
         {cycles.map((c) => {
           const on = activeOffset === String(c.offset);
