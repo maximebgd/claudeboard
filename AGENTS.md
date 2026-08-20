@@ -14,8 +14,11 @@ section ne donne que le panorama fonctionnel.
   panneau d'activité (heatmap GitHub ⇆ courbe des messages/jour + streak), répartition et
   coût par modèle, coût par projet, distribution horaire des débuts de session (heure
   **locale**), top outils/skills, stats de session et projets récents. Un `RangeSelector`
-  filtre les stats (`Tout` / `30 j` / `7 j`, un mois `?range=month&month=YYYY-MM`, ou une
-  plage libre `?range=custom&from&to`) ; les cartes Messages/Tokens/Coût affichent un delta
+  filtre les stats (`Tout` / `30 j` / `7 j`, un mois `?range=month&month=YYYY-MM`, une plage
+  libre `?range=custom&from&to`, ou un **cycle de facturation** de l'abonnement
+  `?range=cycle&cycle=<offset>` — 0 = cycle courant, calé sur le jour d'anniversaire de
+  `sub.since` via `lib/billingCycle.ts`, chip masqué si la date d'abo est inconnue) ; les
+  cartes Messages/Tokens/Coût affichent un delta
   de **vélocité** vs la période précédente de même durée (masqué en fenêtre « Tout »). La
   `SubscriptionCard` compare le coût d'usage au prix du plan pour estimer l'économie ; la
   carte KPI « Coût estimé » (`CostStatCard`) est **cliquable** (coût d'usage ⇆ économie),

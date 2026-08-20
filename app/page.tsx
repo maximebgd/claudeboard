@@ -18,6 +18,7 @@ import {
 import { CLAUDE_DIR, formatDate, formatDuration, formatRelative } from "@/lib/claude";
 import { getAnalytics, MODEL_COLOR, parseModel } from "@/lib/analytics";
 import { getEffectiveSubscription } from "@/lib/subscription";
+import { billingCycle } from "@/lib/billingCycle";
 import { getRateLimits } from "@/lib/rateLimits";
 import { getPreferences } from "@/lib/store";
 import { getT, type Language } from "@/lib/i18n";
@@ -61,12 +62,13 @@ function fmtDuration(ms: number, locale: Language): string {
 const DAY_MS = 86400000;
 
 interface ResolvedRange {
-  key: string; // all | 30j | 7j | month | custom
+  key: string; // all | 30j | 7j | month | custom | cycle
   sinceMs: number;
   untilMs: number; // 0 = pas de borne haute
   month: string; // YYYY-MM (préremplissage)
   from: string; // YYYY-MM-DD (préremplissage)
   to: string;
+  cycle: string; // offset de cycle de facturation (préremplissage, "" hors cycle)
 }
 
 const PRESET_DAYS: Record<string, number> = { all: 0, "30j": 30, "7j": 7 };
@@ -80,7 +82,11 @@ function utcMs(day: string): number {
   return Date.parse(day + "T00:00:00Z");
 }
 
-function resolveRange(params: { [key: string]: string | string[] | undefined }): ResolvedRange {
+function resolveRange(
+  params: { [key: string]: string | string[] | undefined },
+  /** Date de souscription (ms) : ancre des cycles de facturation, `null` si inconnue. */
+  anchorMs: number | null
+): ResolvedRange {
   const key = one(params.range);
 
   if (key === "month") {
@@ -94,6 +100,23 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
       month: m,
       from: "",
       to: "",
+      cycle: "",
+    };
+  }
+
+  // Cycle de facturation de l'abonnement : `cycle` = nombre de cycles avant le
+  // courant (0 = courant). Sans date d'abonnement, on retombe sur « Tout » plus bas.
+  if (key === "cycle" && anchorMs && anchorMs > 0) {
+    const offset = Math.max(0, Math.trunc(Number(one(params.cycle))) || 0);
+    const c = billingCycle(anchorMs, offset, Date.now());
+    return {
+      key: "cycle",
+      sinceMs: c.startMs,
+      untilMs: c.endMs,
+      month: "",
+      from: "",
+      to: "",
+      cycle: String(offset),
     };
   }
 
@@ -109,6 +132,7 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
       month: "",
       from: okFrom ? from : "",
       to: okTo ? to : "",
+      cycle: "",
     };
   }
 
@@ -121,6 +145,7 @@ function resolveRange(params: { [key: string]: string | string[] | undefined }):
     month: "",
     from: "",
     to: "",
+    cycle: "",
   };
 }
 
@@ -291,12 +316,15 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const range = resolveRange(await searchParams);
+  const sp = await searchParams;
+  // L'abonnement est résolu **avant** la fenêtre : le range « Cycle » cale ses bornes
+  // sur la date de facturation (`sub.since`). Lecture d'un petit JSON → coût négligeable.
+  const sub = await getEffectiveSubscription();
+  const range = resolveRange(sp, sub.since);
   const { prevSinceMs, prevUntilMs } = previousWindow(range.sinceMs, range.untilMs);
-  const [a, skills, sub, favorites, preferences, rateLimits, { t, locale }] = await Promise.all([
+  const [a, skills, favorites, preferences, rateLimits, { t, locale }] = await Promise.all([
     getAnalytics(range.sinceMs, range.untilMs, prevSinceMs, prevUntilMs),
     listSkills(),
-    getEffectiveSubscription(),
     getFavoriteSessions(),
     getPreferences(),
     getRateLimits(),
@@ -462,6 +490,8 @@ export default async function HomePage({
               month={range.month}
               from={range.from}
               to={range.to}
+              cycle={range.cycle}
+              anchorMs={sub.since}
             />
           </div>
         </div>

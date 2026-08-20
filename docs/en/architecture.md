@@ -39,6 +39,7 @@ order: 2
 | `search.ts` | `searchTranscripts`: full-text **read-only**, streamed line-by-line scan (case/accents ignored), highlighted excerpts grouped by session. |
 | `mcp.ts` | `getMcpServers`: read-only view of `~/.claude.json` (`env` masked). |
 | `subscription.ts` | `getSubscription` / `getEffectiveSubscription`: read-only view of the Claude plan (non-sensitive fields) + the store's manual choice. |
+| `billingCycle.ts` | `billingCycle` / `recentCycles`: **isomorphic** (no I/O) — billing-cycle bounds (the "Cycle" range) derived from the subscription's anniversary day, UTC-aligned and clamped for short months. |
 | `plugins.ts` | `getPlugins`: read-only view of marketplaces/plugins. |
 | `keybindings.ts` | `parseKeybindings`: defensive extraction for the tabular preview. |
 | `rateLimits.ts` | `getRateLimits`: **read-only** Claude.ai usage limits (5-hour / 7-day windows) from the statusline cache (`statusline-cache/rate-limits.env`) — `known:false` without the cache, values are out of real time. |

@@ -39,11 +39,21 @@ défaut suit la préférence `costCardMode` (cf. Préférences).
 
 ### Sélecteur de fenêtre (`RangeSelector`)
 
-Filtre les stats : `Tout` / `30 j` / `7 j`, un mois précis (`?range=month&month=YYYY-MM`)
-ou une plage libre (`?range=custom&from=…&to=…`). `getAnalytics(sinceMs, untilMs)` prend
-les deux bornes. Chaque carte KPI concernée (Messages, Tokens, Coût) affiche un **delta de
-vélocité** : la variation vs la période précédente de même durée (N vs N-1, avec les dates
-réelles de la période N-1) — masqué pour la fenêtre « Tout ».
+Filtre les stats : `Tout` / `30 j` / `7 j`, puis un **bouton calendrier** unique qui
+regroupe trois modes dans un popover à onglets :
+
+- **Mois** : un mois calendaire précis (`?range=month&month=YYYY-MM`) ;
+- **Période** : une plage libre (`?range=custom&from=…&to=…`) ;
+- **Cycle** : un **cycle de facturation** de votre abonnement
+  (`?range=cycle&cycle=<offset>`, `0` = cycle courant). Les bornes sont calées sur le jour
+  d'anniversaire de la souscription (`sub.since`, cf. `lib/billingCycle.ts`) — p. ex. un abo
+  facturé le 23 donne « 23 juil. → 23 août ». L'onglet n'apparaît **que** si la date
+  d'abonnement est connue.
+
+`getAnalytics(sinceMs, untilMs)` prend les deux bornes. Chaque carte KPI concernée
+(Messages, Tokens, Coût) affiche un **delta de vélocité** : la variation vs la période
+précédente de même durée (N vs N-1, avec les dates réelles de la période N-1) — masqué pour
+la fenêtre « Tout ».
 
 > Le **coût est une estimation locale** (tarifs indicatifs par famille de modèle), pas une
 > facturation réelle. Détails du calcul (coût **et** durées) dans
