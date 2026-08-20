@@ -4,7 +4,7 @@ Un dashboard **local** pour analyser, parcourir et éditer la configuration Clau
 
 ## ✨ Au menu
 
-- **Dashboard analytics** — KPI (projets, sessions, messages, tokens, coût estimé), panneau d'activité (heatmap 12 mois ⇆ courbe des messages/jour + streak), répartition tokens/coût par modèle, coût par projet, distribution horaire, top outils/skills. Filtres par période (tout / 30 j / 7 j / mois / plage libre) avec delta de vélocité N vs N-1.
+- **Dashboard analytics** — KPI (projets, sessions, messages, tokens, coût estimé), panneau d'activité (heatmap 12 mois ⇆ courbe des messages/jour + streak), répartition tokens/coût par modèle, coût par projet, distribution horaire, top outils/skills. Filtres par période (tout / 30 j / 7 j / mois / plage libre / **cycle de facturation** de ton abonnement, calé sur le jour d'anniversaire de la date d'abo) avec delta de vélocité N vs N-1.
 - **Limites d'usage** — bandeau dans l'en-tête du dashboard avec les deux fenêtres glissantes de ton abonnement Claude.ai (**5 h** et **7 j**) : % consommé et compte à rebours avant reset. Lecture seule, **hors temps réel** (dernier relevé d'une session active), via le cache du statusline. Demande un petit réglage du statusline ; sans lui, les jauges restent vides et pointent vers la doc de configuration.
 - **Skills, agents & commandes** — liste, aperçu, édition, création et suppression. Chaque save archive la version précédente dans un panneau **Versions** restaurable (hors de `~/.claude`) ; sous-dossiers = namespaces pour agents/commandes.
 - **Projets & sessions** — navigation lecture seule des transcripts JSONL, épinglage, bouton resume, export Markdown / HTML autonome.
