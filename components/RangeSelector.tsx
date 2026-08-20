@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/components/I18nProvider";
 import type { Language } from "@/lib/i18n/core";
+import { billingCycle, recentCycles } from "@/lib/billingCycle";
 
 /**
  * Sélecteur de fenêtre temporelle du dashboard. Presets rapides (Tout / 30 j / 7 j)
@@ -38,6 +39,10 @@ export interface RangeSelectorProps {
   /** YYYY-MM-DD (préremplissage du mode « Période »). */
   from: string;
   to: string;
+  /** Offset du cycle de facturation actif (0 = courant), "" hors mode cycle. */
+  cycle: string;
+  /** Date de souscription (ms) : ancre des cycles ; `null` masque le chip « Cycle ». */
+  anchorMs: number | null;
 }
 
 /* -------------------------------- date utils ------------------------------ */
@@ -62,6 +67,19 @@ function fmtDayShort(d: string, locale: Language): string {
   const [y, m, day] = d.split("-").map(Number);
   if (!y) return d;
   return new Date(y, m - 1, day).toLocaleDateString(bcp(locale), { day: "numeric", month: "short" });
+}
+
+/** « 23 juil. » à partir d'un epoch ms, en UTC (bornes de cycle calées UTC). */
+function fmtMsDay(ms: number, locale: Language): string {
+  return new Date(ms).toLocaleDateString(bcp(locale), { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+/**
+ * Libellé « 23 juil. – 23 août » d'un cycle : la borne de fin affichée est le début
+ * du cycle suivant (`endMs + 1`), pour lire « du 23 au 23 » comme la facturation.
+ */
+function fmtCycleSpan(startMs: number, endMs: number, locale: Language): string {
+  return `${fmtMsDay(startMs, locale)} – ${fmtMsDay(endMs + 1, locale)}`;
 }
 
 /* ---------------------------------- chips --------------------------------- */
@@ -271,12 +289,72 @@ function DayPicker({
   );
 }
 
+/* ------------------------------- CyclePicker ------------------------------ */
+
+function CyclePicker({
+  anchorMs,
+  activeOffset,
+  onPick,
+  locale,
+  t,
+}: {
+  anchorMs: number;
+  /** Offset actif ("" si le mode cycle n'est pas courant). */
+  activeOffset: string;
+  onPick: (offset: number) => void;
+  locale: Language;
+  t: (key: "range.cycleCurrent" | "range.cycleHint") => string;
+}) {
+  // Jusqu'à 12 cycles récents (courant d'abord), plafonnés à la souscription.
+  const cycles = useMemo(() => recentCycles(anchorMs, Date.now(), 12), [anchorMs]);
+
+  return (
+    <div className="w-60">
+      <div className="mb-2 px-1 text-[11px] leading-snug text-[var(--color-muted)]">{t("range.cycleHint")}</div>
+      <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+        {cycles.map((c) => {
+          const on = activeOffset === String(c.offset);
+          return (
+            <button
+              key={c.offset}
+              type="button"
+              onClick={() => onPick(c.offset)}
+              className={`flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-xs tabular-nums transition-colors ${
+                on
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "text-[var(--color-fg)] hover:bg-[var(--color-hover)]"
+              }`}
+            >
+              <span>{fmtCycleSpan(c.startMs, c.endMs, locale)}</span>
+              {c.offset === 0 && (
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wide ${
+                    on ? "bg-white/20 text-white" : "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
+                  }`}
+                >
+                  {t("range.cycleCurrent")}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------ RangeSelector ----------------------------- */
 
-export default function RangeSelector({ activeKey, month, from, to }: RangeSelectorProps) {
+/** Modes du calendrier regroupés sous l'unique bouton icône. */
+type CalMode = "month" | "custom" | "cycle";
+
+export default function RangeSelector({ activeKey, month, from, to, cycle, anchorMs }: RangeSelectorProps) {
   const router = useRouter();
   const { t, locale } = useTranslation();
-  const [open, setOpen] = useState<null | "month" | "custom">(null);
+  const [open, setOpen] = useState(false);
+  // Onglet actif dans le popover calendrier (recalé sur le mode courant à l'ouverture).
+  const calMode: CalMode = activeKey === "custom" ? "custom" : activeKey === "cycle" ? "cycle" : "month";
+  const [tab, setTab] = useState<CalMode>(calMode);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const PRESETS = PRESET_KEYS.map((key) => ({
@@ -288,9 +366,9 @@ export default function RangeSelector({ activeKey, month, from, to }: RangeSelec
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(null);
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(null);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -300,15 +378,44 @@ export default function RangeSelector({ activeKey, month, from, to }: RangeSelec
   }, [open]);
 
   const nav = (href: string) => {
-    setOpen(null);
+    setOpen(false);
     router.push(href, { scroll: false });
   };
 
-  const monthLabel = activeKey === "month" ? fmtMonthLabel(month, locale, t("range.month")) : t("range.month");
-  const customLabel =
-    activeKey === "custom" && from && to
-      ? `${fmtDayShort(from, locale)} – ${fmtDayShort(to, locale)}`
-      : t("range.custom");
+  // Ouvre le popover en recalant l'onglet sur le mode actuellement sélectionné.
+  const toggle = () =>
+    setOpen((o) => {
+      if (!o) setTab(calMode);
+      return !o;
+    });
+
+  const calActive = activeKey === "month" || activeKey === "custom" || activeKey === "cycle";
+  // Libellé compact affiché à côté de l'icône **quand** une plage calendrier est active.
+  const activeLabel =
+    activeKey === "month"
+      ? fmtMonthLabel(month, locale, t("range.month"))
+      : activeKey === "custom" && from && to
+        ? `${fmtDayShort(from, locale)} – ${fmtDayShort(to, locale)}`
+        : activeKey === "cycle" && anchorMs
+          ? (() => {
+              const c = billingCycle(anchorMs, Math.max(0, Number(cycle) || 0), Date.now());
+              return fmtCycleSpan(c.startMs, c.endMs, locale);
+            })()
+          : null;
+
+  // Onglets disponibles dans le popover (le cycle n'apparaît qu'avec une date d'abo).
+  const TABS: { key: CalMode; label: string; Icon: typeof CalendarDays }[] = [
+    { key: "month", label: t("range.month"), Icon: CalendarDays },
+    { key: "custom", label: t("range.custom"), Icon: CalendarRange },
+    ...(anchorMs ? [{ key: "cycle" as const, label: t("range.cycle"), Icon: CalendarClock }] : []),
+  ];
+
+  const tabBtn = (on: boolean) =>
+    `flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 font-mono text-[11px] transition-colors ${
+      on
+        ? "bg-[var(--color-accent)] text-white"
+        : "text-[var(--color-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-fg)]"
+    }`;
 
   return (
     <div
@@ -326,39 +433,53 @@ export default function RangeSelector({ activeKey, month, from, to }: RangeSelec
         </button>
       ))}
 
+      {/* Unique bouton calendrier : mois complet / période libre / cycle d'abonnement. */}
       <button
         type="button"
-        onClick={() => setOpen((o) => (o === "month" ? null : "month"))}
-        className={chip(activeKey === "month")}
+        onClick={toggle}
+        className={chip(calActive)}
+        aria-label={t("range.calendar")}
+        title={t("range.calendar")}
       >
-        <CalendarDays size={12} />
-        <span className="capitalize">{monthLabel}</span>
+        <CalendarDays size={13} />
+        {activeLabel && <span className="capitalize">{activeLabel}</span>}
       </button>
 
-      <button
-        type="button"
-        onClick={() => setOpen((o) => (o === "custom" ? null : "custom"))}
-        className={chip(activeKey === "custom")}
-      >
-        <CalendarRange size={12} />
-        {customLabel}
-      </button>
-
-      {open === "month" && (
+      {open && (
         <div className={popover}>
-          <MonthPicker value={month} onPick={(m) => nav(`/?range=month&month=${m}`)} locale={locale} t={t} />
-        </div>
-      )}
+          {/* Sélecteur d'onglet : mois / période / cycle. */}
+          <div className="mb-3 flex gap-0.5 rounded-md bg-[var(--color-inset)] p-0.5">
+            {TABS.map(({ key, label, Icon }) => (
+              <button key={key} type="button" onClick={() => setTab(key)} className={tabBtn(tab === key)}>
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </div>
 
-      {open === "custom" && (
-        <div className={popover}>
-          <DayPicker
-            from={from}
-            to={to}
-            onApply={(f, tt) => nav(`/?range=custom&from=${f}&to=${tt}`)}
-            locale={locale}
-            t={t}
-          />
+          {tab === "month" && (
+            <MonthPicker value={month} onPick={(m) => nav(`/?range=month&month=${m}`)} locale={locale} t={t} />
+          )}
+
+          {tab === "custom" && (
+            <DayPicker
+              from={from}
+              to={to}
+              onApply={(f, tt) => nav(`/?range=custom&from=${f}&to=${tt}`)}
+              locale={locale}
+              t={t}
+            />
+          )}
+
+          {tab === "cycle" && anchorMs && (
+            <CyclePicker
+              anchorMs={anchorMs}
+              activeOffset={activeKey === "cycle" ? cycle : ""}
+              onPick={(offset) => nav(`/?range=cycle&cycle=${offset}`)}
+              locale={locale}
+              t={t}
+            />
+          )}
         </div>
       )}
     </div>
