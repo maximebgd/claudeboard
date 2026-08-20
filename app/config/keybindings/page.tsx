@@ -12,9 +12,9 @@ import { getT } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 
 const TEMPLATE = `{
-  "keybindings": [
-
-  ]
+  "$schema": "https://www.schemastore.org/claude-code-keybindings.json",
+  "$docs": "https://code.claude.com/docs/en/keybindings",
+  "bindings": []
 }
 `;
 

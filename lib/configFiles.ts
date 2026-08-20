@@ -113,7 +113,7 @@ function resetTemplate(target: ConfigTarget, locale: Language): string {
     case "settingsLocal":
       return `{\n\n}\n`;
     case "keybindings":
-      return `{\n  "keybindings": []\n}\n`;
+      return `{\n  "$schema": "https://www.schemastore.org/claude-code-keybindings.json",\n  "$docs": "https://code.claude.com/docs/en/keybindings",\n  "bindings": []\n}\n`;
     case "claudeMd":
       return `# ${translate(locale, "claudeMd.template.title")}\n\n`;
   }
